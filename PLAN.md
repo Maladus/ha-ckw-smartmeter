@@ -439,15 +439,15 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 
 | ID | Task | Details | Done when | Deps | Size | Owner |
 |---|---|---|---|---|---|---|
-| #58 | `api.py` skeleton | `aiohttp` via `async_get_clientsession`, base URL, timeouts, `CkwApiError`/`CkwAuthError`/`CkwRateLimitError` | ruff clean, no network in import | #13 | S | AI |
-| #59 | `CkwCustomer`/`CkwMeter` dataclasses | Parse `customer → locations → meters`, flatten meters with location context | fixture parses, all fields typed | #6 | S | AI |
-| #60 | `async_get_customer()` | GET `/v1/smartmeter/customer` | returns dataclass from fixture | #58, #59 | S | AI |
-| #61 | `async_get_measurements(from, to, aggregation)` | Path params `datum_von_YYYYMMDD`/`datum_bis_YYYYMMDD`/`aggregation`; parse array of `{deliverypointnumber, measurements[…]}` | fixture parses into `dict[meter, list[CkwMeasurement]]` | #60 | M | AI |
-| #62 | Measurement model | `zeitstempel_von_utc`, `zeitstempel_bis_utc`, `menge_fakturiert_ht/_nt`, `betrag_ht/_nt`, `anzahl_linien_p/_fw/_fb`; derived `total_kwh`, `total_cost`, `quality_flag` | unit tests for derived values incl. `None` handling | #61 | S | AI |
-| #63 | Error mapping | 400/408/401/403/429/500/503 → typed exceptions; parse `x-ratelimit-remaining`, `-reset` (ms) into `RateLimitInfo` | test per status code | #58 | M | AI |
+| ✅ #58 | `api.py` skeleton | `aiohttp` session and token provider injected (#138, no `homeassistant` import), base URL, 30 s total timeout, `CkwError`/`CkwConnectionError`/`CkwAuthError`/`CkwRangeTooBigError`/`CkwRateLimitError`/`CkwApiError` | ruff clean, no network in import | #13 | S | AI |
+| ✅ #59 | `CkwCustomer`/`CkwMeter` dataclasses | Frozen typed `CkwCustomer(id, locations)` → `CkwLocation` → `CkwMeter`, parsing `customer.User[].locations[].meters[]`, tolerant of unknown/missing keys, unknown enums kept as the raw string | fixture parses, all fields typed | #6 | S | AI |
+| ✅ #60 | `async_get_customer()` | GET `/v1/smartmeter/customer` | returns dataclass from fixture | #58, #59 | S | AI |
+| ✅ #61 | `async_get_measurements(from, to, aggregation)` | Path params `datum_von_YYYYMMDD`/`datum_bis_YYYYMMDD`/`aggregation`; parse array of `{deliverypointnumber, measurements[…]}` into `list[CkwMeterMeasurements]` (a list instead of a dict: order and duplicates are the server's, and a delivery point may repeat) | fixture parses into `list[CkwMeterMeasurements]` | #60 | M | AI |
+| ✅ #62 | Measurement model | `zeitstempel_von_utc`, `zeitstempel_bis_utc`, `menge_fakturiert_ht/_nt`, `betrag_ht/_nt`, `anzahl_linien_p/_fw/_fb`; derived `kwh_total`, `chf_total`, `has_quality_issue`, each `None`-safe | unit tests for derived values incl. `None` handling | #61 | S | AI |
+| ✅ #63 | Error mapping | 400/408/401/403/429/500/503 → typed exceptions; the 400 missing-token bodies map to `CkwAuthError`, the 400 range cap to `CkwRangeTooBigError`; `x-ratelimit-limit/-remaining/-reset` parsed into `RateLimitInfo` on every response (also errors) and exposed as `CkwClient.last_rate_limit` | test per status code | #58 | M | AI |
 | #64 | Range chunking | Split a range into ≤ N-day chunks (respect API limits, `BACKFILL_DAYS`), yield `(from, to)` pairs, Europe/Zurich safe | property test: chunks cover range without overlap/gap | #61 | M | AI |
 | #65 | Aggregation helpers | Map user-facing interval to API enum (`day(s)`, `month(s)`, `week(s)`), document `minute(s)` as unsupported by product decision | unit test | #61 | S | AI |
-| #66 | Diagnostics redaction | `mask_deliverypoint()` (last 4 chars), token stripping helper | used in `diagnostics.py` + debug logging | #59 | S | AI |
+| ✅ #66 | Diagnostics redaction | `mask_deliverypoint()` (last 4 chars) in `api.py`, used by its debug logging; wiring into `diagnostics.py` lands with that module (#105) | used in `diagnostics.py` + debug logging | #59 | S | AI |
 | #147 | Pace requests against the rate limit | Chunker respects `x-ratelimit-remaining`/`-reset` (observed: 4 requests per ~1 s), conservative range size verified against the "response too big" 400, resumable backfill, 429 = wait not fail | 730-day backfill completes without 429; simulated exhaustion makes the client sleep | #62, #66 | S | AI |
 
 ## Phase 4 — Setup, coordinator, runtime data
@@ -572,7 +572,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | #113 | Production / PV feed-in meter support | #7 shows separate delivery point with production `type` | AI+H |
 | #114 | Dynamic tariff entities | User wants prices in the same integration (today: companion `swiss-dynamic-tariffs`, public CKW endpoint) | AI |
 | #115 | Device authorization grant login | CKW enables RFC 8628 for `oe-wigger` | AI |
-| #138 | Clean client boundary + strict typing | `api.py` imports nothing from `homeassistant` (the coordinator maps `CkwAuthError`/`CkwRateLimitError` to HA exceptions), session + token injected as constructor arguments, full annotations, `mypy --strict` in the gates and CI; boundary recorded in `reference/conventions.md` (#129) and ADR-0006. Useful on its own — not a Platinum step | `api.py` free of HA imports, `mypy --strict` green | #61, #129 | M | AI |
+| ✅ #138 | Clean client boundary + strict typing | `api.py` imports nothing from `homeassistant` (the coordinator maps `CkwAuthError`/`CkwRateLimitError` to HA exceptions), session + token injected as constructor arguments, full annotations, `mypy --strict` in the gates and CI; boundary recorded in `reference/conventions.md` (#129) and ADR-0006. Useful on its own — not a Platinum step | `api.py` free of HA imports, `mypy --strict` green | #61, #129 | M | AI |
 | #116 | HA core submission | After 3+ months of stable HACS usage: docs page in `home-assistant.io`, brands repo PR, full test harness, code review | H |
 | #156 | Backfill 15-minute history into InfluxDB | Standalone `scripts/ckw-influx-backfill.py` (not part of the integration): paced `minute(s)` fetching, monthly chunks, resumable, writes InfluxDB line protocol (`kwh_ht`, `kwh_nt`, `chf_ht`, `chf_nt` tags/last4 delivery point), `--dry-run`; how-to explains why it exists (HA exports states only, no `influxdb.write` service) | dry run against the mock produces valid line protocol for 30 days | #152, #154, #147 | M | AI |
 
