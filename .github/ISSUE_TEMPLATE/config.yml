@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation map — find the page that answers your question
+    url: https://github.com/Maladus/ha-ckw-smartmeter/blob/main/docs/README.md
+    about: Tutorial, how-to, reference and explanation pages, one quadrant per need, each one sentence about what it covers.
+  - name: Where to ask — CONTRIBUTING.md, "Where to ask, where to report"
+    url: https://github.com/Maladus/ha-ckw-smartmeter/blob/main/CONTRIBUTING.md#where-to-ask-where-to-report
+    about: A usage question, a CKW login that is no longer accepted (CKW OpenEnergy support, openenergy@ckw.ch), or an API-access request — this repository cannot grant API access.
+  - name: Report a security problem privately
+    url: https://github.com/Maladus/ha-ckw-smartmeter/security/advisories/new
+    about: A leaked token or an auth problem is a security report, never a public issue. The channels and the scope are in SECURITY.md.

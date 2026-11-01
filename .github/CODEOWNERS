@@ -1,0 +1,5 @@
+# This repository is a single-maintainer project: one person owns every path, reviews
+# every pull request and is the only required reviewer. The code owners file names
+# that owner once, for every file, so a branch-protection rule that asks for a code
+# owner review has somebody to ask. #28.
+* @Maladus

@@ -84,3 +84,5 @@ Why it is like this, and which alternatives lost.
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — dev setup, gates, the pull-request checklist and the
   release duty.
 - [AGENTS.md](../AGENTS.md) — the agent contract: what to read first, the commands, the hard rules.
+- [SECURITY.md](../SECURITY.md) and [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) — how to report a
+  vulnerability privately, and the conduct expected in issues, pull requests and discussions.

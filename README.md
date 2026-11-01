@@ -76,6 +76,12 @@ backfill and missing Energy-dashboard statistics. For copy-paste automations and
 [reference: examples](docs/reference/examples.md). What is verified today, and the one remaining gap, is
 in [reference: quality scale](docs/reference/quality-scale.md).
 
+## Contributing and reporting
+
+Setup, the gates and the pull-request checklist are in [CONTRIBUTING.md](CONTRIBUTING.md); [AGENTS.md](AGENTS.md)
+is the same contract for an AI agent. A security problem goes through [SECURITY.md](SECURITY.md), never a
+public issue, and the conduct expected in every space of this project is in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
 ## License
 
 MIT, see [LICENSE](LICENSE). Copyright (c) 2026 Martin Wigger.
