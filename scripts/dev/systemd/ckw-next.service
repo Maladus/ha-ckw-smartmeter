@@ -1,0 +1,22 @@
+# systemd user service for the next-task check (docs/how-to/next-task.md).
+#
+# Installed by scripts/dev/install-timer.sh, which substitutes the repository
+# placeholder below with this checkout's absolute path: systemd has no variable
+# that expands to the checkout in both WorkingDirectory and ExecStart, and a
+# hardcoded path would make the template machine-specific. Edit the template,
+# then re-run the installer - not the copy under ~/.config/systemd/user/.
+
+[Unit]
+Description=ckw next-task check (PLAN.md against the GitHub issue tracker)
+Documentation=file://@REPO@/docs/how-to/next-task.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=@REPO@
+# bash -lc: mise and gh are found through the user's login PATH, which a user
+# unit does not necessarily inherit. --notify pings the coordinator through
+# `workmux send ckw-homeassistant` (falling back to notify-send), so a run that
+# finds startable work reaches a person instead of only a journal line.
+ExecStart=/usr/bin/env bash -lc 'cd @REPO@ && mise run next --notify'

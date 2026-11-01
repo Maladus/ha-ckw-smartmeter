@@ -35,6 +35,7 @@ One goal per page, steps only, no theory.
 | `how-to/debug-connection.md` (planned, #99) | Reading the log, the diagnostics export and the error codes when polling fails. | Users, contributors |
 | `how-to/work-with-ai-agents.md` (planned, #98) | Driving this repository with an AI agent under the contract in `AGENTS.md`. | Contributors, agents |
 | [commits.md](how-to/commits.md) | Commit types, the agent co-author trailer and how to find commits by model. | Contributors |
+| [next-task.md](how-to/next-task.md) | Finding the task that can start now, and having a timer or crontab remind you. | Maintainers, contributors |
 
 ## Reference
 

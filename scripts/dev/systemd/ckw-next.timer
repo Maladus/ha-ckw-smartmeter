@@ -1,0 +1,19 @@
+# systemd user timer for the next-task check (docs/how-to/next-task.md).
+#
+# Installed by scripts/dev/install-timer.sh together with the service unit, whose
+# repository placeholder it fills in. OnUnitActiveSec counts from the end of the
+# previous run, so a slow `gh issue list` never stacks runs on top of each
+# other; Persistent=true catches up after the machine was off. Edit this
+# template, not the copy under ~/.config/systemd/user/.
+
+[Unit]
+Description=Run the ckw next-task check every 30 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+Persistent=true
+Unit=ckw-next.service
+
+[Install]
+WantedBy=timers.target

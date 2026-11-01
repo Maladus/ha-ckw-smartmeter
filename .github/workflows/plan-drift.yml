@@ -1,0 +1,46 @@
+name: Plan drift
+
+# The plan and the issue tracker are the same list (PLAN.md, "Issue tracking on
+# GitHub"). This workflow fails when they disagree: an issue labelled
+# `status: ready` with an open dependency, a closed issue whose plan row is not
+# ✅, a ✅ row whose issue is still open, or a plan row without an issue.
+#
+# Read-only: the check never labels, closes or comments. `issues: read` is what
+# lets `gh issue list` see a private repository's tracker; there is no write
+# permission anywhere in this file.
+on:
+  schedule:
+    # Daily, so drift introduced outside a PLAN.md pull request (a label change,
+    # an issue closed without the row being updated) still surfaces.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - PLAN.md
+
+permissions:
+  contents: read
+  issues: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  drift:
+    name: next-task drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # The script is stdlib-only; the runner image ships the gh CLI, and the
+      # step fails loudly if that ever changes.
+      - name: Check gh CLI
+        run: gh --version
+      - name: Check for plan drift
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/next_tasks.py --check

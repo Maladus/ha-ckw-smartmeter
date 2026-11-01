@@ -41,3 +41,11 @@ run = "uv run python scripts/dev/mock/app.py --port 8787"
 [tasks.docs]
 description = "Lint Markdown and validate the Diataxis layout"
 run = "markdownlint-cli2 \"**/*.md\" \"#node_modules\" && bash scripts/docs-check.sh"
+
+[tasks.next]
+description = "Show which planned tasks can start now (STARTABLE/BLOCKED/DRIFT)"
+run = "python scripts/next_tasks.py"
+
+[tasks.next-check]
+description = "Fail when PLAN.md and the issue tracker drift apart (CI gate)"
+run = "python scripts/next_tasks.py --check"
