@@ -446,23 +446,23 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | ✅ #61 | `async_get_measurements(from, to, aggregation)` | Path params `datum_von_YYYYMMDD`/`datum_bis_YYYYMMDD`/`aggregation`; parse array of `{deliverypointnumber, measurements[…]}` into `list[CkwMeterMeasurements]` (a list instead of a dict: order and duplicates are the server's, and a delivery point may repeat) | fixture parses into `list[CkwMeterMeasurements]` | #60 | M | AI |
 | ✅ #62 | Measurement model | `zeitstempel_von_utc`, `zeitstempel_bis_utc`, `menge_fakturiert_ht/_nt`, `betrag_ht/_nt`, `anzahl_linien_p/_fw/_fb`; derived `kwh_total`, `chf_total`, `has_quality_issue`, each `None`-safe | unit tests for derived values incl. `None` handling | #61 | S | AI |
 | ✅ #63 | Error mapping | 400/408/401/403/429/500/503 → typed exceptions; the 400 missing-token bodies map to `CkwAuthError`, the 400 range cap to `CkwRangeTooBigError`; `x-ratelimit-limit/-remaining/-reset` parsed into `RateLimitInfo` on every response (also errors) and exposed as `CkwClient.last_rate_limit` | test per status code | #58 | M | AI |
-| #64 | Range chunking | Split a range into ≤ N-day chunks (respect API limits, `BACKFILL_DAYS`), yield `(from, to)` pairs, Europe/Zurich safe | property test: chunks cover range without overlap/gap | #61 | M | AI |
-| #65 | Aggregation helpers | Map user-facing interval to API enum (`day(s)`, `month(s)`, `week(s)`), document `minute(s)` as unsupported by product decision | unit test | #61 | S | AI |
+| ✅ #64 | Range chunking | Split a range into ≤ N-day chunks (respect API limits, `BACKFILL_DAYS`), yield `(from, to)` pairs, Europe/Zurich safe | property test: chunks cover range without overlap/gap | #61 | M | AI |
+| ✅ #65 | Aggregation helpers | Map user-facing interval to API enum (`day(s)`, `month(s)`, `week(s)`), document `minute(s)` as unsupported by product decision | unit test | #61 | S | AI |
 | ✅ #66 | Diagnostics redaction | `mask_deliverypoint()` (last 4 chars) in `api.py`, used by its debug logging; wiring into `diagnostics.py` lands with that module (#105) | used in `diagnostics.py` + debug logging | #59 | S | AI |
-| #147 | Pace requests against the rate limit | Chunker respects `x-ratelimit-remaining`/`-reset` (observed: 4 requests per ~1 s), conservative range size verified against the "response too big" 400, resumable backfill, 429 = wait not fail | 730-day backfill completes without 429; simulated exhaustion makes the client sleep | #62, #66 | S | AI |
+| ✅ #147 | Pace requests against the rate limit | Chunker respects `x-ratelimit-remaining`/`-reset` (observed: 4 requests per ~1 s), conservative range size verified against the "response too big" 400, resumable backfill, 429 = wait not fail | 730-day backfill completes without 429; simulated exhaustion makes the client sleep | #62, #66 | S | AI |
 
 ## Phase 4 — Setup, coordinator, runtime data
 
 | ID | Task | Details | Done when | Deps | Size | Owner |
 |---|---|---|---|---|---|---|
-| #67 | `runtime_data` | `@dataclass CkwRuntimeData(api, coordinator, meters, totals)` on `ConfigEntry.runtime_data` | typed, ruff clean | #60 | S | AI |
-| #68 | Coordinator | `DataUpdateCoordinator[CkwData]`, `update_interval` from options (default 2 h), `_async_update_data` fetches customer+meters+window | first refresh populates data | #67 | M | AI |
-| #69 | Rolling window | Refetch last 7 days (`days`) on every poll; merge into per-meter cumulative totals kept in `runtime_data`; ignore duplicate intervals | test: repeated poll does not change totals | #68 | M | AI |
-| #70 | Exception mapping | `CkwAuthError`→`ConfigEntryAuthFailed`; `CkwRateLimitError`→`UpdateFailed` with reset time; network→`ConfigEntryNotReady` at setup / `UpdateFailed` at runtime | tests per case | #63 | M | AI |
-| #71 | Setup/unload | `async_setup_entry` creates API+coordinator, `EntryType.SERVICE` device, forwards platforms; `async_unload_entry` unloads platforms and clears listeners | unload/reload test green (Silver `config-entry-unloading`) | #67 | M | AI |
-| #149 | Log published grid data inside the integration | Coordinator logging only, no probe tool: DEBUG per poll with requested window, interval count, newest `zeitstempel_bis_utc` and computed `lag_hours`; INFO exactly once per publication event ("new grid data published: <date>, lag <h> h"); WARNING when the lag exceeds **96 h** (expected spread is 1-3 days) or the newest interval stalls for four days; attributes `publication_delay_h` + `last_published_interval` on the consumption sensor | with `logger: custom_components.ckw: debug` the poll-by-poll lag is visible, exactly one INFO line per published day, both attributes move with it | #71, #83 | S | AI |
-| #72 | `log-when-unavailable` | First failure logs warning once, recovery logs info | log assertions in test | #70 | S | AI |
-| #73 | Timezone discipline | All date math in `Europe/Zurich`; API dates are `YYYYMMDD`, timestamps UTC `dateTimeOnly` | DST test (23 h / 25 h days) | #69 | M | AI |
+| ✅ #67 | `runtime_data` | `@dataclass CkwRuntimeData(api, coordinator, meters, totals)` on `ConfigEntry.runtime_data` | typed, ruff clean | #60 | S | AI |
+| ✅ #68 | Coordinator | `DataUpdateCoordinator[CkwData]`, `update_interval` from options (default 2 h), `_async_update_data` fetches customer+meters+window | first refresh populates data | #67 | M | AI |
+| ✅ #69 | Rolling window | Refetch last 7 days (`days`) on every poll; merge into per-meter cumulative totals kept in `runtime_data`; ignore duplicate intervals | test: repeated poll does not change totals | #68 | M | AI |
+| ✅ #70 | Exception mapping | `CkwAuthError`→`ConfigEntryAuthFailed`; `CkwRateLimitError`→`UpdateFailed` with reset time; network→`ConfigEntryNotReady` at setup / `UpdateFailed` at runtime | tests per case | #63 | M | AI |
+| ✅ #71 | Setup/unload | `async_setup_entry` creates API+coordinator, `EntryType.SERVICE` device, forwards platforms; `async_unload_entry` unloads platforms and clears listeners | unload/reload test green (Silver `config-entry-unloading`) | #67 | M | AI |
+| ✅ #149 | Log published grid data inside the integration | Coordinator logging only, no probe tool: DEBUG per poll with requested window, interval count, newest `zeitstempel_bis_utc` and computed `lag_hours`; INFO exactly once per publication event ("new grid data published: <date>, lag <h> h"); WARNING when the lag exceeds **96 h** (expected spread is 1-3 days) or the newest interval stalls for four days; attributes `publication_delay_h` + `last_published_interval` on the consumption sensor | with `logger: custom_components.ckw: debug` the poll-by-poll lag is visible, exactly one INFO line per published day, both attributes move with it | #71, #83 | S | AI |
+| ✅ #72 | `log-when-unavailable` | First failure logs warning once, recovery logs info | log assertions in test | #70 | S | AI |
+| ✅ #73 | Timezone discipline | All date math in `Europe/Zurich`; API dates are `YYYYMMDD`, timestamps UTC `dateTimeOnly` | DST test (23 h / 25 h days) | #69 | M | AI |
 
 ## Phase 5 — Entities
 
@@ -624,14 +624,14 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 1 Setup & governance | 31 | 16 |
 | 1b Podman dev instance | 12 | 6 |
 | 2 Auth | 14 | 10 |
-| 3 API | 10 | 7 |
-| 4 Coordinator | 8 | 0 |
+| 3 API | 10 | 9 |
+| 4 Coordinator | 8 | 8 |
 | 5 Entities | 14 | 1 |
 | 6 Statistics | 7 | 0 |
 | 7 Docs | 24 | 13 |
 | 8 Quality/Release | 18 | 0 |
 | 9 Optional | 8 | 1 |
-| **Total** | **152** | **42** |
+| **Total** | **152** | **53** |
 
 ## Critical path
 
