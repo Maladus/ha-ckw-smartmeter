@@ -19,6 +19,9 @@ least in one situation nobody designed for and possibly in one nobody has measur
   offline session max) or a revocation fits; nothing has been instrumented to tell which. The cap is
   invisible in the token response — `refresh_expires_in` always reports the idle window — so only the
   wall-clock interval between login and reauth can reveal it.
+- CKW's own Android app keeps users logged in for roughly 2–3 months (user report, unverified by us).
+  That is the behaviour CKW treats as normal for a client of this realm, so it sets the target: parity
+  with the app, not a login without end.
 - The options flow allows a poll interval up to 12 h — twice the refresh-token lifetime — so a user who
   picks it breaks the chain every cycle without noticing why.
 - Keycloak may rotate refresh tokens on use ("Revoke Refresh Token"). If it does, a lost response or two
@@ -39,9 +42,12 @@ We keep the session alive with the poll and refresh on demand:
    config entry before it is used.
 3. A refresh that fails with `invalid_grant` maps to `ConfigEntryAuthFailed` and starts exactly one
    reauth. There is no retry, no backoff, and no automatic authorization request.
-4. We ask CKW for `offline_access` on `oe-wigger` (issue #2) as an extension, not as the mechanism.
-5. We accept a reauth at whatever absolute cap CKW has configured, until CKW changes it, and document it
-   instead of hiding it.
+4. We ask CKW for `offline_access` on `oe-wigger` (issue #2) as the explicit path to that parity: the
+   scope, not the poll, is what makes weeks of downtime survivable.
+5. The target is parity with the CKW app: at worst one browser re-login per ~2–3 months, and earlier
+   only when Home Assistant was offline long enough to lose the refresh chain. The acceptance criterion
+   is "one reauth per ~2–3 months, never a login loop", not "no reauth at all" — CKW caps the session
+   and no client can extend it.
 
 ## Consequences
 
@@ -54,7 +60,11 @@ We keep the session alive with the poll and refresh on demand:
   entities refreshing, and a manual refresh overlapping the scheduled one.
 - A dead refresh token produces one reauth, not a login loop and not a request storm against the
   identity provider — which keeps the rate-limit and lockout risk out of the auth path.
-- The failure modes are quantified instead of felt, so the user-facing promises can be exact.
+- Reauth becomes a designed step rather than a failure: a clear notification, a one-click browser flow,
+  no repeated logins and no data loss, because the rolling 7-day window and the statistics import resume
+  where they stopped once the entry reloads.
+- The failure modes are quantified instead of felt, so the user-facing promises can be exact — and the
+  promise is now the one CKW's own app keeps.
 
 Worst case for a user, with the numbers this decision is based on:
 
@@ -63,12 +73,16 @@ Worst case for a user, with the numbers this decision is based on:
 | HA restart, update or reboot under 4 h | none |
 | HA off for 4–6 h | one reauth |
 | HA off for more than 6 h | one reauth |
-| HA off for weeks, `offline_access` granted (30 d idle) | none, up to ≈ 30 d |
+| HA off for weeks, `offline_access` granted (30 d idle, 60–90 d cap) | none until the cap, then one reauth |
 | HA polling continuously, absolute session cap at ~60–90 d | one reauth at the cap |
 | CKW revokes the session (password change, admin action) | one reauth, immediately |
 | Poll interval set to 6 h or more without `offline_access` | one reauth per cycle |
 
 **Negative**
+
+- A login that never expires is not achievable with the flows available: CKW caps the session and the
+  alternatives that could sidestep the browser are refused for this client. The integration will ask a
+  human roughly quarterly, for as long as it exists.
 
 - Without `offline_access`, four hours of downtime is the hard limit. A weekend trip with the instance
   powered off costs a login, and no client-side change can avoid it.
@@ -89,7 +103,11 @@ Worst case for a user, with the numbers this decision is based on:
 - #2 — request `offline_access` for `oe-wigger`, and ask in the same mail for the configured SSO
   Session Idle / Max so the 2–3 month question can be answered without waiting. Neither value is
   observable from the client, and an absolute cap never appears in `refresh_expires_in`.
-- #51 — implement reauth on `ConfigEntryAuthFailed` from a failed refresh, once.
+- #51 — implement reauth on `ConfigEntryAuthFailed` from a failed refresh, once, and treat the reauth
+  UX as a feature: a notification that says what happened and what to do, one browser flow, no repeated
+  prompts. A reauth every ~2–3 months is the steady state this ADR designs for.
+- `README.md` and `docs/explanation/data-model.md` — state the expected cadence (on the order of months,
+  earlier after a long outage) so a reauth is not experienced as a surprise or as a bug.
 - #53 — cap the poll-interval option below the refresh lifetime (or add a keep-alive task); the current
   1–12 h range contradicts this decision.
 - #71 — persist the token pair atomically in the coordinator's refresh path, under the lock.
@@ -127,12 +145,16 @@ refused 5-minute polling for data that changes once a day, the API terms allow o
 day, and it buys less than two extra hours of outage tolerance at 24× the request volume against a
 rate-limited API.
 
-**(e) Accept a re-login every 2–3 months and change nothing.** Cheapest, and honest if CKW's cap cannot
-be moved. Rejected as the *decision* because it is the symptom, not a rule: it leaves the 4 h outage
-case undocumented, leaves the rotated-token race unfixed, and leaves the poll interval able to break
-the chain silently. It remains the fallback — and the documented expectation — if CKW refuses
-`offline_access` and will not extend the cap; then the reauth flow (#51) and the how-to (#122) carry the
-user experience.
+**(e) Take the ~2–3 months without asking for `offline_access`.** Keep the poll and the refresh
+discipline, skip the CKW request, accept the cadence. Rejected: without the scope, any outage longer
+than ~4 h forces a reauth, so an instance that sleeps re-authenticates far more often than CKW's app —
+and if the cap is 90 days, a sleeping instance never reaches the app's cadence at all. The ask is one
+email; it is the difference between "months" and "hours".
+
+**(f) Accept a re-login every 2–3 months and change nothing.** No diagnosis, no keep-alive discipline,
+no documentation. Rejected: the cadence is acceptable, the blindness is not. Users cannot tell an
+expected cap from a broken chain, the 4 h outage case stays unexplained, and a rotated refresh token
+can still be lost without a trace.
 
 ## Links
 

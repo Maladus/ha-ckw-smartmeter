@@ -153,7 +153,7 @@ Quality-scale rule `docs-known-limitations`.
 | CKW only | Other grid operators need their own integration; this one has one provider. |
 | No feed-in tariff calculation | Production or PV feed-in metering is not implemented (tracked separately). |
 | 7-day self-healing window | A gap older than 7 days does not repair itself; it needs the backfill. |
-| Occasional CKW login | A dead refresh token needs one browser login: an outage longer than the poll leaves room for, or CKW's own absolute session cap. The imported history is kept. |
+| Sessions last months, not forever | CKW caps a session at roughly 2–3 months — their own app behaves the same — and a long outage can end it sooner. An occasional reauthentication is normal; the imported history is kept. |
 
 ## Related
 

@@ -188,14 +188,13 @@ leaving at least 4 h of headroom.
 | 6 h | 4 h | 2 h | ~6 h | still works, no longer comfortable |
 | 6 h | 6 h | 0 | ~6 h | the third refresh lands on the expiry boundary |
 | 6 h | 12 h (current option maximum) | 0 — the token is dead 6 h before the next poll | — | the options range cannot exceed 6 h without a separate keep-alive |
-| 30 d (offline idle) | 2 h | 29 d 22 h | ~30 d | only if CKW grants `offline_access` |
-| 60 d (offline max, limiter on) | any | hard stop at 60 d from login | — | uninterrupted polling does not extend it |
+| 30 d idle, 60–90 d session max (`offline_access` granted) | 2 h | up to the cap — weeks, not hours | — | the cap, not the token, ends the session: one mandatory reauth at it |
 
-The last row but one is the "survives weeks of HA downtime" case: with `offline_access` the refresh
-token stops tracking the 6 h SSO idle window and tracks the offline window instead, so a three-week
-holiday is survivable. The last row is the sting: a 60-day absolute cap is *reached* by a chain that
-never idles, so `offline_access` converts a fragile 4 h margin into a reliable 60-day cadence — it does
-not make the login permanent.
+The `offline_access` row is the "survives weeks of HA downtime" case: the refresh token stops tracking
+the 6 h SSO idle window and tracks the offline window instead, so a three-week holiday is survivable.
+The note in that row is the sting: the absolute cap is *reached* by a chain that never idles, so
+`offline_access` converts a fragile 4 h margin into a dependable 2–3 month cadence — it does not make
+the login permanent.
 
 Two consequences follow for the refresh call itself:
 
@@ -208,22 +207,30 @@ Two consequences follow for the refresh call itself:
   already revoked and gets `invalid_grant`. Entities reloading in parallel, a manual refresh next to the
   scheduled poll, or a second HA instance restored from a backup are all enough. One lock, one refresh.
 
-## Why the report says "every 2–3 months"
+## Why "every 2–3 months" is expected
 
-The observed cadence is a **user report**, not an instrumented measurement: no reauth timestamp has been
-recorded. Three explanations fit it, and the report alone cannot separate them.
+The cadence is a user report, not an instrumented measurement — and it is also what CKW's own client
+does. Read it as this realm's normal session lifetime rather than as a defect: a client of this realm
+gets on the order of two to three months, and the job is to reach that, not to beat it.
 
-| # | Hypothesis | Fits the 6 h token? | What it predicts |
+The arithmetic points the same way. An offline Keycloak session has 30 days of idle time and a 60-day
+maximum by default; an SSO Session Max configured to about 90 days lands in the same range. Both are
+inside "2–3 months". Neither is consistent with the 6 h window our client reports: a 6 h
+`refresh_expires_in` is an online session, so `oe-wigger` most likely lacks `offline_access` — see
+issue #2. CKW's app is probably on the offline path, our client is not, and the gap between them is the
+gap between "months" and "a few hours of outage".
+
+| # | Reading | Fits the 6 h token? | What it predicts |
 | --- | --- | --- | --- |
-| H1 | An absolute cap on the session — SSO Session Max set to roughly 60–90 days, or an offline session max of 60 days with the limiter on | yes: the token response reports the idle window, so an absolute cap is invisible there | reauth at a fixed interval after the **login**, independent of polls and restarts, with `refresh_expires_in` still reporting 21 600 on the last successful refresh |
-| H2 | Ordinary outages — HA off or unreachable for more than the 4–6 h margin, a few times a year | yes | reauth correlates with an update, a power cut or a holiday, not with a calendar |
-| H3 | Periodic revocation — password change, admin logout, IdP deployment, client re-registration | yes | no pattern at all; reauth follows an event at CKW |
+| H1 (leading) | An absolute cap on the session: offline max 60 d, or SSO Session Max ~90 d | yes: the response reports the idle window, so an absolute cap is invisible there | reauth at a fixed distance after the **login**, independent of polls and restarts, with `refresh_expires_in` still reporting 21 600 on the last successful refresh |
+| H2 | Ordinary outages: HA off or unreachable for more than the 4–6 h margin | yes | reauth correlates with an update, a power cut or a holiday — and, without `offline_access`, happens far more often than every 2–3 months |
+| H3 | Periodic revocation: password change, admin logout, IdP deployment | yes | no pattern; the reauth follows an event at CKW |
 
-H1 is the only one that produces a *regular* 2–3 month cadence with uninterrupted polling, and it is
-also the one that rules out the cheap fixes: neither a shorter poll interval nor `offline_access` with a
-60-day cap removes it. It requires that SSO Session Max at CKW is far above the 10 h default — a
-continuously refreshed 6 h token could not survive 60 days otherwise. That is a derived conclusion, not
-a measured one.
+H1 is the only reading that produces a *regular* 2–3 month cadence with uninterrupted polling. It also
+means the cadence will not be engineered away: a shorter poll interval cannot move an absolute cap, and
+`offline_access` under a 60-day cap reaches it rather than removing it. It requires that SSO Session Max
+at CKW is far above the 10 h default — a continuously refreshed 6 h token could not survive 60 days
+otherwise. That is a derived conclusion, not a measured one.
 
 What the token response cannot show is the cap itself. Keycloak reports the idle window in
 `refresh_expires_in`, not the distance to the session maximum, so three refreshes can return 21 600
@@ -231,15 +238,41 @@ each and the next one can still fail. A value that counts down would prove a fix
 value proves only that the idle window is the nearer bound. An absolute cap therefore shows up in
 exactly one place: the wall-clock distance between the login and the reauth that follows it.
 
-Note what is **not** a candidate: the 30-day offline idle default. It is shorter than the report and
-only applies when `offline_access` is granted, which the 6 h `refresh_expires_in` argues against.
-Restarts and HA updates are not a candidate either, as long as they finish within the 4 h margin — the
-tokens live in the config entry and survive them (issue #71).
+Restarts and HA updates are not the cause of a *regular* cadence, as long as they finish within the 4 h
+margin — the tokens live in the config entry and survive them (issue #71). They are the cause of the
+*irregular* reauth: without `offline_access`, every outage longer than the margin costs a login, which
+is why an instance that sleeps reauthenticates far more often than CKW's app.
 
-To confirm, record the wall-clock time of every successful refresh and of the original login, the time
-of the reauth, and `refresh_expires_in` at each refresh. The
-[probe procedure](#probe-procedure-once-a-client-id-exists) turns that into a decision between H1, H2
-and H3; the login→reauth distance is the only measurement that can confirm H1.
+To confirm which cap applies, record the wall-clock time of every successful refresh and of the
+original login, the time of the reauth, and `refresh_expires_in` at each refresh. The
+[probe procedure](#probe-procedure-once-a-client-id-exists) turns that into a decision between H1's two
+caps and H2/H3; the login→reauth distance is the only measurement that can confirm the cap.
+
+### Reference point: CKW's own app
+
+- **Observed** (user report, not verified by us): the CKW Android app keeps the same account logged in
+  for roughly 2–3 months, and appears to perform some kind of key rotation — whether refresh tokens,
+  signing keys or credentials is unclear.
+- **What it implies**: the realm's own ceiling is on the order of months, not years. A client that
+  stays logged in for months on this realm is consistent with an offline session (30 d idle, 60 d max)
+  or an SSO Session Max near 90 days, and it makes 2–3 months the realistic target for us too.
+- **What it does not imply**: our client inherits nothing. `oe-wigger` is a different OAuth client with
+  its own client scopes and client session settings; the app may hold `offline_access` where we do not,
+  and a native app can also re-authenticate silently from credentials in the OS keystore, so "no
+  visible login" does not prove the session survived. Concrete question for CKW with issue #2: *which
+  client scope and session settings does your own app use, and why does it survive months when a 6 h
+  refresh token does not?*
+
+## Target we design for
+
+Parity with the CKW app: at worst one browser re-login every ~2–3 months, and earlier only when Home
+Assistant was offline long enough to lose the refresh chain — a few hours without `offline_access`,
+weeks with it. That is the number to state in the docs and to measure against, not "never".
+
+A login that never expires is not achievable with the flows available to us: CKW caps the session, the
+client cannot extend it, and the headless alternatives are refused for this client (password grant
+`500`, device grant `unauthorized_client`). A design that promises permanent silence would promise
+something CKW's own app does not deliver.
 
 ## The keep-alive rule
 
@@ -267,8 +300,9 @@ What this rule does not do, deliberately:
   lost.
 - It does not treat `401` from the API as a reason to log in again. It is a reason to *refresh* once;
   only a failed refresh is a reauth.
-- It does not promise silence past the absolute cap. If CKW's SSO Session Max is 60–90 days, a reauth
-  at that boundary is expected behaviour, and the honest fix is a CKW setting, not client code.
+- It does not promise silence. Parity with CKW's app — one reauth per ~2–3 months at worst — is the
+  target; a login that never expires is not achievable with the flows available, and a reauth at CKW's
+  cap is expected behaviour, not a bug to hide.
 
 One gap this analysis exposes: the options flow allows 1–12 h, and anything at or above 6 h breaks the
 chain between polls without `offline_access`. Either the maximum drops below the refresh lifetime, or a
@@ -276,9 +310,9 @@ keep-alive refresh runs independently of the poll. That is a follow-up, not part
 
 ## Probe procedure once a client id exists
 
-Run this when a real client id and one successful login are available. It answers H1 versus H2 versus
-H3 and turns every "open" above into "measured". It needs no special tooling: a token, `curl`, and a
-clock.
+Run this when a real client id and one successful login are available. It answers which cap applies,
+whether the cause is an outage or a revocation, and turns every "open" above into "measured". It needs
+no special tooling: a token, `curl`, and a clock.
 
 1. **Record the login.** Note the wall-clock time, `expires_in`, `refresh_expires_in`, `scope` and
    `session_state` from the authorization-code exchange. A `refresh_expires_in` near 2 592 000 means
@@ -340,21 +374,14 @@ clock.
   is not, or that CKW overrode the offline idle window. Requested in issue #2.
 - **Whether refresh tokens rotate.** "Revoke Refresh Token" state is realm configuration. Until it is
   known, the design must assume rotation.
-- **What the 2–3 month cadence actually is.** Not instrumented; H1/H2/H3 above are untested.
-- **Why the official CKW Android app stays logged in for months (unverified, reporter's observation).**
-  The reporter reports no login in the app for months, and that the app appears to perform some kind of
-  key rotation — unclear whether refresh tokens, signing keys or credentials. This is **not** evidence
-  about `oe-wigger`: it is a different OAuth client, with its own client scopes and client session
-  settings, and a native app can also re-authenticate silently from credentials in the OS keystore, so
-  "no visible login" does not prove the session survived. Two readings still fit: the app holds an
-  offline session (`offline_access` as a client scope or default scope), or it refreshes in the
-  background and reaches the same kind of absolute cap our client will. If the app really rotates
-  refresh tokens, rotation is a realm or client setting, not a quirk of one client, and the
-  atomic-persistence rule above is mandatory rather than defensive. Concrete question for CKW with
-  issue #2: *which client scope and session settings does your own app use, and why does it survive
-  months when a 6 h refresh token does not?*
+- **Which cap produces the 2–3 month cadence.** Not instrumented: the offline max (60 d) and SSO
+  Session Max (~90 d) are both consistent with the report, and neither is visible in the token response.
 - **Whether a reauth is a session limit or a revocation.** Only the timestamp correlation in step 6
   separates them.
+
+The open questions about `Revoke Refresh Token` and the realm's session numbers stay open; they are also
+on the list of questions to CKW in issue #2, and none of them blocks the design above — the keep-alive
+rule works under either answer, and the worst case is a reauth at the cap.
 
 ## Related
 
