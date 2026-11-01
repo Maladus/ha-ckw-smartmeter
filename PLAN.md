@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: https://github.com/Maladus/ha-ckw-smartmeter (`custom_components/ckw`) — private until #110
-Issues: #1–#117, one per task row below (✅ = closed / done)
+Issues: #1–#118, one per task row below (✅ = closed / done)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -73,6 +73,42 @@ the CKW password.
 4. English for everything; German only for CKW domain terms (Zählpunkt, HT/NT, Netzbetreiber).
 5. A doc that contradicts the code is a bug — fix in the same PR or open an issue the same day.
 
+### ADR process (architecture decision records)
+
+**Where:** `docs/adr/NNNN-kebab-case-title.md` — 4 digits, zero-padded, monotonic, never renumbered.
+`0000-template.md` holds the skeleton, `docs/adr/README.md` is the index (number, title, status, date).
+
+**Format** (MADR-mini, one page max):
+
+```
+# NNNN — Title
+- Status: proposed | accepted | deprecated | superseded by NNNN
+- Date: YYYY-MM-DD
+- Deciders: <names>
+
+## Context
+## Decision
+## Consequences        (positive / negative / follow-ups)
+## Alternatives considered   (and why each was rejected)
+## Links                (issues, code, external docs)
+```
+
+**Required when** any of these is true: new dependency · anything touching auth, tokens or secrets ·
+statistics/recorder strategy · entity-id or unique-id scheme · user-visible behaviour (naming, units,
+polling, backfill) · deviation from this plan or from an earlier ADR · a review round argued about it.
+
+**Lifecycle:** `proposed` (in the PR) → `accepted` (merged, status field flipped in the same PR) →
+`deprecated` or `superseded by NNNN`. Accepted ADRs are immutable except typos; a changed mind is a new
+ADR that supersedes the old one. The ADR ships in the same PR as the change, or a docs-only PR before it.
+
+**Linkage:** implementing code and docs cite `ADR-0002`; the PR body links it; the plan row is marked ✅.
+**Enforcement:** PR template asks "ADR needed? linked?"; AGENTS.md makes it a hard rule — no dependency
+and no auth change without an ADR.
+
+**Planned:** 0001 auth (OAuth2+PKCE vs pasted code vs password+SMS-OTP) · 0002 statistics strategy
+(entity statistics via `async_import_statistics` vs external statistics) · 0003 meter↔device mapping and
+unique-id scheme · 0004 poll interval and the one-day data lag.
+
 ## Status legend
 
 | Symbol | Meaning |
@@ -104,6 +140,36 @@ holds status, assignment and discussion.
 Bootstrap status: issues #1–#116 created, milestones 1–13 created, labels created.
 #24 turns this one-off into the re-runnable script.
 
+## Toolchain and tasks (mise)
+
+Everything is pinned and run through mise. `mise install` gives the exact toolchain, and
+`mise run <task>` is the **only** entry point — no bare `python`/`pip`/`podman` commands in docs,
+CI or AGENTS.md. Tracked as #117.
+
+| Tool | Pin | Why |
+|---|---|---|
+| `python` | 3.13 | runtime of the HA image the dev instance uses |
+| `uv` | latest | venv + dependency resolution and locking (#19) |
+| `ruff` | 0.17.3 | lint + format (gate G-1) |
+| `gitleaks` | 8.30.1 | secret scan (gates G-3, #118) |
+| `pipx:pre-commit` | 4.7.0 | hook manager (gate G-3, #17) |
+| `podman` | system, >= 4.9, rootless | dev HA instance; **not** mise-pinned — rootless setup is host-level (subuid/subgid, `net.ipv4.ip_unprivileged_port_start`), documented in #44 |
+
+| Task | Runs | Purpose |
+|---|---|---|
+| `mise run setup` | `mise install`, `uv sync`, `pre-commit install --install-hooks`, bootstrap `config/` + `.env` | once after clone/pull |
+| `mise run dev-up` | `podman run` of the HA dev container (config + component mounted, `:Z`) | start the dev instance (#36) |
+| `mise run dev-down` | stop + remove the container | stop |
+| `mise run dev-logs` | `podman logs -f ha-dev` | debugging |
+| `mise run dev-shell` | `podman exec -it ha-dev bash` | inspect inside |
+| `mise run dev-reset` | stop, delete recorder DB, start | statistics/backfill tests (#43) |
+| `mise run dev-smoke` | manifest check, traceback scan, forced entity refresh | gate G-6 (#42) |
+| `mise run lint` / `mise run fmt` | `ruff check` / `ruff format` | gate G-1 |
+| `mise run test` | `pytest -q` | gate G-2 |
+| `mise run hooks` | `pre-commit run --all-files` | gate G-3 |
+| `mise run check` | lint + test + hooks + dev-smoke | full local gate |
+| `mise run issues` | `scripts/sync-issues.sh` | plan/issue drift gate (#32) |
+
 ## Phase 0 — External prerequisites (blocking)
 
 | ID | Task | Details | Done when | Deps | Owner |
@@ -130,7 +196,8 @@ Bootstrap status: issues #1–#116 created, milestones 1–13 created, labels cr
 | #15 | `strings.json` + translations | `config`, `config.error`, `config.abort`, `entity.sensor.*`, `exceptions` keys; `translations/de.json`, `en.json` | hassfest translations check green | #10 | S | AI |
 | #16 | Test bootstrap | `pyproject.toml` (ruff, pytest config, `pytest-homeassistant-custom-component` optional extra), `tests/conftest.py` | `pytest -q` runs (0 tests ok) | #9 | S | AI |
 | ✅ #17 | pre-commit (locked) | Hooks: `check-added-large-files`, `check-yaml`, `check-json`, `check-merge-conflict`, `check-case-conflict`, `detect-private-key`, `end-of-file-fixer`, `trailing-whitespace`, `mixed-line-ending`, `gitleaks --staged`, `ruff-check`, `ruff-format`, artifact block (`.dev/`, `*.token`, `config/.storage/`, `*.db`); tools pinned in `mise.toml`; installed for `pre-commit` + `pre-push` | `pre-commit run --all-files` green, a staged fake token is rejected | #9 | S | AI |
-| #117 | Secret scanning in CI + push protection | `.github/workflows/secrets.yml` (`gitleaks detect --redact` on push/PR, works on a private repo with free minutes), enable GitHub secret scanning + push protection at publish (#110, free only when public), document policy in `SECURITY.md` (#25) | workflow fails on a seeded leak, policy documented | #18, #25 | S | AI |
+| #118 | Secret scanning in CI + push protection | `.github/workflows/secrets.yml` (`gitleaks detect --redact` on push/PR, works on a private repo with free minutes), enable GitHub secret scanning + push protection at publish (#110, free only when public), document policy in `SECURITY.md` (#25) | workflow fails on a seeded leak, policy documented | #18, #25 | S | AI |
+| #117 | mise toolchain & task runner | Pin `python`, `uv`, `ruff`, `gitleaks`, `pipx:pre-commit` in `mise.toml`; expose every workflow as a mise task (`setup`, `dev-up/-down/-logs/-shell/-reset/-smoke`, `lint`, `fmt`, `test`, `hooks`, `check`, `issues`); CI and docs call the tasks only, never raw interpreters. Podman stays host-level (rootless prerequisites in #44) | fresh clone: `mise install && mise run setup && mise run check` succeeds; no doc, CI job or AGENTS.md line invokes `python`, `pip` or `podman` directly | #9 | M | AI |
 | #18 | CI workflows | `.github/workflows/tests.yaml`: jobs `pre-commit`, `pytest`, `hassfest` (`home-assistant/actions/hassfest`), `hacs` (`hacs/action` category integration) | all jobs green on GitHub | #13–#17 | S | AI |
 | #19 | Dev instance plan | Dev HA is specified in **Phase 1b** (Podman); this task only reserves the directory `scripts/dev/` | `scripts/dev/` exists or is created by #36 | #14 | S | AI |
 | #20 | `AGENTS.md` + `CONTRIBUTING.md` | agent contract (commands, gates, hard rules) and human PR checklist | both written, gates referenced by exact command | #17 | S | AI |
@@ -151,6 +218,10 @@ Bootstrap status: issues #1–#116 created, milestones 1–13 created, labels cr
 | #35 | Automation guardrails | Scheduled workflow `plan-check.yml` running `scripts/sync-issues.sh --check`; optional `actions/add-to-project` for auto-adding new issues | drift detected in CI on a seeded mismatch | #32 | M | AI |
 
 ## Phase 1b — Local test instance in Podman
+
+Every task here is a **mise task** (`mise run dev-up`, `mise run dev-down`, ...) per the Toolchain
+section. The shell scripts behind them live in `scripts/dev/` and are the only place that calls
+`podman` directly. Quadlet is the optional autostart path, not the default.
 
 Rootless Podman instead of Docker: no daemon, systemd-native autostart (quadlet), same image.
 Two run modes, both on the same instance:
@@ -192,16 +263,16 @@ Fallback for non-systemd machines: `scripts/dev/compose.yaml` (`podman-compose`)
 
 | ID | Task | Details | Done when | Deps | Size | Owner |
 |---|---|---|---|---|---|---|
-| #36 | Dev directory & compose fallback | `scripts/dev/{compose.yaml,.env.example,README.md}`, gitignored `config/` with a `configuration.yaml` template (logger, `recorder:` block), `.gitignore` entries | `podman-compose -f scripts/dev/compose.yaml up -d` serves HA on :8123 | #14 | M | AI |
-| #37 | Quadlet unit + autostart | `scripts/dev/ha.container` installed to `~/.config/containers/systemd/ha-dev.container`, `%h` specifiers, pinned image, both volume mounts with `:Z` | `systemctl --user daemon-reload && systemctl --user start ha-dev` → HA reachable, `ckw` listed | #36 | M | AI |
+| #36 | Dev directory & container runner | `scripts/dev/{up.sh,down.sh,reset.sh,smoke.sh,onboard.sh,configuration.yaml,.env.example,README.md}`, gitignored `config/`, `custom_components/ckw/` mount point; `mise run dev-up` starts HA rootless via plain `podman run` (no podman-compose on the target host) | `mise run dev-up` serves HA on :8123 with `config/` and the component mounted | #14, #118 | M | AI |
+| #37 | Quadlet unit + autostart (optional) | `scripts/dev/ha.container` installed to `~/.config/containers/systemd/ha-dev.container`, `%h` specifiers, pinned image, both volume mounts with `:Z` | `systemctl --user daemon-reload && systemctl --user start ha-dev` -> HA reachable, `ckw` listed | #36 | M | AI |
 | #38 | Image pinning & upgrade path | `HA_VERSION` in `.env.example`, bump procedure in README, smoke run after each bump | pinned tag documented, bump checklist exists | #36 | S | AI |
 | #39 | Fixture mode | `CKW_FIXTURE_MODE` read in `const.py`; `api.py` serves `tests/fixtures/*.json` instead of HTTP; log a loud warning when active; never active unless the env var is set | fixture instance shows configured values, `podman logs` shows zero outbound CKW calls | #61 | M | AI |
 | #40 | Onboarding script | `scripts/dev/onboard.sh`: wait for onboarding API, create owner user, optionally core config, then write a long-lived token to `.dev/token` (gitignored) | fresh volume → usable HA + token in under 3 minutes | #37 | M | AI |
 | #41 | HTTPS callback for real login | Caddy sidecar (or documented tunnel) exposing `https://ha-dev.local:8443`, mkcert CA steps, redirect URI `…/auth/external/callback` registered at CKW | real OAuth2 login succeeds on the dev instance | #1, #37 | L | AI+H |
-| #42 | Smoke script | `scripts/dev/smoke.sh`: poll `/manifest.json`, assert `ckw` in `components`, scan `podman logs` for `ERROR`/`Traceback`, call `homeassistant.update_entity` on the CKW sensors with the token, exit non-zero on any failure | exits 0 healthy / non-zero broken; used as gate G-6 | #39, #40 | M | AI |
+| #42 | Smoke script | `mise run dev-smoke` (G-6): `scripts/dev/smoke.sh` polls `/manifest.json`, asserts `ckw` in `components`, scans `podman logs` for `ERROR`/`Traceback`, calls `homeassistant.update_entity` on the CKW sensors with the token, exits non-zero on failure | exits 0 healthy / non-zero broken | #39, #40 | M | AI |
 | #43 | Statistics reset harness | `scripts/dev/reset-db.sh`: stop unit, delete `config/home-assistant_v2.db*`, start, wait ready | three consecutive reset→backfill runs end with identical sums (tests #85/#86) | #37, #85 | S | AI |
-| #44 | Podman runbook | `scripts/dev/README.md`: SELinux `:Z`, rootless ports, `--userns=keep-id`, `podman logs -f ha-dev`, `podman exec -it ha-dev bash`, teardown, volume cleanup | a fresh machine follows it without improvising | #37 | S | AI |
-| #45 | Runbook wired into docs | "Test locally" section in `AGENTS.md` and `CONTRIBUTING.md` (up → smoke → fixture/real switch → reset → teardown); referenced from gate G-6 | commands copy-pasteable, linked from both files | #42, #20 | S | AI |
+| #44 | Podman runbook | `scripts/dev/README.md`: rootless prerequisites (subuid/subgid, `net.ipv4.ip_unprivileged_port_start`), SELinux `:Z`, `--userns=keep-id`, `mise run dev-logs`, `mise run dev-shell`, teardown, volume cleanup | a fresh machine follows it without improvising | #36 | S | AI |
+| #45 | Runbook wired into docs | "Test locally" section in `AGENTS.md` and `CONTRIBUTING.md` using only mise tasks (`mise run setup`, `dev-up`, `dev-smoke`, `dev-reset`); gate G-6 references `mise run dev-smoke` | commands copy-pasteable, linked from both files | #42, #20 | S | AI |
 
 **Phase acceptance:** from a clean checkout, `scripts/dev/smoke.sh` green in fixture mode within 5 minutes;
 real-mode login verified on the dev instance; backfill idempotency reproducible via `reset-db.sh`.
@@ -282,7 +353,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 |---|---|---|---|---|---|
 | #91 | `docs/ckw-openenergy-api.md` | Transcribed API reference: 3 endpoints, all fields, aggregations, rate-limit headers, auth, "data until yesterday", error codes, CKW support contact | every field traceable to the Anypoint spec | #5 | AI |
 | #92 | `docs/architecture.md` | Module map, data flow (OAuth → coordinator → totals → sensors/statistics), meter↔device mapping, why sensors + import | explains each module in ≤ 1 paragraph | #67 | AI |
-| #93 | ADRs | `0001-auth-oauth2-vs-pasted-code.md`, `0002-statistics-strategy.md`, `0003-meter-device-mapping.md`, `0004-poll-interval-and-data-lag.md` | 4 files, each with context/decision/consequences | #92 | AI |
+| #93 | ADRs | `0000-template.md` + `README.md` index + `0001-auth-oauth2-vs-pasted-code.md`, `0002-statistics-strategy.md`, `0003-meter-device-mapping.md`, `0004-poll-interval-and-data-lag.md` (format and lifecycle per "ADR process") | template + 4 ADRs, every one with real alternatives and a status field | #92 | AI |
 | #94 | `README.md` | High-level description, prerequisites (CKW client + redirect registration), step-by-step install (HACS + manual), config fields table, entities table, data lag (1 day), removal instructions, troubleshooting (401/403/429), consent/Art. 8a–8d StromVV note, debug log instructions | a stranger installs it without asking | #54, #76 | AI+H |
 | #95 | `info.md` | Short store blurb for HACS/Marketplace | renders in HACS pane | #94 | AI |
 | #96 | Translation review | Native German pass over `translations/de.json` + `strings.json` | no machine-German left | #15 | H |
@@ -321,12 +392,12 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 
 | Gate | Command |
 |---|---|
-| G-1 | `ruff check . && ruff format --check .` |
-| G-2 | `pytest -q` |
-| G-3 | `pre-commit run --all-files` |
+| G-1 | `mise run lint` |
+| G-2 | `mise run test` |
+| G-3 | `mise run hooks` |
 | G-4 | hassfest (CI job or local docker `home-assistant/actions/hassfest`) |
 | G-5 | `hacs/action` (CI) |
-| G-6 | Dev instance: `scripts/dev/smoke.sh` green (fixture mode), `podman logs` free of tracebacks |
+| G-6 | `mise run dev-smoke` (fixture mode), no tracebacks in `mise run dev-logs` |
 | G-7 | PR ≤ ~400 changed lines; behaviour change ⇒ test added |
 
 ## Hard rules (humans and agents)
@@ -361,7 +432,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | Phase | Tasks | Done |
 |---|---|---|
 | 0 External | 8 | 0 |
-| 1 Setup & governance | 28 | 4 |
+| 1 Setup & governance | 29 | 4 |
 | 1b Podman dev instance | 10 | 0 |
 | 2 Auth | 12 | 0 |
 | 3 API | 9 | 0 |
@@ -371,7 +442,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | 7 Docs | 10 | 0 |
 | 8 Quality/Release | 10 | 0 |
 | 9 Optional | 6 | 0 |
-| **Total** | **117** | **4** |
+| **Total** | **118** | **4** |
 
 ## Critical path
 
@@ -379,4 +450,4 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 
 Everything else can run in parallel; #9–#28 and #91–#93 are safe to do before CKW replies.
 
-Must-have path to v0.1.0: **111 tasks** (all phases except Phase 9).
+Must-have path to v0.1.0: **112 tasks** (all phases except Phase 9).
