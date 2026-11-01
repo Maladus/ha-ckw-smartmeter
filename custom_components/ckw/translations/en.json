@@ -1,0 +1,49 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to CKW",
+        "description": "Sign in with your CKW account to read your smart meter data. Nothing more recent than yesterday is available."
+      },
+      "meter": {
+        "title": "Choose a meter",
+        "description": "Pick the Zählpunkt (delivery point) this entry should read.",
+        "data": {
+          "meter": "Delivery point"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the CKW API. Check your connection and try again.",
+      "invalid_auth": "CKW rejected the sign-in. Please sign in again."
+    },
+    "abort": {
+      "already_configured": "This CKW account is already configured.",
+      "no_meters": "No smart meter was found for this CKW account."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_total": {
+        "name": "Consumption total"
+      },
+      "consumption_yesterday": {
+        "name": "Consumption yesterday"
+      },
+      "cost_total": {
+        "name": "Cost total"
+      },
+      "last_update": {
+        "name": "Last update"
+      }
+    }
+  },
+  "exceptions": {
+    "rate_limited": {
+      "message": "CKW is rate limiting requests. Try again after {reset_time}."
+    },
+    "api_unavailable": {
+      "message": "The CKW API is currently unavailable."
+    }
+  }
+}

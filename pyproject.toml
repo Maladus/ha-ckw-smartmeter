@@ -1,0 +1,39 @@
+# Tool configuration for a HACS repository: no build backend, no project
+# metadata, only the gates. The Home Assistant integration itself lives in
+# custom_components/ckw/ and is installed by HACS, not by pip.
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["custom_components"]
+
+[tool.ruff.lint.per-file-ignores]
+# The mock tests put the repository root on sys.path before importing the mock
+# package, so the import after that statement is deliberate (#144).
+"tests/test_mock_api.py" = ["E402"]
+
+[tool.ruff.format]
+# Files written before this 100-column config existed keep their 88-column
+# formatting. They are linted like everything else; reformatting them is a
+# separate, formatting-only change and must not ride along with a feature.
+exclude = [
+    "scripts/dev/mock/app.py",
+    "scripts/dev/mock/generate_fixtures.py",
+    "scripts/dev/mock/keycloak.py",
+    "tests/test_mock_api.py",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+files = ["custom_components/ckw"]

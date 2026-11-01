@@ -1,3 +1,8 @@
 # Installed by CI (.github/workflows/ci.yml) and by `mise run setup` (issue #117).
 pytest>=8
 aiohttp>=3.9
+# Provides Home Assistant and its test harness; it pins the HA version, so keep it
+# in step with the Home Assistant release CI runs against. No upper bound on
+# purpose: the next release must be allowed to install.
+pytest-homeassistant-custom-component>=0.13
+mypy>=1.11

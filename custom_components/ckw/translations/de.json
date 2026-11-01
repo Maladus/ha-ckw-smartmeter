@@ -1,0 +1,49 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mit CKW verbinden",
+        "description": "Melden Sie sich mit Ihrem CKW-Konto an, um Ihre Smart-Meter-Daten zu lesen. Neuere Werte als der von gestern sind nicht verfügbar."
+      },
+      "meter": {
+        "title": "Zählpunkt auswählen",
+        "description": "Wählen Sie den Zählpunkt, den dieser Eintrag lesen soll.",
+        "data": {
+          "meter": "Zählpunkt"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Die CKW-API ist nicht erreichbar. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "invalid_auth": "CKW hat die Anmeldung abgelehnt. Bitte melden Sie sich erneut an."
+    },
+    "abort": {
+      "already_configured": "Dieses CKW-Konto ist bereits eingerichtet.",
+      "no_meters": "Für dieses CKW-Konto wurde kein Smart Meter gefunden."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "consumption_total": {
+        "name": "Verbrauch gesamt"
+      },
+      "consumption_yesterday": {
+        "name": "Verbrauch gestern"
+      },
+      "cost_total": {
+        "name": "Kosten gesamt"
+      },
+      "last_update": {
+        "name": "Letzte Aktualisierung"
+      }
+    }
+  },
+  "exceptions": {
+    "rate_limited": {
+      "message": "CKW begrenzt die Anfragen. Bitte versuchen Sie es nach {reset_time} erneut."
+    },
+    "api_unavailable": {
+      "message": "Die CKW-API ist derzeit nicht verfügbar."
+    }
+  }
+}

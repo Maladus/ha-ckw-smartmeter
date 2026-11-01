@@ -74,8 +74,17 @@ jobs:
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             echo "No Python tests yet, nothing to run."
           fi
+      - name: Detect integration package
+        id: integration
+        run: |
+          if [ -d custom_components/ckw ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "No custom_components/ckw yet, nothing to type-check."
+          fi
       - name: Install test dependencies
-        if: steps.detect.outputs.enabled == 'true'
+        if: steps.detect.outputs.enabled == 'true' || steps.integration.outputs.enabled == 'true'
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements_test.txt ]; then
@@ -86,6 +95,9 @@ jobs:
       - name: Run pytest
         if: steps.detect.outputs.enabled == 'true'
         run: python -m pytest -q
+      - name: Type-check the integration
+        if: steps.integration.outputs.enabled == 'true'
+        run: python -m mypy custom_components/ckw
 
   hassfest:
     name: Hassfest
