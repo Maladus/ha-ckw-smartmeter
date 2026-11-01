@@ -1,3 +1,5 @@
+# Documentation
+
 This page answers: which document do I need?
 
 Diátaxis sorts documentation by the need behind the question: a **tutorial** teaches by doing, a
@@ -32,7 +34,7 @@ One goal per page, steps only, no theory.
 | `how-to/backfill-history.md` (planned, #123) | Re-running the history import for a Zählpunkt that came back with gaps. | Users |
 | `how-to/debug-connection.md` (planned, #99) | Reading the log, the diagnostics export and the error codes when polling fails. | Users, contributors |
 | `how-to/work-with-ai-agents.md` (planned, #98) | Driving this repository with an AI agent under the contract in `AGENTS.md`. | Contributors, agents |
-| `how-to/commits.md` (planned, #143) | Writing commit messages and splitting a change into reviewable commits. | Contributors |
+| [commits.md](how-to/commits.md) | Commit types, the agent co-author trailer and how to find commits by model. | Contributors |
 
 ## Reference
 

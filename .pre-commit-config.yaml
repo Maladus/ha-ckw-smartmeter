@@ -7,7 +7,7 @@
 # CI (.github/workflows/tests.yaml) - local hooks can be bypassed with
 # `git commit --no-verify`, CI cannot.
 
-default_install_hook_types: [pre-commit, pre-push]
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
 default_stages: [pre-commit]
 
 repos:
@@ -65,3 +65,13 @@ repos:
         language: system
         types_or: [python, pyi]
         require_serial: true
+
+      # Agent co-author trailer (#143). commit-msg stage only: the hook rewrites
+      # the message file it is handed, so it must never run in the pre-commit
+      # stage, where the filenames are staged files instead. Silent unless both
+      # PI_PROVIDER and PI_MODEL are set in the environment.
+      - id: co-author-trailer
+        name: co-author trailer (agent commits)
+        entry: python3 scripts/hooks/co_author.py
+        language: system
+        stages: [commit-msg]

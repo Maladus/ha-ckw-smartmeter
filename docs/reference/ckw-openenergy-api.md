@@ -211,8 +211,8 @@ The numeric limit and the window length are not stated in the transcribed contra
 
 ## Support
 
-- Contact: **openenergy@ckw.ch**
-- API access is requested through the form at **https://www.ckw.ch/openenergy** — free of charge, and
+- Contact: **<openenergy@ckw.ch>**
+- API access is requested through the form at **<https://www.ckw.ch/openenergy>** — free of charge, and
   required by Art. 8a–8d StromVV.
 - A `403` because the client is missing an API audience or a role is a registration problem, not a code
   problem: escalate it to the address above, quoting the client id.

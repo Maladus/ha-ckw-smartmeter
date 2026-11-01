@@ -1,0 +1,10 @@
+# Runner settings for markdownlint-cli2. The lint rules themselves live in
+# .markdownlint.yaml - that is the file CI detects and the one PLAN.md row #127
+# names - this file only scopes what the "**/*.md" glob picks up.
+config: .markdownlint.yaml
+
+# Agent prompt dumps in .workmux/ are per-worktree scaffolding (excluded through
+# .git/info/exclude, never checked out in CI). Linting them would turn a local
+# `mise run docs` red for files the repository does not contain.
+ignores:
+  - .workmux/

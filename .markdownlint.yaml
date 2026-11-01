@@ -1,0 +1,55 @@
+# markdownlint-cli2 configuration for every *.md in this repository.
+#
+# All default rules are on; the entries below are the only deliberate
+# relaxations, each with the reason it exists. Nothing here weakens a rule that
+# catches a real documentation bug (broken structure, ambiguous links, missing
+# code-fence language) - those stay on.
+
+# MD013 line-length: off. Reference tables (API fields, quality-scale rules) and
+# the link-heavy "Related" blocks are long by nature; hard-wrapping them makes
+# the tables unreadable and every reflow a diff on lines that did not change.
+MD013: false
+
+# MD024 no-duplicate-heading: siblings only. "Example", "Steps" or "Options"
+# legitimately repeat under different parents in how-tos and ADRs; only two
+# identical headings under the same parent stay an error.
+MD024:
+  siblings_only: true
+
+# MD033 inline HTML: allow only the tags Home Assistant docs accept and Markdown
+# cannot express - <br> for a line break inside a table cell, and
+# <details>/<summary> for a collapsible block. Everything else is still refused.
+MD033:
+  allowed_elements:
+    - br
+    - details
+    - summary
+
+# MD041 first-line-heading: stays on. Our pages open with an H1 and the
+# "This page answers:" sentence right below it (PLAN.md documentation rule 7),
+# never with a bare sentence, so a document that starts without a heading is a
+# bug that this rule should catch.
+MD041: true
+
+# MD036 no-emphasis-as-heading: off. Bold lead-in lines are a deliberate device
+# here - "**Positive** / **Negative** / **Follow-ups**" in every ADR and
+# "**In scope** / **Success criteria**" in PLAN.md. Turning them into headings
+# would change the outline of documents that are deliberately append-only.
+MD036: false
+
+# MD056 table-column-count: off. PLAN.md's Phase 7 and Phase 8 tables carry a
+# Size column on the rows that were written with an estimate and omit it on the
+# rest; reconciling them is an edit to the plan, not to the doc tooling. Every
+# other table in the repository is checked by the markdown renderer anyway.
+MD056: false
+
+# MD060 table-column-style: off. Table pipe padding is not a correctness
+# property: the plan's dense matrices use compact `|---|` pipes while the
+# Diataxis pages use padded `| --- |` ones, and forcing one style rewrites
+# hundreds of lines of pure whitespace. MD055 still catches a dropped pipe.
+MD060: false
+
+# MD040 fenced-code-language: stays on. Mermaid diagrams are written as
+# ```mermaid fences, so they carry an info string like any other block and no
+# Mermaid content is inspected by these rules.
+MD040: true

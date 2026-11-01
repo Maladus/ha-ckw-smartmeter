@@ -1,6 +1,6 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
-Repository: https://github.com/Maladus/ha-ckw-smartmeter (`custom_components/ckw`) — private until #110
+Repository: <https://github.com/Maladus/ha-ckw-smartmeter> (`custom_components/ckw`) — private until #110
 Issues: #1–#140, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
@@ -142,7 +142,7 @@ and treat `quality_scale.yaml` as our own audit checklist until then.
 
 **Format** (MADR-mini, one page max):
 
-```
+```text
 # NNNN — Title
 - Status: proposed | accepted | deprecated | superseded by NNNN
 - Date: YYYY-MM-DD
@@ -174,11 +174,11 @@ Diátaxis sorts by *user need*, ADRs sort by *time*. They intersect in one place
 
 | Concern | Where it goes | Never |
 |---|---|---|
-Current behaviour/spec (what is true now) | `docs/reference/`, `docs/how-to/` | an ADR — it would rot on the next change |
-Why the current shape exists, what was rejected | ADR in `docs/explanation/decisions/` | `architecture.md` prose (history would be lost) |
-The system as it is today, in one narrative | `docs/explanation/architecture.md` | a second copy of ADR contents |
-Chronological log of decisions | `decisions/README.md` index (no, title, date, status) | `CHANGELOG.md` (that's releases, not reasoning) |
-Work to be done | the issue with the same number | an ADR |
+| Current behaviour/spec (what is true now) | `docs/reference/`, `docs/how-to/` | an ADR — it would rot on the next change |
+| Why the current shape exists, what was rejected | ADR in `docs/explanation/decisions/` | `architecture.md` prose (history would be lost) |
+| The system as it is today, in one narrative | `docs/explanation/architecture.md` | a second copy of ADR contents |
+| Chronological log of decisions | `decisions/README.md` index (no, title, date, status) | `CHANGELOG.md` (that's releases, not reasoning) |
+| Work to be done | the issue with the same number | an ADR |
 
 **Linking direction:** reference/how-to point *up* to explanation when the reason matters
 (`→ ADR-0002`); explanation/architecture points *out* to reference for current details; tutorials and
@@ -221,7 +221,7 @@ holds status, assignment and discussion.
   milestone) and fails CI when they disagree. The plan stays authoritative for scope.
 
 Bootstrap status: issues #1–#116 created, milestones 1–13 created, labels created.
-#24 turns this one-off into the re-runnable script.
+Issue #24 turns this one-off into the re-runnable script.
 
 ## Toolchain and tasks (mise)
 
@@ -280,7 +280,7 @@ them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritte
 | #2 | Request `offline_access` scope | Same mail; ask whether the client scope can be enabled so refresh tokens survive SSO idle timeout | answer in writing | #1 | H |
 | #3 | Ask about device authorization grant | Optional, enables headless login without SMS | answer in writing | #1 | H |
 | #4 | Ask about MFA in browser login | Is OTP enforced on the web login page or only in the API login flow? | answer in writing | — | H |
-| #5 | Verify API access with real token | Login in browser, exchange code with PKCE, `GET /api/v1/smartmeter/customer` → expect 200 (403/401 = audience/role problem → escalate to openenergy@ckw.ch) | 200 with customer + ≥1 meter | #1 | H |
+| #5 | Verify API access with real token | Login in browser, exchange code with PKCE, `GET /api/v1/smartmeter/customer` → expect 200 (403/401 = audience/role problem → escalate to <openenergy@ckw.ch>) | 200 with customer + ≥1 meter | #1 | H |
 | #6 | Capture redacted fixtures | Save customer, `…/days`, `…/months` responses; redact `deliverypointnumber`, customer ids, addresses | 3 JSON files in `tests/fixtures/` | #5 | AI+H |
 | #7 | Confirm meter topology | Number of delivery points, `type`/`fuel` values, whether PV feed-in is a separate delivery point | documented in `docs/ckw-openenergy-api.md` | #5 | H |
 | #8 | Confirm rate limits in practice | Read `x-ratelimit-limit` / `-remaining` / `-reset` values; note window length | documented | #5 | AI+H |
@@ -478,8 +478,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 ## Quality-scale target: Gold
 
 54 rules total (Bronze 20, Silver 10, Gold 21, Platinum 3). Tier is reached only when every rule of
-that tier **and all lower tiers** is `done` or `exempt` with a reason. Tracking: #101 (`quality_scale.yaml`),
-#102 (Bronze audit), #137 (Silver + Gold audit).
+that tier **and all lower tiers** is `done` or `exempt` with a reason. Tracking: #101 (`quality_scale.yaml`), #102 (Bronze audit), #137 (Silver + Gold audit).
 
 | Tier | Status in plan | Rules needing new work |
 |---|---|---|
@@ -506,7 +505,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | #107 | Fresh-instance smoke test | Second HA instance (or clean docker volume): HACS custom repo install → setup → dashboard | works end to end | all above | H |
 | #108 | Marketplace submission | PR to `hacs/default` (integration list), expect months of review | PR opened | #107 | H |
 | #109 | Release | `git tag v0.1.0`, notes generated, `hacs.json` version alignment | HACS shows the release | #107 | H |
-| #110 | Publish the repo | Flip `gh repo edit --visibility public --accept-visibility-change-consequences` **only when**: README complete, no secrets in history (`git log -p | grep -i token`), fixtures redacted, CI green, LICENSE detected. Then re-check topics + description, run `#107` as a stranger would | repo public, HACS custom-repo install works from a clean instance | #101, #94 | S | H |
+| #110 | Publish the repo | Flip `gh repo edit --visibility public --accept-visibility-change-consequences` **only when**: README complete, no secrets in history (`git log -p \| grep -i token`), fixtures redacted, CI green, LICENSE detected. Then re-check topics + description, run `#107` as a stranger would | repo public, HACS custom-repo install works from a clean instance | #101, #94 | S | H |
 | #130 | Exception translations (Gold) | Every user-facing error from `strings.json` `exceptions:`, raised as `HomeAssistantError` with `translation_domain`/`translation_key`: invalid auth, rate limit (with reset time), no meters, unsupported meter, API unavailable; nothing raw reaches the UI | every failure path translated de/en, tests assert keys not strings | #63, #15 | S | AI |
 | #131 | Icon translations (Gold) | `icons.json` keyed by `translation_key`; no `_attr_icon` in Python | hassfest icons check green, zero icons in code | #76 | S | AI |
 | #132 | Entity disabled by default (Gold) | Rare entities registered with `entity_registry_enabled_default=False`: HT/NT detail, quality flags, raw timestamps — instead of an options toggle | fresh setup enables exactly the 4 core entities per meter | #80 | S | AI |
@@ -555,7 +554,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | Risk | Impact | Mitigation | Owner |
 |---|---|---|---|
 | CKW does not register redirect URIs | M1 blocked | fallback flows #56/#57 ready to build | H |
-| Client missing API audience/roles → 403 | M2 blocked | #5 catches it early; escalate to openenergy@ckw.ch | H |
+| Client missing API audience/roles → 403 | M2 blocked | #5 catches it early; escalate to <openenergy@ckw.ch> | H |
 | `offline_access` refused (refresh dies after 6 h) | daily reauth pain | 2 h poll keeps the chain alive; documented caveat | AI+H |
 | API range limits unknown | backfill fails | chunking #64 with conservative chunk size + retry/backoff | AI |
 | Data quality flags (`anzahl_linien_*` > 1) | wrong sums | #62 exposes flags, coordinator logs them, statistics skip flagged intervals | AI |
@@ -586,8 +585,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 
 ## Critical path
 
-`#23 (goal) → #27 (docs map) → #93 (ADRs) → #91/#92/#125 (reference, architecture, data model) →
-#1 → #46–#48 → #61 → #76 → #87 → #101 → #107 → #110`
+`#23 (goal) → #27 (docs map) → #93 (ADRs) → #91/#92/#125 (reference, architecture, data model) → #1 → #46–#48 → #61 → #76 → #87 → #101 → #107 → #110`
 
 Slices 0 and 1 need nothing from CKW and nothing from code — that is where the project starts.
 Gold adds `#130–#137` on top of the Bronze/Silver path; it does not change the order, only the finish line.
