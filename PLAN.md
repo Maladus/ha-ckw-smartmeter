@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: https://github.com/Maladus/ha-ckw-smartmeter (`custom_components/ckw`) — private until #110
-Issues: #1–#129, one per task row below (✅ = closed / done)
+Issues: #1–#137, one per task row below (✅ = closed / done)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -10,7 +10,9 @@ statistics (Energy dashboard).
 - API: `https://e-customer-smartmeter.de-c1.eu1.cloudhub.io/api/v1/…`
 - Auth: CKW Single Sign-On (Keycloak) `https://id.ckw.ch/realms/CKW-prod`, public client `oe-wigger`
 - Data: daily, available until yesterday, per meter, HT/NT quantities in kWh + amounts in CHF
-- Target: HACS/Marketplace installable, HA quality scale **Bronze** at v0.1.0, **Silver** at v0.3.0
+- Target: HACS/Marketplace installable, HA quality scale **Gold** — Bronze at v0.1.0, Silver at v0.3.0,
+  Gold (all 21 rules, 54 rules total) at v1.0.0. Platinum is out of scope (it grades the Python library,
+  not the integration).
 
 ## Project goal
 
@@ -253,6 +255,23 @@ CI or AGENTS.md. Tracked as #117.
 | `mise run docs` | `markdownlint-cli2` + `scripts/docs-check.sh` | doc lint, quadrant placement, link check (#127) |
 | `mise run issues` | `scripts/sync-issues.sh` | plan/issue drift gate (#32) |
 
+## Implementation order
+
+Documentation and the goal come first — they define scope, and every later task is checked against
+them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritten.
+
+| Slice | Issues | Exit criterion |
+|---|---|---|
+| **0 Foundations** | #23 goal · #24 roadmap · #27 docs map · #93 ADR template + 0001–0005 · #126 glossary · #129 conventions · #91 API reference · #92 architecture · #125 data model · #94 README · #127 doc lint | `docs/` exists with all four quadrants, `GOAL.md` states scope/non-goals, `mise run docs` green — **no integration code yet** |
+| **1 Contract** | #1–#4, #91, #119, #120 | CKW client verified against the real API; tutorial path written down |
+| **2 Skeleton** | #10–#35, #117 | component loads in the dev instance, CI + gates green |
+| **3 Auth** | #46–#48, #51–#53 | browser login works, token refresh survives restart |
+| **4 Data** | #58–#66, #70–#80 | kWh + CHF entities update from the real API |
+| **5 History** | #85–#90 | 2-year backfill, idempotent across restarts |
+| **6 Dev instance** | #36–#45 | `mise run dev-up` + `dev-smoke` work for contributors |
+| **7 Silver/Gold** | #101–#137 | all 54 quality-scale rules accounted for (done/exempt) |
+| **8 Release** | #107–#110, #116 | tagged release, repo public, (optionally) core submission |
+
 ## Phase 0 — External prerequisites (blocking)
 
 | ID | Task | Details | Done when | Deps | Owner |
@@ -437,7 +456,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | #91 | `docs/reference/ckw-openenergy-api.md` | Transcribed API reference: 3 endpoints, all fields, aggregations, rate-limit headers, auth, "data until yesterday", error codes, CKW support contact. Lookup only, no procedures | every field traceable to the Anypoint spec | #1 | AI |
 | #92 | `docs/explanation/architecture.md` | arc42 chapters 3/4/5/6 in one document: context diagram, building-block table (each block linking the ADRs that shaped it), one runtime sequence (OAuth → coordinator → totals → sensors/statistics); carries the "arc42 chapter index → Diátaxis" table as appendix. Omitted on purpose: formal view templates and §7 deployment (Podman runbook covers it) | explains each module in <= 1 paragraph; a newcomer reads it in 10 minutes; every block has an ADR link | #46 | AI |
 | #93 | `docs/explanation/decisions/` (ADRs) | `0000-template.md` + `README.md` index + `0001-auth-oauth2-vs-pasted-code.md`, `0002-statistics-strategy.md`, `0003-meter-device-mapping.md`, `0004-poll-interval-and-data-lag.md`, `0005-doc-structure-diataxis-arc42-lite.md` (format and lifecycle per "ADR process") | template + 4 ADRs, every one with real alternatives and a status field | #92 | AI |
-| #94 | `README.md` | Entry point, not a manual: one-paragraph pitch, prerequisites checklist, 5-line quickstart linking `docs/tutorial/getting-started.md`, feature/entity summary table, data lag, consent/Art. 8a–8d StromVV note, links into all four quadrants, install/removal pointer | a stranger knows within 30 seconds whether it fits, and where to start | #102, #76 | AI+H |
+| #94 | `README.md` | Entry point, not a manual: pitch, prerequisites checklist, 5-line quickstart linking `docs/tutorial/getting-started.md`, feature/entity summary, data lag, consent/Art. 8a–8d StromVV note, links into all four quadrants. Drafted in slice 0 from `GOAL.md`, completed once entities exist | a stranger knows within 30 seconds whether it fits and where to start | #23, #27 | AI+H |
 | #95 | `info.md` | Short store blurb for HACS/Marketplace (Markdown), mirrors the README intro | renders in HACS pane | #94 | AI |
 | #96 | Translation review | Native German pass over `translations/de.json` + `strings.json` | no machine-German left | #15 | H |
 | #97 | `CHANGELOG.md` + releases | Keep-a-changelog format, `v0.1.0` release notes, optional release-drafter workflow | release published | milestones | AI |
@@ -455,6 +474,24 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | #127 | markdownlint + `mise run docs` | `.markdownlint.yaml`, `markdownlint-cli2` pinned in `mise.toml`, `scripts/docs-check.sh`: every file under `docs/` sits in exactly one quadrant folder, is linked from `docs/README.md`, and has the "This page answers:" opening plus a `Related` block; relative links resolve | CI job fails on a misplaced doc, a broken relative link or a lint violation | #117, #27 | M | AI |
 | #128 | `docs/reference/examples.md` | Gold `docs-examples`: 3-5 copy-paste automations/blueprints — cost alert (`numerical_state` on month cost), daily consumption notification from statistics, Energy-dashboard card snippet, and an example of using HT/NT split for load shifting | every example renders and works as written; each states its entity ids | #124 | S | AI |
 | #129 | `docs/reference/conventions.md` | arc42 §8 as reference: exception mapping (`CkwAuthError` → `ConfigEntryAuthFailed`, 429 → `UpdateFailed`), redaction rules, Europe/Zurich discipline, append-only unique-id scheme, logging levels per failure class, naming (domain `ckw`, module layout) | every crosscutting rule stated once, testable, and cited from `architecture.md` and `AGENTS.md` | #92, #63 | S | AI |
+
+## Quality-scale target: Gold
+
+54 rules total (Bronze 20, Silver 10, Gold 21, Platinum 3). Tier is reached only when every rule of
+that tier **and all lower tiers** is `done` or `exempt` with a reason. Tracking: #101 (`quality_scale.yaml`),
+#102 (Bronze audit), #137 (Silver + Gold audit).
+
+| Tier | Status in plan | Rules needing new work |
+|---|---|---|
+| **Bronze** | covered by #10–#35, #101, #102 | — |
+| **Silver** | #48 (reauth), #57 (unload), #63 (exceptions), #99 (logs), #106 (doc params) | #135 `parallel-updates`, #136 `test-coverage` |
+| **Gold** | #92/#124/#125/#126/#128 (docs), #105 (diagnostics), #52 (reconfigure), #80 (device class/category) | #130 `exception-translations`, #131 `icon-translations`, #132 `entity-disabled-by-default`, #133 `repair-issues`, #134 `dynamic-devices` + `stale-devices` |
+| **Platinum** | out of scope | `strict-typing`, `inject-websession`, `async-dependency` — would require our own library instead of an in-tree client |
+
+Expected `exempt` (with reason, checked by #137): `discovery`, `discovery-update-info` (cloud service,
+nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `docs-actions`,
+`docs-triggers`, `docs-conditions` (no services, triggers or conditions), `dependency-transparency`
+(no third-party requirement — everything runs on HA and stdlib).
 
 ## Phase 8 — Quality scale, verification, release
 
@@ -534,14 +571,14 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | 5 Entities | 10 | 0 |
 | 6 Statistics | 7 | 0 |
 | 7 Docs | 21 | 0 |
-| 8 Quality/Release | 10 | 0 |
+| 8 Quality/Release | 18 | 0 |
 | 9 Optional | 6 | 0 |
-| **Total** | **129** | **4** |
+| **Total** | **137** | **4** |
 
 ## Critical path
 
-`#1 → #47 → #55 → #61/#68/#76 → #86 → #101 → #107 → #109`
+`#23 (goal) → #27 (docs map) → #93 (ADRs) → #91/#92/#125 (reference, architecture, data model) →
+#1 → #46–#48 → #61 → #76 → #87 → #101 → #107 → #110`
 
-Everything else can run in parallel; #9–#28 and #91–#93 are safe to do before CKW replies.
-
-Must-have path to v0.1.0: **123 tasks** (all phases except Phase 9).
+Slices 0 and 1 need nothing from CKW and nothing from code — that is where the project starts.
+Gold adds `#130–#137` on top of the Bronze/Silver path; it does not change the order, only the finish line.
