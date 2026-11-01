@@ -43,7 +43,10 @@ Both routes end in the same place, and the walkthrough with the expected result 
    it, the next step stops with "Add the CKW OAuth application credentials before setting up the
    integration."
 2. Go to Settings → Devices & services → **Add integration** → **CKW Smart Meter** and sign in at
-   CKW.
+   CKW. The sign-in returns through `https://my.home-assistant.io/redirect/oauth` when your instance
+   has the `my` integration, which nearly every installation does — Cloud or not, no Nabu Casa
+   subscription involved. Which URIs CKW must have registered, and what a mismatch looks like, is in
+   [reference: redirect URIs](../reference/oauth-redirects.md).
 
 You should now see one entry per CKW account, with one device per Zählpunkt under it.
 
@@ -94,6 +97,8 @@ dashboard.
   Energy dashboard.
 - [Request the CKW client](request-ckw-client.md) — the client id the "Add the integration"
   step requires.
+- [Redirect URIs](../reference/oauth-redirects.md) — the URIs the sign-in step needs registered,
+  with and without Home Assistant Cloud.
 - [Reauthenticate](reauthenticate.md) — what to do when a working install stops accepting the CKW
   login, without deleting anything.
 - [Backfill history](backfill-history.md) — re-importing the 730 days after a meter exchange or a

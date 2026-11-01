@@ -112,7 +112,8 @@ an authorize request for `oe-wigger` with Home Assistant's redirect URI returns 
 page with `"pageId": "error"` and `"summary": "Ungültiger Parameter: redirect_uri"`. No form was
 submitted. With a client that exists (see the token probes above), that message means the redirect URI
 is **not registered** for it as of 2026-11-01 — the prerequisite tracked as issue #1, not a property of
-the token chain. The realm itself accepts
+the token chain ([redirect URIs](../reference/oauth-redirects.md) has the rule and the fixes). The realm
+itself accepts
 `response_mode=query` (see the metadata above), so the open point in ADR-0006 is about what CKW's
 documented URL asks for, not about realm capability.
 

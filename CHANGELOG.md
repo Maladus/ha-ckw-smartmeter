@@ -8,6 +8,14 @@ user-visible behaviour in a minor release; every such change is listed.
 
 ## [Unreleased]
 
+### Added
+
+- [Reference: redirect URIs](docs/reference/oauth-redirects.md): the three values CKW can have registered
+  (My Home Assistant, own FQDN, localhost), what each one depends on, the exact-match rule with the German
+  `Ungültiger Parameter: redirect_uri` error, what the My Home Assistant page asks on first use, and the
+  troubleshooting for a mismatch. The My Home Assistant URL was previously described as a Cloud feature; it
+  works for any installation and needs no Nabu Casa subscription (#41).
+
 ## [0.1.0] - 2026-11-01
 
 The first release. It is exercised against the mock CKW API, the recorded fixtures and the local Home
