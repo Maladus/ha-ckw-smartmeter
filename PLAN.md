@@ -148,7 +148,7 @@ scripts/sync-issues.sh --check  # drift gate for CI
 | S-18 | `SECURITY.md` | Supported versions, private reporting (GitHub security advisories + mail), explicit scope: token handling, reauth flow, never paste tokens/codes into issues; what is redacted in diagnostics | GitHub shows Security policy, linked from README | S-1 | S | AI |
 | S-19 | `docs/README.md` | Doc index mirroring the "Document structure" table + the five documentation rules | every doc listed, no orphan docs | S-1 | S | AI |
 | S-20 | Repo settings & meta | Description, topics (`home-assistant`, `hacs`, `ckw`, `switzerland`, `energy`, `smart-meter`), `.github/CODEOWNERS`, branch protection on `main` with required CI checks, `SUPPORT.md` (where to ask vs. report). Labels/milestones are S-22/S-23 | CI required on `main`, topics set | S-10 | S | H |
-| S-21 | Create GitHub repo | `gh repo create ckw-homeassistant --public --description "…" --license MIT`, verify `gh auth status`, push `main`, enable Dependabot security alerts | repo exists, CI runs on first push | S-1 | S | H |
+| S-21 | Create GitHub repo | `gh repo create ckw-homeassistant --private` (stays private until Q-10), verify `gh auth status`, push `main`, enable Dependabot security alerts | repo exists, CI runs on first push | S-1 | S | H |
 | S-22 | Label taxonomy | `type: feat\|fix\|docs\|chore\|test\|infra`, `phase: 0…9`, `status: backlog\|ready\|blocked\|review`, `owner: ai\|human\|both`, `size: s\|m\|l`, `area: auth\|api\|stats\|entities\|ci\|docs` — created by `gh label create` loop in `scripts/gh-setup.sh` | 5 label families present, naming documented | S-21 | S | AI |
 | S-23 | Milestones per phase | `P0 External` … `P9 Optional` + release milestones `v0.1.0`, `v0.3.0` | `gh milestone list` shows all | S-21 | S | AI |
 | S-24 | Plan → issues sync | `scripts/sync-issues.sh`: parse the task tables in `PLAN.md`, create missing issues `[ID] title` with details + acceptance + DoD checklist, assign milestone/labels; `--check` fails on drift; `--board` regenerates the progress board | one issue per task, `--check` green | S-22, S-23 | L | AI |
@@ -310,6 +310,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | Q-7 | Fresh-instance smoke test | Second HA instance (or clean docker volume): HACS custom repo install → setup → dashboard | works end to end | all above | H |
 | Q-8 | Marketplace submission | PR to `hacs/default` (integration list), expect months of review | PR opened | Q-7 | H |
 | Q-9 | Release | `git tag v0.1.0`, notes generated, `hacs.json` version alignment | HACS shows the release | Q-7 | H |
+| Q-10 | Publish the repo | Flip `gh repo edit --visibility public --accept-visibility-change-consequences` **only when**: README complete, no secrets in history (`git log -p | grep -i token`), fixtures redacted, CI green, LICENSE detected. Then re-check topics + description, run `Q-7` as a stranger would | repo public, HACS custom-repo install works from a clean instance | Q-1, D-4 | S | H |
 
 ## Phase 9 — Later / optional
 
@@ -355,6 +356,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | Data quality flags (`anzahl_linien_*` > 1) | wrong sums | B-5 exposes flags, coordinator logs them, statistics skip flagged intervals | AI |
 | Meter exchange mid-history | broken cumulative sums | detect `supply_start_date` change → new statistic id + ADR | AI+H |
 | HACS → Marketplace rename (2026.11) | docs drift | repo structure unaffected; mention both names in README | AI |
+| Repo still private at release | HACS cannot install private repos (no token support) | Q-10 gates the flip: public before Q-7/Q-8, never during active auth/session debugging | H |
 | Plan and issues drift apart | unclear status, duplicated work | `sync-issues.sh --check` in CI (S-27), plan is authoritative | AI |
 | Issue noise (115 issues at once) | overwhelming for contributors | milestones + `status: ready` filter; only current phase is `ready`, everything else `status: backlog` | AI |
 | SELinux blocks bind mounts | dev HA boots empty, hours lost | always `:Z`, documented in DEV-9, checked by DEV-7 | AI |
@@ -373,9 +375,9 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | 5 Entities | 10 | 0 |
 | 6 Statistics | 7 | 0 |
 | 7 Docs | 10 | 0 |
-| 8 Quality/Release | 9 | 0 |
+| 8 Quality/Release | 10 | 0 |
 | 9 Optional | 6 | 0 |
-| **Total** | **115** | **0** |
+| **Total** | **116** | **0** |
 
 ## Critical path
 
@@ -383,4 +385,4 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 
 Everything else can run in parallel; S-1..S-20 and D-1..D-3 are safe to do before CKW replies.
 
-Must-have path to v0.1.0: **109 tasks** (all phases except Phase 9).
+Must-have path to v0.1.0: **110 tasks** (all phases except Phase 9).
