@@ -54,11 +54,12 @@ flowchart LR
 | `config_flow.py` | User step → OAuth2 → probe `/smartmeter/customer` → meter picker when the account has more than one delivery point; plus reauth, reconfigure and the unique-entry guard. | [0001](decisions/0001-auth-oauth2-vs-pasted-code.md), [0003](decisions/0003-meter-device-mapping.md) |
 | `__init__.py` | Creates API client and coordinator, builds `CkwRuntimeData` on `entry.runtime_data`, forwards the sensor platform, unloads cleanly. | [0002](decisions/0002-statistics-strategy.md), [0003](decisions/0003-meter-device-mapping.md) |
 | `coordinator.py` | The `DataUpdateCoordinator`: one 2 h interval from options, a 7-day rolling `days` window, cumulative per-meter totals, and API → `ConfigEntryAuthFailed` / `UpdateFailed` / `ConfigEntryNotReady`. | [0004](decisions/0004-poll-interval-and-data-lag.md), [0002](decisions/0002-statistics-strategy.md) |
+| `exceptions.py` | The `HomeAssistantError` subclasses a service raises to the user, each with `translation_domain=ckw` and a semantic `translation_key` from `strings.json` `exceptions:`; also the one mapping from `api.py` failures to those keys. | — |
 | `entity.py` + `sensor.py` | `CoordinatorEntity` base with `has_entity_name` and a per-meter `DeviceInfo` under a service device; one `SensorEntityDescription` per measurement (cumulative kWh, cumulative CHF, yesterday's kWh, HT/NT detail, last update). | [0003](decisions/0003-meter-device-mapping.md), [0002](decisions/0002-statistics-strategy.md) |
 | `statistics.py` | Idempotent import: recompute the cumulative sum for the window and overwrite instead of appending; 730-day backfill in chunks; skip unchanged windows. | [0002](decisions/0002-statistics-strategy.md), [0004](decisions/0004-poll-interval-and-data-lag.md) |
 | `diagnostics.py` | Downloadable redacted dump: masked delivery points, token-free entry data, coordinator state, quality flags. | [0003](decisions/0003-meter-device-mapping.md) |
 
-Layering: `const` → `api` → `coordinator` → `entity`/`sensor`/`statistics`; crosscutting rules live
+Layering: `const` → `api` → `exceptions`/`coordinator` → `entity`/`sensor`/`statistics`; crosscutting rules live
 once in [conventions](../reference/conventions.md).
 
 ## Runtime view (arc42 §6)

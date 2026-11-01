@@ -505,7 +505,9 @@ async def test_a_rate_limit_failure_names_the_reset_time(
 
     error = coordinator.last_exception
     assert isinstance(error, UpdateFailed)
-    assert "resets in 120 s" in str(error)
+    # The message is translated in the frontend; code and tests assert the key (#130).
+    assert error.translation_key == "rate_limited"
+    assert error.translation_placeholders == {"reset": "120 s"}
     assert error.retry_after == pytest.approx(120.0)
 
 
@@ -709,5 +711,5 @@ async def test_a_window_that_is_still_too_big_fails_the_poll(
     await coordinator.async_refresh()
 
     assert isinstance(coordinator.last_exception, UpdateFailed)
-    assert "even the 3-day window" in str(coordinator.last_exception)
+    assert coordinator.last_exception.translation_key == "range_too_big"
     assert len(fake.calls) == 2

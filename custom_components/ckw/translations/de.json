@@ -75,17 +75,29 @@
     }
   },
   "exceptions": {
-    "rate_limited": {
-      "message": "CKW begrenzt die Anfragen. Bitte versuchen Sie es nach {reset_time} erneut."
+    "invalid_auth": {
+      "message": "CKW hat die Anmeldung abgelehnt. Bitte melden Sie sich erneut an."
     },
-    "api_unavailable": {
-      "message": "Die CKW-API ist derzeit nicht verfügbar."
+    "rate_limited": {
+      "message": "CKW begrenzt die Anfragen. Bitte versuchen Sie es in {reset} erneut."
+    },
+    "rate_limited_no_reset": {
+      "message": "CKW begrenzt die Anfragen. Bitte versuchen Sie es später erneut."
+    },
+    "range_too_big": {
+      "message": "CKW hat den angefragten Zeitraum als zu gross abgelehnt."
+    },
+    "api_error": {
+      "message": "CKW hat mit einem unerwarteten Fehler geantwortet (HTTP-Status {status})."
     },
     "cannot_connect": {
       "message": "Die CKW-API ist nicht erreichbar. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
     },
-    "invalid_auth": {
-      "message": "CKW hat die Anmeldung abgelehnt. Bitte melden Sie sich erneut an."
+    "no_meters": {
+      "message": "Für dieses CKW-Konto wurde kein Strom-Smart-Meter gefunden."
+    },
+    "no_data": {
+      "message": "CKW hat für diesen Zeitraum keine importierbaren Daten geliefert."
     },
     "unknown": {
       "message": "Beim Zugriff auf CKW ist ein unerwarteter Fehler aufgetreten."

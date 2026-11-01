@@ -546,7 +546,7 @@ async def test_backfill_service_calls_the_backfill_with_the_requested_days(
     assert args[1] is entry
     assert args[2] is entry.runtime_data.coordinator
     assert args[3] == 45
-    assert kwargs == {"force": True}
+    assert kwargs == {"force": True, "raise_on_error": True}
 
 
 async def test_backfill_service_validates_its_fields(

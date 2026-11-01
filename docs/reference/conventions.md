@@ -19,7 +19,9 @@ translator. A raw status code or response body never reaches the UI.
 
 User-visible text comes from `strings.json` `exceptions:`, raised as `HomeAssistantError` with
 `translation_domain` and `translation_key`, de and en — never an English literal in code (#130); enforced
-by hassfest and by tests that assert keys rather than strings. Related: ADR-0001.
+by hassfest and by tests that assert keys rather than strings. `exceptions.py` holds those classes and the
+one mapping from an `api.py` failure to a key; a service raises them, while a poll hands the same key to
+`UpdateFailed`/`ConfigEntryAuthFailed`. Related: ADR-0001.
 
 ## Redaction
 
@@ -70,7 +72,7 @@ by hassfest and by tests that assert keys rather than strings. Related: ADR-0001
 | Rule | Enforced by |
 |---|---|
 | Domain is `ckw`, the component lives in `custom_components/ckw/` | `manifest.json`, hassfest |
-| Modules are exactly `__init__.py`, `const.py`, `api.py`, `coordinator.py`, `entity.py`, `sensor.py`, `statistics.py`, `config_flow.py`, `application_credentials.py`, `diagnostics.py` | hassfest, review only |
+| Modules are exactly `__init__.py`, `const.py`, `api.py`, `exceptions.py`, `coordinator.py`, `entity.py`, `sensor.py`, `statistics.py`, `config_flow.py`, `application_credentials.py`, `diagnostics.py` | hassfest, review only |
 | Every constant, URL and tunable lives in `const.py`; no magic string or number at the call site | review only |
 | `from __future__ import annotations` and full type annotations in every module, layering `const` → `api` → `coordinator` → `entity`/`sensor`/`statistics` with no upward import | `mypy --strict` (#138), review only |
 

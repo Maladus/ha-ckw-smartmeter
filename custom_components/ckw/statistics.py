@@ -37,6 +37,7 @@ from datetime import date, datetime, time, timedelta
 from functools import partial
 from typing import TYPE_CHECKING, Any, Final
 
+import aiohttp
 import voluptuous as vol
 from homeassistant.components.recorder.models import (
     StatisticData,
@@ -69,6 +70,7 @@ from .const import (
     DAYS_AGGREGATION,
     DOMAIN,
     MAX_BACKFILL_DAYS,
+    REAUTH_STATUSES,
     SERVICE_BACKFILL,
     STATISTIC_ENTITY_KEY,
     STATISTIC_SOURCE,
@@ -79,6 +81,13 @@ from .const import (
     TIME_ZONE,
     WINDOW_END_DAYS_BACK,
     Fuel,
+)
+from .exceptions import (
+    CkwAuthenticationError,
+    CkwConnectionFailedError,
+    CkwNoDataError,
+    CkwNoMetersError,
+    error_for_api_failure,
 )
 
 if TYPE_CHECKING:
@@ -382,6 +391,7 @@ async def async_backfill(
     days: int = BACKFILL_DAYS,
     *,
     force: bool = False,
+    raise_on_error: bool = False,
 ) -> None:
     """Import the last ``days`` local days of history, chunk by chunk.
 
@@ -394,6 +404,10 @@ async def async_backfill(
     The offset of the first day that is not imported yet is stored after every
     chunk, so a restart resumes instead of starting over. A revoked sign-in
     stops the job and starts reauthentication; it is never retried here (#86).
+
+    ``raise_on_error`` is for the ``ckw.backfill`` service: the user asked for
+    the import, so a failure is raised as a translated ``HomeAssistantError``
+    instead of only being logged and resumed at the next setup (#130).
     """
     state = entry.runtime_data.statistics_state
     if state.running:
@@ -438,7 +452,9 @@ async def async_backfill(
         while cursor <= end:
             chunk_start = cursor
             chunk_end = min(chunk_start + timedelta(days=BACKFILL_CHUNK_DAYS - 1), end)
-            rows = await _async_import_chunk(hass, entry, coordinator, chunk_start, chunk_end)
+            rows = await _async_import_chunk(
+                hass, entry, coordinator, chunk_start, chunk_end, raise_on_error=raise_on_error
+            )
             if rows is None:
                 # Abort-safe: keep the stored offset so the next setup, or the
                 # `ckw.backfill` service, continues here instead of restarting.
@@ -477,6 +493,10 @@ async def async_backfill(
                 await asyncio.sleep(BACKFILL_PAUSE_SECONDS)
 
         state.done = True
+        if raise_on_error and imported == 0:
+            # The service asked for history and could import none of it: saying
+            # so is more useful than reporting a silent success (#130).
+            raise CkwNoDataError()
         _LOGGER.info(
             "backfill: finished %d/%d chunk(s) for %s, %d row(s) imported",
             chunks_done,
@@ -511,18 +531,61 @@ async def _async_import_chunk(
     coordinator: CkwCoordinator,
     start: date,
     end: date,
+    *,
+    raise_on_error: bool = False,
 ) -> int | None:
-    """Fetch one chunk and import every delivery point in it, or ``None`` on failure."""
+    """Fetch one chunk and import every delivery point in it, or ``None`` on failure.
+
+    A background backfill logs a failure and keeps its offset (``None``). The
+    service sets ``raise_on_error``, so the same condition reaches the user as a
+    translated ``HomeAssistantError`` instead of only the log (#130).
+    """
     await coordinator.async_pace()
     try:
         series = await coordinator.client.async_get_measurements(
             start, end, aggregation=DAYS_AGGREGATION
         )
+    except aiohttp.ClientResponseError as err:
+        # The OAuth2 token refresh answers with a bare response error, not a
+        # ``CkwError``; a dead chain asks for a new sign-in like a 401 does.
+        if err.status in REAUTH_STATUSES:
+            _LOGGER.error(
+                "backfill: the CKW sign-in could not be refreshed (%s); "
+                "reauthentication is required",
+                err.status,
+            )
+            entry.async_start_reauth(hass)
+            if raise_on_error:
+                raise CkwAuthenticationError() from err
+            return None
+        _LOGGER.warning(
+            "backfill: the chunk %s..%s failed, the next run resumes at %s: %s",
+            start.isoformat(),
+            end.isoformat(),
+            start.isoformat(),
+            err,
+        )
+        if raise_on_error:
+            raise CkwConnectionFailedError() from err
+        return None
+    except (TimeoutError, aiohttp.ClientError) as err:
+        _LOGGER.warning(
+            "backfill: the chunk %s..%s failed, the next run resumes at %s: %s",
+            start.isoformat(),
+            end.isoformat(),
+            start.isoformat(),
+            err,
+        )
+        if raise_on_error:
+            raise CkwConnectionFailedError() from err
+        return None
     except CkwAuthError as err:
         # A dead sign-in is not retried: the backfill stops and the user is
         # asked to sign in again (ADR-0007).
         _LOGGER.error("backfill: CKW rejected the sign-in (%s); reauthentication is required", err)
         entry.async_start_reauth(hass)
+        if raise_on_error:
+            raise CkwAuthenticationError() from err
         return None
     except CkwError as err:
         _LOGGER.warning(
@@ -532,12 +595,16 @@ async def _async_import_chunk(
             start.isoformat(),
             err,
         )
+        if raise_on_error:
+            raise error_for_api_failure(err) from err
         return None
 
     meters = _electricity_series(coordinator, series)
     if not meters:
-        # An empty window is normal (the meter was not installed yet); the
-        # chunk counts as done and the job moves on.
+        # An empty window is normal (the meter was not installed yet), but data
+        # that belongs to no electricity meter is a condition the service names.
+        if raise_on_error and series and not _has_electricity_series(coordinator, series):
+            raise CkwNoMetersError()
         return 0
 
     imported = 0
@@ -570,6 +637,8 @@ async def _async_import_chunk(
             start.isoformat(),
             end.isoformat(),
         )
+        if raise_on_error:
+            raise CkwNoDataError()
         return None
     return imported
 
@@ -653,6 +722,7 @@ def async_register_backfill_service(hass: HomeAssistant) -> None:
                 entry.runtime_data.coordinator,
                 days,
                 force=force,
+                raise_on_error=True,
             )
 
     if hass.services.has_service(DOMAIN, SERVICE_BACKFILL):
@@ -881,6 +951,17 @@ def _electricity_series(
         and meter_series.measurements
         and _is_electricity(coordinator, meter_series.deliverypointnumber)
     ]
+
+
+def _has_electricity_series(
+    coordinator: CkwCoordinator, series: Sequence[CkwMeterMeasurements]
+) -> bool:
+    """Whether the response named at least one electricity delivery point."""
+    return any(
+        meter_series.deliverypointnumber
+        and _is_electricity(coordinator, meter_series.deliverypointnumber)
+        for meter_series in series
+    )
 
 
 def _local_day(measurement: CkwMeasurement) -> date | None:

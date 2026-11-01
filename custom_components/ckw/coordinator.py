@@ -21,10 +21,13 @@ What a poll does:
    (#149). The publication ``INFO`` line is written for the delivery point of
    this config entry only, so one entry sees exactly one line per published day.
 
-The exceptions of ``api.py`` are translated here and nowhere else: an expired
+The exceptions of ``api.py`` become Home Assistant exceptions here: an expired
 sign-in becomes ``ConfigEntryAuthFailed`` (reauth, no retry), a rate limit and
 every transport failure become ``UpdateFailed``, and a window CKW calls too big
-is retried once with half of it (``docs/reference/conventions.md`` "Error
+is retried once with half of it. Those ``UpdateFailed`` objects carry the same
+``translation_domain``/``translation_key`` pair the service errors in
+``exceptions.py`` use, so no English message is written here (#130); the
+mapping itself is documented in ``docs/reference/conventions.md`` ("Error
 mapping", #70).
 """
 
@@ -65,6 +68,7 @@ from .const import (
     CONF_POLL_HOURS,
     DAYS_AGGREGATION,
     DEFAULT_POLL_HOURS,
+    DOMAIN,
     MAX_POLL_HOURS,
     MIN_POLL_HOURS,
     MIN_WINDOW_DAYS,
@@ -74,20 +78,17 @@ from .const import (
     PUBLICATION_STALL_DAYS,
     QUARTER_HOUR_MINUTES,
     RATE_LIMIT_MIN_REMAINING,
+    REAUTH_STATUSES,
     ROLLING_WINDOW_DAYS,
     SECONDS_PER_HOUR,
     TIME_ZONE,
     WINDOW_END_DAYS_BACK,
 )
+from .exceptions import format_reset_seconds
 
 __all__ = ["CkwCoordinator", "CkwData", "MeterTotals", "QuarterHourReading"]
 
 _LOGGER: Final[logging.Logger] = logging.getLogger(__name__)
-
-#: HTTP statuses of a failed token refresh: the chain is dead, a human must sign
-#: in again (ADR-0007). ``api.py`` wraps API statuses, so a bare response error
-#: here comes from the OAuth2 token request.
-_REAUTH_STATUSES: Final[frozenset[int]] = frozenset({400, 401, 403})
 
 
 @dataclass(frozen=True, slots=True)
@@ -237,9 +238,7 @@ class CkwCoordinator(DataUpdateCoordinator[CkwData]):
         except CkwRangeTooBigError as err:
             days //= 2
             if days < MIN_WINDOW_DAYS:
-                raise UpdateFailed(
-                    f"CKW rejected even the shortest window {start:%Y%m%d} as too big: {err}"
-                ) from err
+                raise _range_too_big_failure() from err
             _LOGGER.warning(
                 "CKW rejected the %d-day window as too big, retrying once with the last %d days",
                 ROLLING_WINDOW_DAYS,
@@ -249,9 +248,7 @@ class CkwCoordinator(DataUpdateCoordinator[CkwData]):
             try:
                 series = await self._async_fetch(start, end)
             except CkwRangeTooBigError as retry_err:
-                raise UpdateFailed(
-                    f"CKW rejected even the {days}-day window as too big: {retry_err}"
-                ) from retry_err
+                raise _range_too_big_failure() from retry_err
 
         new_counts, corrected, newest = self._merge(series)
         self._new_intervals = new_counts
@@ -310,20 +307,20 @@ class CkwCoordinator(DataUpdateCoordinator[CkwData]):
             # The caller halves the window once; it is not a failure by itself.
             raise
         except CkwApiError as err:
-            raise UpdateFailed(f"CKW answered {err.status}: {err}") from err
+            raise _api_failure(err) from err
         except CkwConnectionError as err:
-            raise UpdateFailed(f"cannot reach the CKW API: {err}") from err
+            raise _connection_failure() from err
         except CkwError as err:
-            raise UpdateFailed(str(err)) from err
+            raise _unknown_failure() from err
         except aiohttp.ClientResponseError as err:
-            if err.status in _REAUTH_STATUSES:
+            if err.status in REAUTH_STATUSES:
                 raise ConfigEntryAuthFailed(
                     f"the CKW sign-in could not be refreshed ({err.status}); "
                     "reauthentication is required"
                 ) from err
-            raise UpdateFailed(f"cannot reach the CKW API: {err}") from err
+            raise _connection_failure() from err
         except (TimeoutError, aiohttp.ClientError) as err:
-            raise UpdateFailed(f"cannot reach the CKW API: {err}") from err
+            raise _connection_failure() from err
         finally:
             # ``Reset`` counts forward from this response, not from the next
             # poll: stamp it so ``_async_pace`` can subtract the elapsed time.
@@ -562,15 +559,41 @@ def _window_start(end: date, days: int) -> date:
     return end - timedelta(days=max(days, MIN_WINDOW_DAYS) - 1)
 
 
+def _range_too_big_failure() -> UpdateFailed:
+    """Build the ``UpdateFailed`` for a window CKW still calls too big (Gold #130)."""
+    return UpdateFailed(translation_domain=DOMAIN, translation_key="range_too_big")
+
+
+def _api_failure(err: CkwApiError) -> UpdateFailed:
+    """Build the ``UpdateFailed`` for a status CKW answered with (Gold #130)."""
+    return UpdateFailed(
+        translation_domain=DOMAIN,
+        translation_key="api_error",
+        translation_placeholders={"status": str(err.status)},
+    )
+
+
+def _connection_failure() -> UpdateFailed:
+    """Build the ``UpdateFailed`` for an unreachable CKW API (Gold #130)."""
+    return UpdateFailed(translation_domain=DOMAIN, translation_key="cannot_connect")
+
+
+def _unknown_failure() -> UpdateFailed:
+    """Build the ``UpdateFailed`` for a failure without a specific key (Gold #130)."""
+    return UpdateFailed(translation_domain=DOMAIN, translation_key="unknown")
+
+
 def _rate_limit_failure(err: CkwRateLimitError) -> UpdateFailed:
     """Build the ``UpdateFailed`` that names the reset time of a ``429``."""
     reset = err.retry_after_seconds
     if reset is None or reset <= 0:
-        return UpdateFailed(f"CKW rate limit exhausted and no reset time was reported: {err}")
+        return UpdateFailed(translation_domain=DOMAIN, translation_key="rate_limited_no_reset")
     # The base coordinator may bring the next poll forward by the reset, but
     # only once: nothing here retries inside the same poll.
     return UpdateFailed(
-        f"CKW rate limit exhausted, the quota resets in {reset:.0f} s: {err}",
+        translation_domain=DOMAIN,
+        translation_key="rate_limited",
+        translation_placeholders={"reset": format_reset_seconds(reset)},
         retry_after=reset,
     )
 
