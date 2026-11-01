@@ -19,7 +19,7 @@ flowchart LR
     ha -->|"authorization code + PKCE"| sso
     sso -->|"tokens"| ha
     ha -->|"GET /smartmeter/customer<br/>GET /smartmeter/measurement/…/days"| api
-    api -->|"daily kWh (HT/NT) and CHF per delivery point"| ha
+    api -->|"daily kWh (HT/NT) per delivery point<br/>CHF amounts parsed, not exposed"| ha
     api -.->|"read once per day, out of band"| meter
     ha -.->|"never"| meter
 ```
@@ -55,7 +55,7 @@ flowchart LR
 | `__init__.py` | Creates API client and coordinator, builds `CkwRuntimeData` on `entry.runtime_data`, forwards the sensor platform, unloads cleanly. | [0002](decisions/0002-statistics-strategy.md), [0003](decisions/0003-meter-device-mapping.md) |
 | `coordinator.py` | The `DataUpdateCoordinator`: one 2 h interval from options, a 7-day rolling `days` window, cumulative per-meter totals, and API → `ConfigEntryAuthFailed` / `UpdateFailed` / `ConfigEntryNotReady`. | [0004](decisions/0004-poll-interval-and-data-lag.md), [0002](decisions/0002-statistics-strategy.md) |
 | `exceptions.py` | The `HomeAssistantError` subclasses a service raises to the user, each with `translation_domain=ckw` and a semantic `translation_key` from `strings.json` `exceptions:`; also the one mapping from `api.py` failures to those keys. | — |
-| `entity.py` + `sensor.py` | `CoordinatorEntity` base with `has_entity_name` and a per-meter `DeviceInfo` under a service device; one `SensorEntityDescription` per measurement (cumulative kWh, cumulative CHF, yesterday's kWh, HT/NT detail, last update). | [0003](decisions/0003-meter-device-mapping.md), [0002](decisions/0002-statistics-strategy.md) |
+| `entity.py` + `sensor.py` | `CoordinatorEntity` base with `has_entity_name` and a per-meter `DeviceInfo` under a service device; one `SensorEntityDescription` per measurement (cumulative kWh, yesterday's kWh, HT/NT detail, quarter-hour, last update; the CHF amounts the API returns are parsed but get no entity). | [0003](decisions/0003-meter-device-mapping.md), [0002](decisions/0002-statistics-strategy.md) |
 | `statistics.py` | Idempotent import: recompute the cumulative sum for the window and overwrite instead of appending; 730-day backfill in chunks; skip unchanged windows. | [0002](decisions/0002-statistics-strategy.md), [0004](decisions/0004-poll-interval-and-data-lag.md) |
 | `diagnostics.py` | Downloadable redacted dump: masked delivery points, token-free entry data, coordinator state, quality flags. | [0003](decisions/0003-meter-device-mapping.md) |
 
@@ -88,7 +88,7 @@ sequenceDiagram
     CO->>API: GET /smartmeter/measurement/…/days (730-day backfill, chunked)
     API-->>CO: daily measurements per meter, 1 to 3 days late
     CO->>ST: import statistics for the backfill window
-    ST-->>HA: kWh and CHF history for the Energy dashboard
+    ST-->>HA: kWh history for the Energy dashboard
     HA-->>U: sensors available
 ```
 

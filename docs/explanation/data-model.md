@@ -37,8 +37,8 @@ exists precisely to pick up intervals that appear after their nominal day had pa
 re-reads the last seven days, so a late interval is imported when it shows up and a CKW correction
 overwrites the earlier value.
 
-Why not import the finer history that may exist? Because the product is daily consumption and cost in
-the Energy dashboard. 96 intervals per day multiply every statistic row, every entity update and every
+Why not import the finer history that may exist? Because the product is daily consumption in the
+Energy dashboard. 96 intervals per day multiply every statistic row, every entity update and every
 API request for detail no Energy-dashboard graph uses; the decision and its alternatives belong in the
 backlog, not in this document.
 
@@ -71,8 +71,9 @@ measurement shapes are open: unknown keys and missing keys are legal, so a parse
 
 Each interval carries two buckets — high tariff (`_ht`) and low tariff (`_nt`). Both arrive as a
 quantity in kWh (`menge_fakturiert_ht`, `menge_fakturiert_nt`) and as an amount in CHF (`betrag_ht`,
-`betrag_nt`). The integration's total is always their sum; the HT/NT split is kept as opt-in detail
-entities so the default device stays readable.
+`betrag_nt`). The integration's kWh total is always the sum of the two buckets; the HT/NT split is kept
+as opt-in detail entities so the default device stays readable, and the CHF amounts are parsed but
+reach no entity and no statistic (see "The CHF amounts are a base price, and are not exposed").
 
 HT/NT does **not** follow a fixed clock. The grid operator (Netzbetreiber) defines the switching
 times, and they can differ by municipality and change over time. The API does not return the
@@ -94,14 +95,17 @@ interval: it logs the flag, exposes it as a diagnostic attribute, skips the inte
 statistics, and raises a repair issue so the user knows the total has a hole rather than a wrong
 number.
 
-## Cost is a base price
+## The CHF amounts are a base price, and are not exposed
 
 `betrag_ht` and `betrag_nt` are **base prices in CHF, without VAT and without surcharges** (grid
 fees, levies, municipal charges). The sum is a usable trend, not the number on the invoice — it will
-be lower, and the gap is not a bug. The Energy dashboard cost graph is a trend line, not a bill.
+be lower, and the gap is not a bug.
 
-A `betrag_*` that is missing or null becomes an unknown state (`None`), never `0.0`: unknown cost is
-not free electricity.
+Because that number cannot be reconciled with a bill, the integration parses it and stops there: no
+entity, no statistic and no diagnostics field exposes a CHF amount, and the Energy dashboard's cost
+graph therefore stays empty for these meters. That is a recorded decision (PLAN.md, decision A2), not
+an unfinished feature. A missing or null `betrag_*` is handled like any other unknown field and never
+becomes `0.0`; nothing user-facing depends on it.
 
 ## Aggregations are server-side
 
@@ -164,7 +168,7 @@ Quality-scale rule `docs-known-limitations`.
 | 1–3 day lag | The newest value is 1 to 3 days old, and how old varies by meter and day; there is no workaround, only patience. |
 | No live values | No power (`W`) for *now*, no current; the freshest value is 1–3 days old. Minute-level history is not imported (PLAN #65). |
 | Paced backfill | First setup imports 730 days over several minutes rather than instantly; the history fills in. |
-| Base price only | CHF values exclude VAT and surcharges and will not match the invoice. |
+| No cost entities | The CHF amounts CKW returns are parsed but never exposed as an entity, a statistic or a diagnostics field: they are base prices without VAT and surcharges, so they would not match the invoice. |
 | CKW only | Other grid operators need their own integration; this one has one provider. |
 | No feed-in tariff calculation | Production or PV feed-in metering is not implemented (tracked separately). |
 | 7-day self-healing window | A gap older than 7 days does not repair itself; it needs the backfill. |

@@ -1,6 +1,6 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
-Repository: <https://github.com/Maladus/ha-ckw-smartmeter> (`custom_components/ckw`) — private until #110
+Repository: <https://github.com/Maladus/ha-ckw-smartmeter> (`custom_components/ckw`) — public since #110
 Issues: #1–#159, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
