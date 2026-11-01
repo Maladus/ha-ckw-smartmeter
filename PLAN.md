@@ -548,12 +548,12 @@ in `docs/reference/configuration.md` instead).
 
 | ID | Task | Details | Done when | Deps | Owner |
 |---|---|---|---|---|---|
-| #101 | `quality_scale.yaml` | All 20 Bronze rules with `done`/`exempt` + reason | hassfest quality-scale check green | #10 | AI |
-| #102 | Bronze audit | Walk every Bronze rule (action-setup, appropriate-polling, brands, common-modules, config-flow, config-flow-test-coverage, dependency-transparency, docs-*, entity-event-setup, entity-unique-id, has-entity-name, runtime-data, test-before-configure, test-before-setup, unique-config-entry) and record evidence | table in `docs/quality-scale.md` | #101 | AI+H |
+| ✅ #101 | `quality_scale.yaml` | All 20 Bronze rules with `done`/`exempt` + reason | hassfest quality-scale check green | #10 | AI |
+| ✅ #102 | Bronze audit | Walk every Bronze rule (action-setup, appropriate-polling, brands, common-modules, config-flow, config-flow-test-coverage, dependency-transparency, docs-*, entity-event-setup, entity-unique-id, has-entity-name, runtime-data, test-before-configure, test-before-setup, unique-config-entry) and record evidence | table in `docs/quality-scale.md` | #101 | AI+H |
 | #103 | Silver: `entity-unavailable` + `log-when-unavailable` | verified by pulling network in dev instance | observed behaviour matches | #82, #72 | H |
 | #104 | Silver: `config-entry-unloading` | reload from UI works | verified | #71 | AI+H |
 | #105 | Silver: `diagnostics` | `diagnostics.py` downloadable, redacted | dump inspected manually | #66 | AI |
-| #106 | Silver: docs parameters | installation + options parameters documented | matches config flow | #94 | AI |
+| ✅ #106 | Silver: docs parameters | installation + options parameters documented | matches config flow | #94 | AI |
 | #107 | Fresh-instance smoke test | Second HA instance (or clean docker volume): HACS custom repo install → setup → dashboard | works end to end | all above | H |
 | #108 | Marketplace submission | PR to `hacs/default` (integration list), expect months of review | PR opened | #107 | H |
 | #109 | Release | `git tag v0.1.0`, notes generated, `hacs.json` version alignment | HACS shows the release | #107 | H |
@@ -565,7 +565,7 @@ in `docs/reference/configuration.md` instead).
 | ✅ #134 | Dynamic and stale devices (Gold) | The sensor platform listens to the coordinator (`CkwData.meters_present` vs the accumulated `meters`): a delivery point CKW starts to return gets its seven entities and its device on the next poll, no reload. A meter missing for more than `STALE_AFTER_DAYS` is stale. Entities and history stay, the sensors are unavailable, `stale_since` sits on Consumption total, one `INFO` line marks it going stale and one its return, and no repair issue is raised because a meter can come back. `async_remove_config_entry_device` lets the user delete a vanished meter's device, and it is only registered again while the meter is present | second meter in the CKW portal shows up within one poll; vanished meter marked stale; a deleted device is not resurrected until its meter returns | #76, #70 | M | AI |
 | ✅ #135 | Parallel updates (Silver) | `PARALLEL_UPDATES = 0` per platform with a one-line reason | constant set, noted in `reference/conventions.md` (#129) | #76 | S | AI |
 | ✅ #136 | Test coverage >= 95% (Silver) | `[tool.coverage]` in `pyproject.toml` (`branch`, `fail_under = 95`, `show_missing`); CI runs pytest with `--cov=custom_components/ckw --cov-report=term-missing`; fixtures for multi-meter, DST day, quality flags, missing intervals; config flow, coordinator, statistics, repairs and availability error paths included | CI enforces the threshold and the local gate prints per-module coverage (measured 99%) | #19, #32 | L | AI |
-| #137 | Silver + Gold audit and tier claim | All 54 rules accounted for with evidence in `reference/quality-scale.md` and `quality_scale.yaml`; verified `exempt`: `discovery`, `discovery-update-info`, `docs-triggers/conditions`, `dependency-transparency` (not `action-setup`, which the rule texts do not exempt) | every `done` links code/docs, every `exempt` states why, every `todo` names its closing issue | #102, #130, #131, #132, #133, #134, #136 | M | AI |
+| ✅ #137 | Silver + Gold audit and tier claim | All 54 rules accounted for with evidence in `reference/quality-scale.md` and `quality_scale.yaml`; verified `exempt`: `discovery`, `discovery-update-info`, `docs-triggers/conditions`, `dependency-transparency` (not `action-setup`, which the rule texts do not exempt) | every `done` links code/docs, every `exempt` states why, every `todo` names its closing issue | #102, #130, #131, #132, #133, #134, #136 | M | AI |
 
 ## Phase 9 — Later / optional
 
@@ -632,7 +632,7 @@ in `docs/reference/configuration.md` instead).
 | 5 Entities | 14 | 13 |
 | 6 Statistics | 7 | 5 |
 | 7 Docs | 24 | 19 |
-| 8 Quality/Release | 18 | 7 |
+| 8 Quality/Release | 18 | 11 |
 | 9 Optional | 8 | 1 |
 | **Total** | **152** | **80** |
 
