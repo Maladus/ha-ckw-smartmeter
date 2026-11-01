@@ -41,9 +41,10 @@
     "step": {
       "init": {
         "title": "CKW options",
-        "description": "Choose how often the integration asks CKW for new meter data.",
+        "description": "Choose how often the integration asks CKW for new meter data and whether setup imports the 730-day history.",
         "data": {
-          "poll_hours": "Poll interval (hours)"
+          "poll_hours": "Poll interval (hours)",
+          "backfill_enabled": "Import the 730-day history on setup"
         }
       }
     }

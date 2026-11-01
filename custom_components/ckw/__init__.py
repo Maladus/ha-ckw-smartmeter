@@ -29,6 +29,7 @@ from homeassistant.helpers.device_registry import DeviceEntryType
 from .api import CkwClient
 from .const import (
     API_BASE_URL,
+    CONF_BACKFILL_ENABLED,
     DOMAIN,
     ENV_API_BASE_URL,
     MANUFACTURER,
@@ -122,7 +123,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: CkwConfigEntry) -> bool:
     state = await async_prepare_statistics(hass, entry)
     async_register_statistics(hass, entry)
     async_register_backfill_service(hass)
-    if state.done:
+    backfill_enabled = bool(entry.options.get(CONF_BACKFILL_ENABLED, True))
+    if state.done or not backfill_enabled:
+        if not backfill_enabled and not state.done:
+            _LOGGER.info(
+                "statistics: the history backfill is disabled for %s, "
+                "only the rolling window is imported",
+                entry.title,
+            )
         entry.async_create_background_task(
             hass,
             async_import_polled_statistics(hass, entry),

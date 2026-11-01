@@ -1,5 +1,9 @@
 # Installed by CI (.github/workflows/ci.yml) and by `mise run setup` (issue #117).
-pytest>=8
+# pytest 9 makes pytest-homeassistant-custom-component 0.13.316 recurse inside
+# its `caplog` fixture (RecursionError: maximum recursion depth exceeded), which
+# surfaces as seven collection/setup errors before any test runs. Keep pytest
+# below 9 until PHCC supports it.
+pytest>=8,<9
 aiohttp>=3.9
 # Provides Home Assistant and its test harness; it pins the HA version, so keep it
 # in step with the Home Assistant release CI runs against. No upper bound on

@@ -48,6 +48,8 @@ from custom_components.ckw.api import (
     mask_deliverypoint,
 )
 from custom_components.ckw.const import (
+    BACKFILL_DAYS,
+    CONF_BACKFILL_ENABLED,
     CONF_CITY,
     CONF_CUSTOMER_ID,
     CONF_METER,
@@ -280,12 +282,23 @@ def messages(caplog: pytest.LogCaptureFixture, level: int) -> list[str]:
 
 
 async def setup_entry(
-    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch, fake: FakeMeasurements
+    hass: HomeAssistant,
+    monkeypatch: pytest.MonkeyPatch,
+    fake: FakeMeasurements,
+    *,
+    backfill: bool | None = False,
 ) -> ConfigEntry:
-    """Set up a real config entry whose client replays ``fake``."""
+    """Set up a real config entry whose client replays ``fake``.
+
+    The background backfill is off by default: these tests assert the
+    coordinator's poll requests, and an enabled backfill would add its own
+    chunks to the same call list. ``backfill=None`` leaves the integration's
+    default untouched, which is what the scheduling test needs.
+    """
     register_implementation(hass)
     monkeypatch.setattr(CkwClient, "async_get_measurements", fake)
-    entry = add_entry(hass)
+    options = {} if backfill is None else {CONF_BACKFILL_ENABLED: backfill}
+    entry = add_entry(hass, options=options)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     return entry
@@ -303,14 +316,10 @@ async def test_two_polls_grow_the_totals_and_log_one_publication(
     platform_calls: list[tuple[str, ...]],
 ) -> None:
     """A second poll with one more day grows the totals and logs one INFO line."""
-    register_implementation(hass)
     fake = FakeMeasurements(load_series())
-    monkeypatch.setattr(CkwClient, "async_get_measurements", fake)
-    entry = add_entry(hass)
 
     with freeze_time(FROZEN_NOW):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry = await setup_entry(hass, monkeypatch, fake)
         coordinator = entry.runtime_data.coordinator
         first = coordinator.data.meters[ENTRY_METER]
 
@@ -340,6 +349,29 @@ async def test_two_polls_grow_the_totals_and_log_one_publication(
     assert mask_deliverypoint(ENTRY_METER) in info[0]
 
 
+async def test_the_default_options_schedule_the_history_backfill(
+    hass: HomeAssistant,
+    monkeypatch: pytest.MonkeyPatch,
+    platform_calls: list[tuple[str, ...]],
+) -> None:
+    """Without an explicit option setup starts the 730-day history import."""
+    fake = FakeMeasurements(load_series())
+    backfill = AsyncMock()
+    monkeypatch.setattr("custom_components.ckw.async_backfill", backfill)
+
+    with freeze_time(FROZEN_NOW):
+        entry = await setup_entry(hass, monkeypatch, fake, backfill=None)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    backfill.assert_awaited_once()
+    args, _ = backfill.await_args
+    assert args[0] is hass
+    assert args[1] is entry
+    assert args[3] == BACKFILL_DAYS
+    # The poll before it is still the plain rolling window.
+    assert fake.calls == [(date(2026, 10, 26), date(2026, 11, 1), DAYS_AGGREGATION)]
+
+
 async def test_an_unchanged_poll_is_quiet_but_logs_at_debug(
     hass: HomeAssistant,
     caplog: pytest.LogCaptureFixture,
@@ -347,14 +379,10 @@ async def test_an_unchanged_poll_is_quiet_but_logs_at_debug(
     platform_calls: list[tuple[str, ...]],
 ) -> None:
     """The same window twice changes nothing, so no INFO line is written."""
-    register_implementation(hass)
     fake = FakeMeasurements(load_series())
-    monkeypatch.setattr(CkwClient, "async_get_measurements", fake)
-    entry = add_entry(hass)
 
     with freeze_time(FROZEN_NOW):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry = await setup_entry(hass, monkeypatch, fake)
         coordinator = entry.runtime_data.coordinator
         first = coordinator.data.meters[ENTRY_METER]
 
@@ -375,14 +403,10 @@ async def test_a_duplicate_interval_is_not_counted_twice(
     platform_calls: list[tuple[str, ...]],
 ) -> None:
     """Overlapping windows overlap: only the unseen interval grows the totals."""
-    register_implementation(hass)
     fake = FakeMeasurements(load_series(extra_day=True))
-    monkeypatch.setattr(CkwClient, "async_get_measurements", fake)
-    entry = add_entry(hass)
 
     with freeze_time(FROZEN_NOW):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry = await setup_entry(hass, monkeypatch, fake)
         coordinator = entry.runtime_data.coordinator
         first = coordinator.data.meters[ENTRY_METER]
 
@@ -401,14 +425,10 @@ async def test_a_long_lag_warns_once(
     platform_calls: list[tuple[str, ...]],
 ) -> None:
     """A lag above the documented threshold warns once, not on every poll."""
-    register_implementation(hass)
     fake = FakeMeasurements(load_series())
-    monkeypatch.setattr(CkwClient, "async_get_measurements", fake)
-    entry = add_entry(hass)
 
     with freeze_time(datetime(2026, 11, 10, 12, 0, tzinfo=TIME_ZONE)):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry = await setup_entry(hass, monkeypatch, fake)
         coordinator = entry.runtime_data.coordinator
         warnings = messages(caplog, logging.WARNING)
         assert any("more than the expected 96 h" in line for line in warnings)
@@ -427,14 +447,10 @@ async def test_an_interval_that_never_advances_warns_after_four_days(
     platform_calls: list[tuple[str, ...]],
 ) -> None:
     """A feed that stopped publishing is called out, not silently swallowed."""
-    register_implementation(hass)
     fake = FakeMeasurements(load_series())
-    monkeypatch.setattr(CkwClient, "async_get_measurements", fake)
-    entry = add_entry(hass)
 
     with freeze_time(FROZEN_NOW):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry = await setup_entry(hass, monkeypatch, fake)
         coordinator = entry.runtime_data.coordinator
 
     caplog.clear()
@@ -500,14 +516,10 @@ async def test_a_range_too_big_answer_halves_the_window_once(
     platform_calls: list[tuple[str, ...]],
 ) -> None:
     """``400`` "response too big" retries once with half the window, then succeeds."""
-    register_implementation(hass)
     fake = RangeTooBigOnce(load_series())
-    monkeypatch.setattr(CkwClient, "async_get_measurements", fake)
-    entry = add_entry(hass)
 
     with freeze_time(FROZEN_NOW):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        entry = await setup_entry(hass, monkeypatch, fake)
 
     assert [call[:2] for call in fake.calls] == [
         (date(2026, 10, 26), date(2026, 11, 1)),
@@ -635,14 +647,10 @@ async def test_the_window_uses_local_dates_on_dst_days(
     expected: tuple[date, date],
 ) -> None:
     """The ``YYYYMMDD`` path parameters follow the local day, not the UTC one."""
-    register_implementation(hass)
     fake = FakeMeasurements(load_series())
-    monkeypatch.setattr(CkwClient, "async_get_measurements", fake)
-    entry = add_entry(hass)
 
     with freeze_time(frozen):
-        assert await hass.config_entries.async_setup(entry.entry_id)
-        await hass.async_block_till_done()
+        await setup_entry(hass, monkeypatch, fake)
 
     assert fake.calls[0][:2] == expected
     assert fake.calls[0][2] == DAYS_AGGREGATION

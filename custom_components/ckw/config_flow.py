@@ -47,6 +47,7 @@ from .api import (
     mask_deliverypoint,
 )
 from .const import (
+    CONF_BACKFILL_ENABLED,
     CONF_CITY,
     CONF_CUSTOMER_ID,
     CONF_METER,
@@ -384,9 +385,15 @@ class CkwOptionsFlow(config_entries.OptionsFlow):
     """Options for one CKW entry."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Store the poll interval."""
+        """Store the poll interval and whether setup imports the history."""
+        current_backfill = bool(self.config_entry.options.get(CONF_BACKFILL_ENABLED, True))
         if user_input is not None:
-            return self.async_create_entry(data={CONF_POLL_HOURS: user_input[CONF_POLL_HOURS]})
+            return self.async_create_entry(
+                data={
+                    CONF_POLL_HOURS: user_input[CONF_POLL_HOURS],
+                    CONF_BACKFILL_ENABLED: user_input[CONF_BACKFILL_ENABLED],
+                }
+            )
 
         current = self.config_entry.options.get(CONF_POLL_HOURS, DEFAULT_POLL_HOURS)
         if current not in POLL_INTERVAL_HOURS:
@@ -395,6 +402,9 @@ class CkwOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
-                {vol.Required(CONF_POLL_HOURS, default=current): vol.In(POLL_INTERVAL_HOURS)}
+                {
+                    vol.Required(CONF_POLL_HOURS, default=current): vol.In(POLL_INTERVAL_HOURS),
+                    vol.Required(CONF_BACKFILL_ENABLED, default=current_backfill): bool,
+                }
             ),
         )

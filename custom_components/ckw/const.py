@@ -142,6 +142,10 @@ CONF_CUSTOMER_ID: Final = "customer_id"
 CONF_CITY: Final = "city"
 CONF_METER: Final = "meter"
 CONF_POLL_HOURS: Final = "poll_hours"
+#: Whether setup imports the 730-day history in the background. Absent means
+#: enabled, so an existing entry keeps backfilling after the upgrade. A user who
+#: does not want the initial history import can turn it off in the options flow.
+CONF_BACKFILL_ENABLED: Final = "backfill_enabled"
 
 # Development overrides for the endpoints (scripts/dev/.env.example).
 ENV_API_BASE_URL: Final = "CKW_API_BASE_URL"

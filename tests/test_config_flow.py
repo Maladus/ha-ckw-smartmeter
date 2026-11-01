@@ -37,6 +37,7 @@ from custom_components.ckw.api import (
     CkwMeter,
 )
 from custom_components.ckw.const import (
+    CONF_BACKFILL_ENABLED,
     CONF_CITY,
     CONF_CUSTOMER_ID,
     CONF_METER,
@@ -183,7 +184,7 @@ async def start_user_flow(hass: HomeAssistant) -> FlowResult:
     return await complete_oauth(hass, result)
 
 
-def add_entry(hass: HomeAssistant) -> MockConfigEntry:
+def add_entry(hass: HomeAssistant, *, options: dict[str, Any] | None = None) -> MockConfigEntry:
     """Add a configured CKW entry whose entry id must survive reauth."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -200,6 +201,7 @@ def add_entry(hass: HomeAssistant) -> MockConfigEntry:
                 "token_type": "Bearer",
             },
         },
+        options=options or {},
         unique_id=CUSTOMER_ID,
         title=TITLE,
     )
@@ -394,11 +396,28 @@ async def test_options_flow_stores_the_poll_interval(hass: HomeAssistant) -> Non
     assert result["step_id"] == "init"
 
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {CONF_POLL_HOURS: 4}
+        result["flow_id"], {CONF_POLL_HOURS: 4, CONF_BACKFILL_ENABLED: True}
     )
 
     assert result["type"] == "create_entry"
     assert entry.options[CONF_POLL_HOURS] == 4
+    assert entry.options[CONF_BACKFILL_ENABLED] is True
+
+
+async def test_options_flow_can_disable_the_backfill(hass: HomeAssistant) -> None:
+    """The options flow lets a user stop a backfill that keeps running."""
+    entry = add_entry(hass, options={CONF_BACKFILL_ENABLED: True})
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] == "form"
+    assert result["step_id"] == "init"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_POLL_HOURS: 4, CONF_BACKFILL_ENABLED: False}
+    )
+
+    assert result["type"] == "create_entry"
+    assert entry.options[CONF_BACKFILL_ENABLED] is False
 
 
 async def test_missing_oauth_configuration_aborts(

@@ -41,9 +41,10 @@
     "step": {
       "init": {
         "title": "CKW-Optionen",
-        "description": "Wählen Sie, wie oft die Integration neue Zählerdaten bei CKW abfragt.",
+        "description": "Wählen Sie, wie oft die Integration neue Zählerdaten bei CKW abfragt und ob beim Einrichten die 730 Tage Historie importiert wird.",
         "data": {
-          "poll_hours": "Abfrageintervall (Stunden)"
+          "poll_hours": "Abfrageintervall (Stunden)",
+          "backfill_enabled": "730 Tage Historie beim Einrichten importieren"
         }
       }
     }
