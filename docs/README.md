@@ -9,7 +9,7 @@ exactly one quadrant; entries marked `planned` are not written yet and name the 
 
 ## Start here
 
-- **I want to use it** — getting-started (planned, #119) → install (planned, #121).
+- **I want to use it** — [getting-started](tutorial/getting-started.md) → [install](how-to/install.md).
 - **I want to change code** — [architecture](explanation/architecture.md) → conventions (planned, #129)
   → work-with-ai-agents (planned, #98).
 - **Something is broken** — debug-connection (planned, #99) → reauthenticate (planned, #122).
@@ -20,7 +20,7 @@ Learn by doing, start to finish, no alternatives.
 
 | Document | What it covers | Audience |
 | --- | --- | --- |
-| `tutorial/getting-started.md` (planned, #119) | HACS install, first CKW login, Zählpunkt choice and a populated Energy dashboard in one pass. | New users |
+| [getting-started.md](tutorial/getting-started.md) | Install, client id, first CKW login, Zählpunkt choice and a populated Energy dashboard in one pass. | New users |
 
 ## How-to
 
@@ -29,7 +29,7 @@ One goal per page, steps only, no theory.
 | Document | What it covers | Audience |
 | --- | --- | --- |
 | `how-to/request-ckw-client.md` (planned, #120) | Asking CKW for the OpenEnergy client id and registering the Home Assistant redirect URI. | New users |
-| `how-to/install.md` (planned, #121) | Installing, updating and removing the integration through HACS. | Users |
+| [install.md](how-to/install.md) | Installing through HACS or by copying the folder, updating, and removing the integration with or without its statistics. | Users |
 | `how-to/reauthenticate.md` (planned, #122) | Repairing a login CKW no longer accepts, without losing the imported history. | Users |
 | `how-to/backfill-history.md` (planned, #123) | Re-running the history import for a Zählpunkt that came back with gaps. | Users |
 | [live-and-archive.md](how-to/live-and-archive.md) | Pairing the CKW archive with a local live source on the meter, and why the two numbers differ. | Users |
@@ -47,7 +47,7 @@ Lookup only: exact names, values and limits, with no steps.
 | [ckw-openenergy-api.md](reference/ckw-openenergy-api.md) | The endpoints, fields, rate limits and error codes of the CKW OpenEnergy API as CKW publishes them. | Contributors |
 | [ckw-openenergy-api-verification.md](reference/ckw-openenergy-api-verification.md) | What the live endpoints and the deployed API model actually return, and where that contradicts the transcription. | Contributors |
 | [glossary.md](reference/glossary.md) | One definition per CKW and Home Assistant term used anywhere in this repository. | Everyone |
-| `reference/entities.md` (planned, #124) | Every entity and statistic with its unit, device class and update behaviour. | Users, contributors |
+| [entities.md](reference/entities.md) | Every entity and statistic with its unit, device class, unique id, statistic id, cadence and Energy-dashboard eligibility. | Users, contributors |
 | `reference/configuration.md` (planned, #106) | The parameters a user sets at setup and later in the options flow. | Users |
 | `reference/quality-scale.md` (planned, #102) | The quality-scale rules, their tier, and the document or code that satisfies each. | Contributors |
 | `reference/examples.md` (planned, #128) | Copy-paste automations, dashboard cards and template sensors built on the integration. | Users |
