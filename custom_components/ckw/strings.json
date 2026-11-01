@@ -7,19 +7,45 @@
       },
       "meter": {
         "title": "Choose a meter",
-        "description": "Pick the Zählpunkt (delivery point) this entry should read.",
+        "description": "Pick the Zählpunkt (delivery point) this entry should read. {count} electricity meters are available.",
         "data": {
           "meter": "Delivery point"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate CKW",
+        "description": "The sign-in for {name} is no longer valid. Sign in again to keep reading its smart meter data.",
+        "data": {}
       }
     },
     "error": {
       "cannot_connect": "Could not reach the CKW API. Check your connection and try again.",
-      "invalid_auth": "CKW rejected the sign-in. Please sign in again."
+      "invalid_auth": "CKW rejected the sign-in. Please sign in again.",
+      "invalid_meter": "Choose one of the offered delivery points.",
+      "unknown": "An unexpected error occurred while talking to CKW."
     },
     "abort": {
       "already_configured": "This CKW account is already configured.",
-      "no_meters": "No smart meter was found for this CKW account."
+      "cannot_connect": "Could not reach the CKW API. Check your connection and try again.",
+      "invalid_auth": "CKW rejected the sign-in. Please sign in again.",
+      "missing_configuration": "Add the CKW OAuth application credentials before setting up the integration.",
+      "no_meters": "No electricity smart meter was found for this CKW account.",
+      "reauth_account_mismatch": "The CKW account signed in does not match the account of this entry.",
+      "reauth_successful": "Reauthentication was successful.",
+      "reconfigure_account_mismatch": "The CKW account signed in does not match the account of this entry.",
+      "reconfigure_successful": "The configuration was updated.",
+      "unknown": "An unexpected error occurred while talking to CKW."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "CKW options",
+        "description": "Choose how often the integration asks CKW for new meter data.",
+        "data": {
+          "poll_hours": "Poll interval (hours)"
+        }
+      }
     }
   },
   "entity": {
@@ -44,6 +70,15 @@
     },
     "api_unavailable": {
       "message": "The CKW API is currently unavailable."
+    },
+    "cannot_connect": {
+      "message": "Could not reach the CKW API. Check your connection and try again."
+    },
+    "invalid_auth": {
+      "message": "CKW rejected the sign-in. Please sign in again."
+    },
+    "unknown": {
+      "message": "An unexpected error occurred while talking to CKW."
     }
   }
 }

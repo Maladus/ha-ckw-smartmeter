@@ -51,6 +51,17 @@ fi
 readonly HA_VERSION="${HA_VERSION:-stable}"
 readonly IMAGE="$IMAGE_REPOSITORY:$HA_VERSION"
 
+# Pass the CKW_* endpoint overrides from .env into the container when they are
+# set. The integration reads them from its own environment
+# (custom_components/ckw/application_credentials.py), so no file in config/ is
+# edited and production installations never see them.
+podman_env=()
+for name in CKW_API_BASE_URL CKW_AUTHORIZE_URL CKW_TOKEN_URL; do
+    if [[ -n ${!name:-} ]]; then
+        podman_env+=(-e "$name")
+    fi
+done
+
 [[ -d "$REPO_ROOT/custom_components/ckw" ]] ||
     fail "custom_components/ckw is missing - run this from a full checkout"
 
@@ -76,6 +87,7 @@ podman run -d \
     -v "$REPO_ROOT/custom_components/ckw:/config/custom_components/ckw:Z" \
     -e TZ=Europe/Zurich \
     --add-host=host.containers.internal:host-gateway \
+    "${podman_env[@]}" \
     "$IMAGE" >/dev/null
 
 info "started $CONTAINER from $IMAGE"

@@ -42,6 +42,7 @@ flowchart LR
   → [ADR-0004](decisions/0004-poll-interval-and-data-lag.md)
 - **Diátaxis documents, arc42-lite architecture**: block, decision and consequence one link apart.
   → [ADR-0005](decisions/0005-doc-structure-diataxis-arc42-lite.md)
+- **One config entry per CKW customer, one coordinator per entry**: accounts stay isolated and reauth/deletion target a single entry. → [ADR-0008](decisions/0008-multi-account.md)
 
 ## Building blocks (arc42 §5)
 

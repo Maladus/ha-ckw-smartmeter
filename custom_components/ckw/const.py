@@ -56,6 +56,8 @@ AGGREGATIONS: Final[tuple[str, ...]] = (
 DEFAULT_POLL_HOURS: Final[int] = 2
 MIN_POLL_HOURS: Final[int] = 1
 MAX_POLL_HOURS: Final[int] = 12
+# The options flow offers exactly these intervals (ADR-0004, #53).
+POLL_INTERVAL_HOURS: Final[tuple[int, ...]] = (1, 2, 4, 6, 12)
 BACKFILL_DAYS: Final[int] = 730
 ROLLING_WINDOW_DAYS: Final[int] = 7
 REFRESH_SKEW_SECONDS: Final[int] = 60
@@ -68,6 +70,17 @@ PUBLICATION_LAG_WARNING_HOURS: Final[int] = 48
 CONF_BASE_URL: Final = "base_url"
 CONF_AUTHORIZE_URL: Final = "authorize_url"
 CONF_TOKEN_URL: Final = "token_url"
+
+# Config-entry data and options written by the config flow.
+CONF_CUSTOMER_ID: Final = "customer_id"
+CONF_CITY: Final = "city"
+CONF_METER: Final = "meter"
+CONF_POLL_HOURS: Final = "poll_hours"
+
+# Development overrides for the endpoints (scripts/dev/.env.example).
+ENV_API_BASE_URL: Final = "CKW_API_BASE_URL"
+ENV_AUTHORIZE_URL: Final = "CKW_AUTHORIZE_URL"
+ENV_TOKEN_URL: Final = "CKW_TOKEN_URL"
 
 # ---------------------------------------------------------------------------
 # Local mock defaults (`mise run dev-mock`, scripts/dev/mock/README.md)

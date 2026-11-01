@@ -7,19 +7,45 @@
       },
       "meter": {
         "title": "Zählpunkt auswählen",
-        "description": "Wählen Sie den Zählpunkt, den dieser Eintrag lesen soll.",
+        "description": "Wählen Sie den Zählpunkt, den dieser Eintrag lesen soll. Es sind {count} Stromzähler verfügbar.",
         "data": {
           "meter": "Zählpunkt"
         }
+      },
+      "reauth_confirm": {
+        "title": "CKW erneut anmelden",
+        "description": "Die Anmeldung für {name} ist nicht mehr gültig. Melden Sie sich erneut an, damit die Smart-Meter-Daten weiter gelesen werden können.",
+        "data": {}
       }
     },
     "error": {
       "cannot_connect": "Die CKW-API ist nicht erreichbar. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
-      "invalid_auth": "CKW hat die Anmeldung abgelehnt. Bitte melden Sie sich erneut an."
+      "invalid_auth": "CKW hat die Anmeldung abgelehnt. Bitte melden Sie sich erneut an.",
+      "invalid_meter": "Wählen Sie einen der angebotenen Zählpunkte.",
+      "unknown": "Beim Zugriff auf CKW ist ein unerwarteter Fehler aufgetreten."
     },
     "abort": {
       "already_configured": "Dieses CKW-Konto ist bereits eingerichtet.",
-      "no_meters": "Für dieses CKW-Konto wurde kein Smart Meter gefunden."
+      "cannot_connect": "Die CKW-API ist nicht erreichbar. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "invalid_auth": "CKW hat die Anmeldung abgelehnt. Bitte melden Sie sich erneut an.",
+      "missing_configuration": "Fügen Sie zuerst die CKW-OAuth-Anmeldedaten hinzu, bevor Sie die Integration einrichten.",
+      "no_meters": "Für dieses CKW-Konto wurde kein Strom-Smart-Meter gefunden.",
+      "reauth_account_mismatch": "Das angemeldete CKW-Konto stimmt nicht mit dem Konto dieses Eintrags überein.",
+      "reauth_successful": "Die erneute Anmeldung war erfolgreich.",
+      "reconfigure_account_mismatch": "Das angemeldete CKW-Konto stimmt nicht mit dem Konto dieses Eintrags überein.",
+      "reconfigure_successful": "Die Konfiguration wurde aktualisiert.",
+      "unknown": "Beim Zugriff auf CKW ist ein unerwarteter Fehler aufgetreten."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "CKW-Optionen",
+        "description": "Wählen Sie, wie oft die Integration neue Zählerdaten bei CKW abfragt.",
+        "data": {
+          "poll_hours": "Abfrageintervall (Stunden)"
+        }
+      }
     }
   },
   "entity": {
@@ -44,6 +70,15 @@
     },
     "api_unavailable": {
       "message": "Die CKW-API ist derzeit nicht verfügbar."
+    },
+    "cannot_connect": {
+      "message": "Die CKW-API ist nicht erreichbar. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+    },
+    "invalid_auth": {
+      "message": "CKW hat die Anmeldung abgelehnt. Bitte melden Sie sich erneut an."
+    },
+    "unknown": {
+      "message": "Beim Zugriff auf CKW ist ein unerwarteter Fehler aufgetreten."
     }
   }
 }

@@ -97,9 +97,9 @@ podman run -d --name ha-dev --replace \
 
 ## Mock or production
 
-The integration's config flow takes the endpoint overrides (`CONF_BASE_URL`, `CONF_AUTHORIZE_URL`,
-`CONF_TOKEN_URL` in `custom_components/ckw/const.py`). Without an override the production endpoints
-are used.
+The integration reads the `CKW_*` environment variables from `scripts/dev/.env` (copy
+`.env.example`); `dev-up` passes any that are set into the container. Without them the production
+endpoints from `custom_components/ckw/const.py` are used.
 
 | Setting | Mock (`mise run dev-mock`) | Production |
 |---|---|---|
@@ -109,9 +109,9 @@ are used.
 | Client id / secret | anything, the mock never checks them | the client id CKW issued to you (#1) |
 
 The same values are in `scripts/dev/.env.example`. Copy it to `scripts/dev/.env` (gitignored) to pin
-`HA_VERSION`; the `CKW_*` entries there are documentation for the config flow, not container
-variables. The mock's tokens are JWT-shaped but unsigned and nothing verifies them - never point a
-real client at the mock and call it authenticated.
+`HA_VERSION`; `dev-up` passes the `CKW_*` entries there into the container. The mock's tokens are
+JWT-shaped but unsigned and nothing verifies them - never point a real client at the mock and call it
+authenticated.
 
 ## Tests that need a clean database
 
