@@ -157,4 +157,7 @@ the public flip. A release is not a merge; it is a separate, deliberate step aft
 - [docs/README.md](docs/README.md) — the documentation map.
 - [docs/reference/conventions.md](docs/reference/conventions.md) — the crosscutting rules every change
   has to respect.
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — behaviour and enforcement in issues, pull requests and
+  discussions; [SECURITY.md](SECURITY.md) — the private channels behind "Where to ask, where to report";
+  [SUPPORT.md](SUPPORT.md) — the same table as a standalone page.
 - [CHANGELOG.md](CHANGELOG.md) — released changes and the release procedure.

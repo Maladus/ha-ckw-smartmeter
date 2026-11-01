@@ -1,0 +1,52 @@
+name: Feature request
+description: A capability the integration does not have yet, inside the scope this project agreed on
+title: "[Feature]: "
+labels: ["type: feat"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Scope first. [GOAL.md](https://github.com/Maladus/ha-ckw-smartmeter/blob/main/GOAL.md) lists what this
+        integration deliberately is **not**: real-time power, invoices and product switching, other Swiss
+        grid operators, dynamic tariffs. An idea listed there as out of scope needs a plan change before it
+        needs a pull request, and a request will not change that on its own.
+
+        [PLAN.md](https://github.com/Maladus/ha-ckw-smartmeter/blob/main/PLAN.md) and
+        [ROADMAP.md](https://github.com/Maladus/ha-ckw-smartmeter/blob/main/ROADMAP.md) say whether the work
+        is already scheduled.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do in Home Assistant, and where the integration gets in the way. The situation matters more than the wording of a solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What the integration should do instead — an entity, an attribute, an option, a service call. Say which of them you would put on a dashboard or in an automation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: |
+        Another integration, a template sensor, the CKW portal itself, or nothing at all. If you already
+        work around the gap, describe the workaround — it often shows what the feature really needs.
+    validations:
+      required: false
+
+  - type: textarea
+    id: scope-check
+    attributes:
+      label: Why this is in scope
+      description: |
+        One or two sentences against the out-of-scope list in GOAL.md: what makes this a gap in *this*
+        integration rather than a different project, a companion integration or a CKW task?
+    validations:
+      required: true

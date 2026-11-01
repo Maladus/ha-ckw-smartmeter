@@ -1,0 +1,102 @@
+name: Bug report
+description: The CKW integration is wrong or does something it should not, and the documentation does not explain it
+title: "[Bug]: "
+labels: ["type: fix"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before you write, two facts that answer a lot of reports:
+
+        - **The newest value is 1–3 days old by design.** CKW reads the meter once a day and publishes
+          late, so a flat line or a missing day at the right edge of the graph is normal.
+        - The symptom → cause → fix table and the way to raise the log level are in
+          [Debug a connection](https://github.com/Maladus/ha-ckw-smartmeter/blob/main/docs/how-to/debug-connection.md).
+
+        Never paste an access token, a refresh token, an SMS code or your CKW password into this form,
+        and redact your Zählpunkt (`deliverypointnumber`) to its last four characters.
+
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+      description: Which entity, repair issue or step is wrong, and since when. The exact wording of an error helps.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: What the integration or its documentation made you expect instead.
+    validations:
+      required: true
+
+  - type: input
+    id: integration-version
+    attributes:
+      label: Integration version
+      description: 'From `custom_components/ckw/manifest.json`, or **Settings → Devices & services → CKW Smart Meter**.'
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: ha-version
+    attributes:
+      label: Home Assistant version
+      description: '**Settings → About**, for example `2025.8.1`.'
+      placeholder: "2025.8.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation method
+      options:
+        - HACS (Home Assistant Marketplace)
+        - Manual copy into `custom_components/`
+        - Development checkout mounted into the dev container
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log lines around custom_components.ckw at debug level
+      description: |
+        Set the logger to `debug` (**Developer Tools → Actions**, action `logger.set_level`,
+        `custom_components.ckw: debug`), reproduce the problem, and paste the lines from the start of one
+        poll to the failure. The tokens and the full Zählpunkt are already redacted by the integration —
+        keep it that way.
+      render: text
+    validations:
+      required: true
+
+  - type: dropdown
+    id: diagnostics
+    attributes:
+      label: Diagnostics attached
+      description: |
+        **Settings → Devices & services → CKW Smart Meter → three-dot menu → Download diagnostics**, then
+        drag the JSON file into this issue. It masks the Zählpunkt to its last four characters and drops
+        every token, the customer id, e-mail and phone number.
+      options:
+        - "Yes — attached to this issue"
+        - "No — the menu entry is missing"
+        - "No — for another reason (say why above)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: |
+        The first four characters of the Zählpunkt and the entry title, so the meter can be identified
+        without publishing the full number. Related automations, a recorder purge, a fresh install — if it
+        might matter, it belongs here.
+      render: text
+    validations:
+      required: false

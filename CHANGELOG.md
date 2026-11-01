@@ -33,6 +33,11 @@ user-visible behaviour in a minor release; every such change is listed.
   type, rate limit), the statistics progress and two token booleans. No token, no customer number (only
   a short hash), no address and no e-mail address ever reach the file. Gold rule `diagnostics`, #105 -
   the last open rule of that tier, so `manifest.json` now claims `quality_scale: gold`.
+- Issue forms for a bug report and a feature request, a pull-request checklist mirroring the gates, a
+  Contributor Covenant 2.1 code of conduct, a security policy with the private reporting channels, a
+  `SUPPORT.md` that says where to ask instead of report, and a `CODEOWNERS` naming the single maintainer.
+  The repository now answers "what happened", "where do I ask" and "where do I report a vulnerability"
+  before the first issue is opened (#21, #25, #26, #28).
 
 ## [0.1.0] - 2026-11-01
 
