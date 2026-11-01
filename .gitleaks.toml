@@ -1,0 +1,35 @@
+# Repository secret scan.
+# Nothing in this repository may contain a CKW session, refresh token, SMS code,
+# password or an unredacted delivery point number. Fixtures are redacted by rule
+# (PLAN.md hard rule 3), so a fixture match is a bug, not an exception.
+title = "ckw-homeassistant"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documentation placeholders and redacted example values"
+paths = ['''(^|/)PLAN\.md$''', '''(^|/)docs/.*\.md$''']
+regexes = [
+  '''CH0{10,}''',            # obviously fake delivery point in examples
+  '''<fqdn>''',
+  '''<random-32-bytes>''',
+]
+
+[[rules]]
+id = "ckw-refresh-token"
+description = "CKW Keycloak refresh token"
+regex = '''refresh_token["'\s:=]+ey[A-Za-z0-9_-]{20,}'''
+tags = ["key", "ckw"]
+
+[[rules]]
+id = "ckw-access-token"
+description = "CKW Keycloak access token"
+regex = '''access_token["'\s:=]+ey[A-Za-z0-9_-]{20,}'''
+tags = ["key", "ckw"]
+
+[[rules]]
+id = "home-assistant-storage-token"
+description = "Home Assistant long-lived token or OAuth token outside .storage"
+regex = '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[A-Za-z0-9_-]{20,}'''
+tags = ["key"]

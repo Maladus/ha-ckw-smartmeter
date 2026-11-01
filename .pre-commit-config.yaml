@@ -1,0 +1,67 @@
+# Local gates, run by `git commit`. Installed with:
+#   pre-commit install --install-hooks
+#   pre-commit install --hook-type pre-push
+#
+# Hooks use the tools already provided by mise (gitleaks) or installed locally
+# (ruff); no network access is needed at commit time. The authoritative gate is
+# CI (.github/workflows/tests.yaml) - local hooks can be bypassed with
+# `git commit --no-verify`, CI cannot.
+
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # Secrets: local binary, so the scan also works offline.
+  - repo: local
+    hooks:
+      - id: gitleaks-staged
+        name: gitleaks (staged changes)
+        entry: gitleaks protect --staged --redact --no-banner --config .gitleaks.toml
+        language: system
+        pass_filenames: false
+
+      - id: gitleaks-history
+        name: gitleaks (full history, pre-push only)
+        entry: gitleaks detect --redact --no-banner --config .gitleaks.toml
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: no-dev-artifacts
+        name: block local HA artifacts
+        entry: |
+          bash -c 'for f in "$@"; do case "$f" in
+            .dev/*|*.token|config/.storage/*|secrets/*|config/home-assistant_v2.db*)
+              echo "refusing to commit local artifact: $f" >&2; exit 1;; esac; done' --
+        language: system
+        pass_filenames: true
+
+      - id: ruff-check
+        name: ruff check
+        entry: ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+
+      - id: ruff-format
+        name: ruff format
+        entry: ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true

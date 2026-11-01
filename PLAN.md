@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: https://github.com/Maladus/ha-ckw-smartmeter (`custom_components/ckw`) — private until #110
-Issues: #1–#116, one per task row below (✅ = closed / done)
+Issues: #1–#117, one per task row below (✅ = closed / done)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -129,7 +129,8 @@ Bootstrap status: issues #1–#116 created, milestones 1–13 created, labels cr
 | #14 | `__init__.py` stub | `async_setup_entry`/`async_unload_entry` no-ops + `PLATFORMS = [Platform.SENSOR]` | HA dev instance loads entry without errors | #10 | S | AI |
 | #15 | `strings.json` + translations | `config`, `config.error`, `config.abort`, `entity.sensor.*`, `exceptions` keys; `translations/de.json`, `en.json` | hassfest translations check green | #10 | S | AI |
 | #16 | Test bootstrap | `pyproject.toml` (ruff, pytest config, `pytest-homeassistant-custom-component` optional extra), `tests/conftest.py` | `pytest -q` runs (0 tests ok) | #9 | S | AI |
-| #17 | pre-commit | hooks: `check-added-large-files`, `check-yaml`, `end-of-file-fixer`, `trailing-whitespace`, `ruff-check --fix`, `ruff-format` | `pre-commit run --all-files` green | #9 | S | AI |
+| ✅ #17 | pre-commit (locked) | Hooks: `check-added-large-files`, `check-yaml`, `check-json`, `check-merge-conflict`, `check-case-conflict`, `detect-private-key`, `end-of-file-fixer`, `trailing-whitespace`, `mixed-line-ending`, `gitleaks --staged`, `ruff-check`, `ruff-format`, artifact block (`.dev/`, `*.token`, `config/.storage/`, `*.db`); tools pinned in `mise.toml`; installed for `pre-commit` + `pre-push` | `pre-commit run --all-files` green, a staged fake token is rejected | #9 | S | AI |
+| #117 | Secret scanning in CI + push protection | `.github/workflows/secrets.yml` (`gitleaks detect --redact` on push/PR, works on a private repo with free minutes), enable GitHub secret scanning + push protection at publish (#110, free only when public), document policy in `SECURITY.md` (#25) | workflow fails on a seeded leak, policy documented | #18, #25 | S | AI |
 | #18 | CI workflows | `.github/workflows/tests.yaml`: jobs `pre-commit`, `pytest`, `hassfest` (`home-assistant/actions/hassfest`), `hacs` (`hacs/action` category integration) | all jobs green on GitHub | #13–#17 | S | AI |
 | #19 | Dev instance plan | Dev HA is specified in **Phase 1b** (Podman); this task only reserves the directory `scripts/dev/` | `scripts/dev/` exists or is created by #36 | #14 | S | AI |
 | #20 | `AGENTS.md` + `CONTRIBUTING.md` | agent contract (commands, gates, hard rules) and human PR checklist | both written, gates referenced by exact command | #17 | S | AI |
@@ -360,7 +361,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | Phase | Tasks | Done |
 |---|---|---|
 | 0 External | 8 | 0 |
-| 1 Setup & governance | 27 | 3 |
+| 1 Setup & governance | 28 | 4 |
 | 1b Podman dev instance | 10 | 0 |
 | 2 Auth | 12 | 0 |
 | 3 API | 9 | 0 |
@@ -370,7 +371,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | 7 Docs | 10 | 0 |
 | 8 Quality/Release | 10 | 0 |
 | 9 Optional | 6 | 0 |
-| **Total** | **116** | **3** |
+| **Total** | **117** | **4** |
 
 ## Critical path
 
@@ -378,4 +379,4 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 
 Everything else can run in parallel; #9–#28 and #91–#93 are safe to do before CKW replies.
 
-Must-have path to v0.1.0: **110 tasks** (all phases except Phase 9).
+Must-have path to v0.1.0: **111 tasks** (all phases except Phase 9).
