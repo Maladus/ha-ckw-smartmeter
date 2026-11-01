@@ -397,7 +397,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | #54 | Config-flow tests | `pytest-homeassistant-custom-component`: happy path, invalid auth, cannot connect, already configured, multi-meter, reauth | `test_config_flow.py` ≥ 6 cases green | #48–#53 | M | AI |
 | #55 | End-to-end login | Real browser login in `scripts/ha-dev` HA against `oe-wigger`; HA restart → no prompt | entry `loaded`, entities present, restart silent | #47, #5 | — | H |
 | #56 | Fallback: pasted-code flow | Only if CKW refuses callback registration: PKCE generate → show authorize URL → user pastes redirect URL → exchange | hidden menu entry `user_paste` works | #56 trigger | M | AI |
-| #57 | Fallback: password + SMS OTP flow | Only if browser callback is unusable in practice: 2 steps (`/otp/login` → token with `code`), tokens only, no password stored, single-flight lock | login completes, no password in entry data | #57 trigger | L | AI+H |
+| ~~#57~~ | Fallback: password + SMS OTP flow | Only if browser callback is unusable in practice: 2 steps (`/otp/login` → token with `code`), tokens only, no password stored, single-flight lock | login completes, no password in entry data | #57 trigger | L | AI+H — **dropped by ADR-0006** |
 
 ## Phase 3 — API client
 
