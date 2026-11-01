@@ -342,7 +342,7 @@ them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritte
 | ✅ #117 | mise toolchain & task runner | Pin `python`, `uv`, `ruff`, `gitleaks`, `pipx:pre-commit`, `npm:markdownlint-cli2` and its `node` in `mise.toml`; expose every workflow as a mise task (`setup`, `dev-up/-down/-logs/-shell/-reset/-smoke/-onboard/-mock`, `lint`, `fmt`, `test`, `types`, `hooks`, `docs`, `check`, `next`, `issues`), each with a one-line description and running from the repo root; CI calls the tasks only, never raw interpreters. Podman stays host-level (rootless prerequisites in #44) | fresh clone: `mise install && mise run setup && mise run check` succeeds; no doc, CI job or AGENTS.md line invokes `python`, `pip` or `podman` directly | #9 | M | AI |
 | ✅ #142 | Pre-push gate: full check before any merge | `pre-push` stage hook `scripts/hooks/pre_push_gate.sh` (`language: system`, `always_run`) runs `mise run check` and aborts on failure; the full-history gitleaks hook stays in the same stage; `MISE_SKIP_GATE=1` is the documented escape hatch with a loud warning; worktree agents may only `/merge` when it is green. Needed because GitHub branch protection is unavailable on a private repo without Pro, and merges happen locally | a failing test or lint error rejects the push, measured 20 s wall time (budget 90 s) | #117, #127 | S | AI |
 | ✅ #18 | CI workflows | `.github/workflows/tests.yaml`: jobs `pre-commit`, `pytest`, `hassfest` (`home-assistant/actions/hassfest`), `hacs` (`hacs/action` category integration) | all jobs green on GitHub | #13–#17 | S | AI |
-| #19 | Dev instance plan | Dev HA is specified in **Phase 1b** (Podman); this task only reserves the directory `scripts/dev/` | `scripts/dev/` exists or is created by #36 | #14 | S | AI |
+| ✅ #19 | Dev instance plan | Dev HA is specified in **Phase 1b** (Podman); this task only reserves the directory `scripts/dev/` | `scripts/dev/` exists or is created by #36 | #14 | S | AI |
 | ✅ #20 | `AGENTS.md` + `CONTRIBUTING.md` | agent contract (commands, gates, hard rules) and human PR checklist | both written, gates referenced by exact command | #17 | S | AI |
 | ✅ #158 | Agents and timer notify the coordinator | `workmux send <handle> "done <handle>: <summary + commit>"` on completion, `blocked <handle>: <reason>` when stuck (silence = still working); `mise run next --notify` prefers `workmux send`, falls back to `notify-send`, then stdout; timer and crontab use the same command | a timer tick with a startable task reaches the coordinator, convention documented in AGENTS.md (#20) | #20 | S | AI |
 | ✅ #21 | Issue/PR templates | `.github/ISSUE_TEMPLATE/{bug,feature}.yml`, `PULL_REQUEST_TEMPLATE.md` with quality-scale checklist | templates visible on GitHub | #9 | S | AI |
@@ -354,12 +354,12 @@ them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritte
 | ✅ #27 | `docs/README.md` | The Diátaxis map: four quadrant sections, "start here" per audience (user, contributor, agent), one sentence per document, link to every doc under `docs/`; nothing else | every doc linked, no orphan documents, `mise run docs` green | #9 | S | AI |
 | ✅ #28 | Repo settings & meta | Description, topics (`home-assistant`, `hacs`, `ckw`, `switzerland`, `energy`, `smart-meter`), `.github/CODEOWNERS`, branch protection on `main` with required CI checks, `SUPPORT.md` (where to ask vs. report). Labels/milestones are #30/#31 | CI required on `main`, topics set | #18 | S | H |
 | ✅ #29 | Create GitHub repo | `gh repo create ckw-homeassistant --private` (stays private until #110), verify `gh auth status`, push `main`, enable Dependabot security alerts | repo exists, CI runs on first push | #9 | S | H |
-| #30 | Label taxonomy | `type: feat\|fix\|docs\|chore\|test\|infra`, `phase: 0…9`, `status: backlog\|ready\|blocked\|review`, `owner: ai\|human\|both`, `size: s\|m\|l`, `area: auth\|api\|stats\|entities\|ci\|docs` — created by `gh label create` loop in `scripts/gh-setup.sh` | 5 label families present, naming documented | #29 | S | AI |
-| #31 | Milestones per phase | `P0 External` … `P9 Optional` + release milestones `v0.1.0`, `v0.3.0` | `gh milestone list` shows all | #29 | S | AI |
+| ✅ #30 | Label taxonomy | `type: feat\|fix\|docs\|chore\|test\|infra`, `phase: 0…9`, `status: backlog\|ready\|blocked\|review`, `owner: ai\|human\|both`, `size: s\|m\|l`, `area: auth\|api\|stats\|entities\|ci\|docs` — created by `gh label create` loop in `scripts/gh-setup.sh` | 5 label families present, naming documented | #29 | S | AI |
+| ✅ #31 | Milestones per phase | `P0 External` … `P9 Optional` + release milestones `v0.1.0`, `v0.3.0` | `gh milestone list` shows all | #29 | S | AI |
 | #32 | Plan → issues sync | `scripts/sync-issues.sh`: parse the task tables in `PLAN.md`, create missing issues `[ID] title` with details + acceptance + DoD checklist, assign milestone/labels; `--check` fails on drift; `--board` regenerates the progress board | one issue per task, `--check` green | #30, #31 | L | AI |
 | #33 | Project board | `gh project create`, fields `Phase`, `Status`, `Owner`, `Size`; views: board by Status, table by Phase, filtered "blocked" | all issues visible in the board, fields populated | #32 | M | AI |
-| #34 | Issue/PR workflow conventions | Branch per issue (`gh issue develop N --checkout`), PR body `Closes #N`, merge flips the plan board column; written into `CONTRIBUTING.md` + `AGENTS.md` | first PR merged through the flow | #32, #20 | S | AI |
-| #35 | Automation guardrails | Scheduled workflow `plan-check.yml` running `scripts/sync-issues.sh --check`; optional `actions/add-to-project` for auto-adding new issues | drift detected in CI on a seeded mismatch | #32 | M | AI |
+| ✅ #34 | Issue/PR workflow conventions | Branch per issue (`gh issue develop N --checkout`), PR body `Closes #N`, merge flips the plan board column; written into `CONTRIBUTING.md` + `AGENTS.md` | first PR merged through the flow | #32, #20 | S | AI |
+| ✅ #35 | Automation guardrails | Scheduled workflow `plan-check.yml` running `scripts/sync-issues.sh --check`; optional `actions/add-to-project` for auto-adding new issues | drift detected in CI on a seeded mismatch | #32 | M | AI |
 
 ## Phase 1b — Local test instance in Podman
 
@@ -634,8 +634,8 @@ rejects a red push (#142). Locally that includes G-6 whenever the dev container 
 | Phase | Tasks | Done |
 |---|---|---|
 | 0 External | 8 | 0 |
-| 1 Setup & governance | 31 | 26 |
-| 1b Podman dev instance | 12 | 6 |
+| 1 Setup & governance | 31 | 31 |
+| 1b Podman dev instance | 12 | 7 |
 | 2 Auth | 14 | 10 |
 | 3 API | 10 | 9 |
 | 4 Coordinator | 8 | 8 |
@@ -644,7 +644,7 @@ rejects a red push (#142). Locally that includes G-6 whenever the dev container 
 | 7 Docs | 24 | 24 |
 | 8 Quality/Release | 18 | 14 |
 | 9 Optional | 8 | 1 |
-| **Total** | **152** | **96** |
+| **Total** | **152** | **101** |
 
 ## Critical path
 
