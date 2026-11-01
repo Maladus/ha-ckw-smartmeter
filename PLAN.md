@@ -623,12 +623,12 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 2 Auth | 14 | 1 |
 | 3 API | 10 | 0 |
 | 4 Coordinator | 8 | 0 |
-| 5 Entities | 13 | 0 |
+| 5 Entities | 13 | 1 |
 | 6 Statistics | 7 | 0 |
 | 7 Docs | 24 | 13 |
 | 8 Quality/Release | 18 | 0 |
 | 9 Optional | 8 | 0 |
-| **Total** | **150** | **24** |
+| **Total** | **150** | **25** |
 
 ## Critical path
 
