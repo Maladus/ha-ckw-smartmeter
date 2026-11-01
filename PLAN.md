@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: <https://github.com/Maladus/ha-ckw-smartmeter> (`custom_components/ckw`) — private until #110
-Issues: #1–#143, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
+Issues: #1–#147, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -375,6 +375,8 @@ Fallback for non-systemd machines: `scripts/dev/compose.yaml` (`podman-compose`)
 | #43 | Statistics reset harness | `scripts/dev/reset-db.sh`: stop unit, delete `config/home-assistant_v2.db*`, start, wait ready | three consecutive reset→backfill runs end with identical sums (tests #85/#86) | #37, #85 | S | AI |
 | #44 | Podman runbook | `scripts/dev/README.md`: rootless prerequisites (subuid/subgid, `net.ipv4.ip_unprivileged_port_start`), SELinux `:Z`, `--userns=keep-id`, `mise run dev-logs`, `mise run dev-shell`, teardown, volume cleanup | a fresh machine follows it without improvising | #36 | S | AI |
 | #45 | Runbook wired into docs | "Test locally" section in `AGENTS.md` and `CONTRIBUTING.md` using only mise tasks (`mise run setup`, `dev-up`, `dev-smoke`, `dev-reset`); gate G-6 references `mise run dev-smoke` | commands copy-pasteable, linked from both files | #42, #20 | S | AI |
+| #141 | Local mock CKW API for offline development | `scripts/dev/mock/` (aiohttp) + fake Keycloak: three endpoints from `tests/fixtures/`, auth/token/otp/password endpoints, `x-ratelimit-*` headers, `?fail=`/`?slow=` injection, deterministic fixture generator, `mise run dev-mock` | full setup + one poll against the mock, `?fail=401` produces the reauth path | #91, #39 | M | AI |
+| #144 | Mock and fixtures must match the measured API | Rework mock + fixtures against `docs/reference/ckw-openenergy-api-verification.md`: `customer.User[].locations[].meters[]`, enums `SMART/ANALOGUE`, `import/export/consumption/production`, `elec/gas`, `anzahl_linien_* = 1` normally, 400 missing-token gate, documented error bodies, `minute(s)` = 15-minute rows, `x-ratelimit-limit: 4`, unknown-key tolerance, `?fail=quota`, `?range=too-big` | fixtures and tests match the measured shapes; no test asserts contradicted behaviour | #141, #143 | M | AI |
 
 **Phase acceptance:** from a clean checkout, `scripts/dev/smoke.sh` green in fixture mode within 5 minutes;
 real-mode login verified on the dev instance; backfill idempotency reproducible via `reset-db.sh`.
@@ -409,6 +411,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | #64 | Range chunking | Split a range into ≤ N-day chunks (respect API limits, `BACKFILL_DAYS`), yield `(from, to)` pairs, Europe/Zurich safe | property test: chunks cover range without overlap/gap | #61 | M | AI |
 | #65 | Aggregation helpers | Map user-facing interval to API enum (`day(s)`, `month(s)`, `week(s)`), document `minute(s)` as unsupported by product decision | unit test | #61 | S | AI |
 | #66 | Diagnostics redaction | `mask_deliverypoint()` (last 4 chars), token stripping helper | used in `diagnostics.py` + debug logging | #59 | S | AI |
+| #147 | Pace requests against the rate limit | Chunker respects `x-ratelimit-remaining`/`-reset` (observed: 4 requests per ~1 s), conservative range size verified against the "response too big" 400, resumable backfill, 429 = wait not fail | 730-day backfill completes without 429; simulated exhaustion makes the client sleep | #62, #66 | S | AI |
 
 ## Phase 4 — Setup, coordinator, runtime data
 
@@ -474,6 +477,8 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | ✅ #127 | markdownlint + `mise run docs` | `.markdownlint.yaml`, `markdownlint-cli2` pinned in `mise.toml`, `scripts/docs-check.sh`: every file under `docs/` sits in exactly one quadrant folder, is linked from `docs/README.md`, and has the "This page answers:" opening plus a `Related` block; relative links resolve | CI job fails on a misplaced doc, a broken relative link or a lint violation | #117, #27 | M | AI |
 | ✅ #143 | Co-author trailers | `scripts/hooks/co_author.py` as a `commit-msg` hook: appends `Co-Authored-By: pi (<model>) <noreply@pi.local>` (model only, never the provider) when `PI_PROVIDER`/`PI_MODEL` are set, never for a plain shell, never twice; how-to in `docs/how-to/commits.md` | agent commit carries one trailer, human commit none | #17, #129 | S | AI |
 | #128 | `docs/reference/examples.md` | Gold `docs-examples`: 3-5 copy-paste automations/blueprints — cost alert (`numerical_state` on month cost), daily consumption notification from statistics, Energy-dashboard card snippet, and an example of using HT/NT split for load shifting | every example renders and works as written; each states its entity ids | #124 | S | AI |
+| #145 | Correct reference + data model against the measurements | Fix `docs/reference/ckw-openenergy-api.md` and `docs/explanation/data-model.md`: nested `User`, enums, redaction of `email`/`phone`, `anzahl_linien_*` semantics, error table with bodies, range cap, quarter-hour `minute(s)`, 4-request rate limit, dynamic-price parameters, day boundary stated as an inference | neither document contradicts the verification page; open questions stay open | #143 | M | AI |
+| #146 | ADR-0006: measured auth constraints | Only browser authorization-code remains (password grant refused, `response_mode=fragment` breaks HA's callback); mark 0001 partially superseded in its Status field; drop #53, note #50 as the fallback | ADR merged, index updated, #53 closed as not planned | #93, #143 | S | AI |
 | ✅ #129 | `docs/reference/conventions.md` | arc42 §8 as reference: exception mapping (`CkwAuthError` → `ConfigEntryAuthFailed`, 429 → `UpdateFailed`), redaction rules, Europe/Zurich discipline, append-only unique-id scheme, logging levels per failure class, naming (domain `ckw`, module layout) | every crosscutting rule stated once, testable, and cited from `architecture.md` and `AGENTS.md` | #92, #63 | S | AI |
 
 ## Quality-scale target: Gold
@@ -573,16 +578,16 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 |---|---|---|
 | 0 External | 8 | 0 |
 | 1 Setup & governance | 29 | 8 |
-| 1b Podman dev instance | 10 | 0 |
+| 1b Podman dev instance | 12 | 0 |
 | 2 Auth | 12 | 0 |
-| 3 API | 9 | 0 |
+| 3 API | 10 | 0 |
 | 4 Coordinator | 7 | 0 |
 | 5 Entities | 10 | 0 |
 | 6 Statistics | 7 | 0 |
-| 7 Docs | 22 | 11 |
+| 7 Docs | 24 | 11 |
 | 8 Quality/Release | 18 | 0 |
 | 9 Optional | 7 | 0 |
-| **Total** | **139** | **18** |
+| **Total** | **143** | **18** |
 
 ## Critical path
 
