@@ -129,6 +129,10 @@ PUBLICATION_STALL_DAYS: Final[int] = 4
 
 REFRESH_SKEW_SECONDS: Final[int] = 60
 
+#: HTTP statuses of a failed token refresh: the chain is dead, a human must sign
+#: in again (ADR-0007). The coordinator and the statistics backfill share it.
+REAUTH_STATUSES: Final[frozenset[int]] = frozenset({400, 401, 403})
+
 # ---------------------------------------------------------------------------
 # Config keys: the endpoint override (#39) that switches mock and production
 # ---------------------------------------------------------------------------

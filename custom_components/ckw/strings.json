@@ -75,17 +75,29 @@
     }
   },
   "exceptions": {
-    "rate_limited": {
-      "message": "CKW is rate limiting requests. Try again after {reset_time}."
+    "invalid_auth": {
+      "message": "CKW rejected the sign-in. Please sign in again."
     },
-    "api_unavailable": {
-      "message": "The CKW API is currently unavailable."
+    "rate_limited": {
+      "message": "CKW is rate limiting requests. Try again in {reset}."
+    },
+    "rate_limited_no_reset": {
+      "message": "CKW is rate limiting requests. Try again later."
+    },
+    "range_too_big": {
+      "message": "CKW rejected the requested date range as too large."
+    },
+    "api_error": {
+      "message": "CKW answered with an unexpected error (HTTP status {status})."
     },
     "cannot_connect": {
       "message": "Could not reach the CKW API. Check your connection and try again."
     },
-    "invalid_auth": {
-      "message": "CKW rejected the sign-in. Please sign in again."
+    "no_meters": {
+      "message": "No electricity smart meter was found for this CKW account."
+    },
+    "no_data": {
+      "message": "CKW returned no data that could be imported for this period."
     },
     "unknown": {
       "message": "An unexpected error occurred while talking to CKW."
