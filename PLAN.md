@@ -345,14 +345,14 @@ them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritte
 | #19 | Dev instance plan | Dev HA is specified in **Phase 1b** (Podman); this task only reserves the directory `scripts/dev/` | `scripts/dev/` exists or is created by #36 | #14 | S | AI |
 | ✅ #20 | `AGENTS.md` + `CONTRIBUTING.md` | agent contract (commands, gates, hard rules) and human PR checklist | both written, gates referenced by exact command | #17 | S | AI |
 | ✅ #158 | Agents and timer notify the coordinator | `workmux send <handle> "done <handle>: <summary + commit>"` on completion, `blocked <handle>: <reason>` when stuck (silence = still working); `mise run next --notify` prefers `workmux send`, falls back to `notify-send`, then stdout; timer and crontab use the same command | a timer tick with a startable task reaches the coordinator, convention documented in AGENTS.md (#20) | #20 | S | AI |
-| #21 | Issue/PR templates | `.github/ISSUE_TEMPLATE/{bug,feature}.yml`, `PULL_REQUEST_TEMPLATE.md` with quality-scale checklist | templates visible on GitHub | #9 | S | AI |
+| ✅ #21 | Issue/PR templates | `.github/ISSUE_TEMPLATE/{bug,feature}.yml`, `PULL_REQUEST_TEMPLATE.md` with quality-scale checklist | templates visible on GitHub | #9 | S | AI |
 | ✅ #22 | `LICENSE` | Full MIT text, copyright "Martin Wigger" + year, LICENSE section in README. Rationale: HACS-typical, and permissive enough to be relicensed into Apache-2.0 for a later core submission | GitHub detects MIT, badge shown | #9 | S | AI |
 | ✅ #23 | `GOAL.md` | Goal, in/out of scope, success criteria — the "Project goal" block of this plan, maintained separately so it survives plan rewrites | file matches this plan, linked from README | #9 | S | AI |
 | ✅ #24 | `ROADMAP.md` | Public milestones `v0.1.0` → `v0.3.0` → `v1.0.0`, 3–6 bullets each, link to `PLAN.md` | no task IDs duplicated, roadmap matches phase order | #23 | S | AI |
-| #25 | `CODE_OF_CONDUCT.md` | Contributor Covenant 2.1, enforcement contact, scope (issues, PRs, discussions) | linked from README + CONTRIBUTING | #9 | S | AI |
-| #26 | `SECURITY.md` | Supported versions, private reporting (GitHub security advisories + mail), explicit scope: token handling, reauth flow, never paste tokens/codes into issues; what is redacted in diagnostics | GitHub shows Security policy, linked from README | #9 | S | AI |
+| ✅ #25 | `CODE_OF_CONDUCT.md` | Contributor Covenant 2.1, enforcement contact, scope (issues, PRs, discussions) | linked from README + CONTRIBUTING | #9 | S | AI |
+| ✅ #26 | `SECURITY.md` | Supported versions, private reporting (GitHub security advisories + mail), explicit scope: token handling, reauth flow, never paste tokens/codes into issues; what is redacted in diagnostics | GitHub shows Security policy, linked from README | #9 | S | AI |
 | ✅ #27 | `docs/README.md` | The Diátaxis map: four quadrant sections, "start here" per audience (user, contributor, agent), one sentence per document, link to every doc under `docs/`; nothing else | every doc linked, no orphan documents, `mise run docs` green | #9 | S | AI |
-| #28 | Repo settings & meta | Description, topics (`home-assistant`, `hacs`, `ckw`, `switzerland`, `energy`, `smart-meter`), `.github/CODEOWNERS`, branch protection on `main` with required CI checks, `SUPPORT.md` (where to ask vs. report). Labels/milestones are #30/#31 | CI required on `main`, topics set | #18 | S | H |
+| ✅ #28 | Repo settings & meta | Description, topics (`home-assistant`, `hacs`, `ckw`, `switzerland`, `energy`, `smart-meter`), `.github/CODEOWNERS`, branch protection on `main` with required CI checks, `SUPPORT.md` (where to ask vs. report). Labels/milestones are #30/#31 | CI required on `main`, topics set | #18 | S | H |
 | ✅ #29 | Create GitHub repo | `gh repo create ckw-homeassistant --private` (stays private until #110), verify `gh auth status`, push `main`, enable Dependabot security alerts | repo exists, CI runs on first push | #9 | S | H |
 | #30 | Label taxonomy | `type: feat\|fix\|docs\|chore\|test\|infra`, `phase: 0…9`, `status: backlog\|ready\|blocked\|review`, `owner: ai\|human\|both`, `size: s\|m\|l`, `area: auth\|api\|stats\|entities\|ci\|docs` — created by `gh label create` loop in `scripts/gh-setup.sh` | 5 label families present, naming documented | #29 | S | AI |
 | #31 | Milestones per phase | `P0 External` … `P9 Optional` + release milestones `v0.1.0`, `v0.3.0` | `gh milestone list` shows all | #29 | S | AI |
@@ -634,7 +634,7 @@ rejects a red push (#142). Locally that includes G-6 whenever the dev container 
 | Phase | Tasks | Done |
 |---|---|---|
 | 0 External | 8 | 0 |
-| 1 Setup & governance | 31 | 22 |
+| 1 Setup & governance | 31 | 26 |
 | 1b Podman dev instance | 12 | 6 |
 | 2 Auth | 14 | 10 |
 | 3 API | 10 | 9 |
@@ -644,7 +644,7 @@ rejects a red push (#142). Locally that includes G-6 whenever the dev container 
 | 7 Docs | 24 | 24 |
 | 8 Quality/Release | 18 | 14 |
 | 9 Optional | 8 | 1 |
-| **Total** | **152** | **92** |
+| **Total** | **152** | **96** |
 
 ## Critical path
 
