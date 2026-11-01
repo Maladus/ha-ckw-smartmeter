@@ -255,6 +255,25 @@ CI or AGENTS.md. Tracked as #117.
 | `mise run docs` | `markdownlint-cli2` + `scripts/docs-check.sh` | doc lint, quadrant placement, link check (#127) |
 | `mise run issues` | `scripts/sync-issues.sh` | plan/issue drift gate (#32) |
 
+## MVP definition (no CKW answer required)
+
+The first usable release does **not** wait for CKW. Everything below runs against the local mock
+(`mise run dev-mock`: OpenEnergy API + fake Keycloak) or against fixtures:
+
+- component skeleton: `manifest.json`, `hacs.json`, `const.py`, `__init__.py`, strings/translations (#10–#15)
+- endpoints, both read-only, already implemented in the mock: `/smartmeter/customer`, `/smartmeter/measurement/...`
+- auth: authorization-code + PKCE against the **mock IdP** — same code path as production, only the URLs differ
+- coordinator (2 h poll, rolling window), sensors (kWh, CHF, HT/NT), statistics import + 730-day backfill
+- logging of the publication delay (#149), diagnostics, tests, docs for all four quadrants
+- local gates: `mise run check`, pre-push hook (#142)
+
+**Deferred until CKW answers — not MVP blockers:** registering the redirect URI (#1), `offline_access` (#2),
+MFA question (#4), live-account verification (#5), capturing real fixtures (#6), meter topology (#7),
+first real publication-delay measurement, HACS install from a public repo (#110).
+
+Switch from mock to production is two config values (`API_BASE_URL`, `AUTHORIZE_URL`/`TOKEN_URL`), which is
+why #39 is specified as an endpoint override rather than a separate code path.
+
 ## Implementation order
 
 Documentation and the goal come first — they define scope, and every later task is checked against
@@ -263,23 +282,23 @@ them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritte
 | Slice | Issues | Exit criterion |
 |---|---|---|
 | **0 Foundations** | #23 goal · #24 roadmap · #27 docs map · #93 ADR template + 0001–0005 · #126 glossary · #129 conventions · #91 API reference · #92 architecture · #125 data model · #94 README · #127 doc lint | `docs/` exists with all four quadrants, `GOAL.md` states scope/non-goals, `mise run docs` green — **no integration code yet** |
-| **1 Contract** | #1–#4, #91, #119, #120 | CKW client verified against the real API; tutorial path written down |
-| **2 Skeleton** | #10–#35, #117 | component loads in the dev instance, CI + gates green |
-| **3 Auth** | #46–#48, #51–#53 | browser login works, token refresh survives restart |
+| **1 Mock contract** | #144 (done), #91, #119, #120 | mock serves the measured contract; nothing waits on CKW |
+| **2 Skeleton** | #10–#35, #117, #142 | component loads in the dev instance against the mock, CI + gates green |
+| **3 Auth** | #46–#52 (mock IdP), #53 options flow | browser login against the mock works, refresh survives restart; production login only needs the registered URI |
 | **4 Data** | #58–#66, #70–#80 | kWh + CHF entities update from the real API |
 | **5 History** | #85–#90 | 2-year backfill, idempotent across restarts |
 | **6 Dev instance** | #36–#45 | `mise run dev-up` + `dev-smoke` work for contributors |
 | **7 Silver/Gold** | #101–#137 | all 54 quality-scale rules accounted for (done/exempt) |
-| **8 Release** | #107–#110, #116 | tagged release, repo public, (optionally) core submission |
+| **8 Release** | #107–#110, #116 (+ #1/#2/#5 when CKW answers) | tagged release, repo public, (optionally) core submission; production login verified |
 
 ## Phase 0 — External prerequisites (blocking)
 
 | ID | Task | Details | Done when | Deps | Owner |
 |---|---|---|---|---|---|
-| #1 | Register redirect URIs at CKW | Reply to CKW contact: `https://my.home-assistant.io/redirect/oauth` and `https://<fqdn>/auth/external/callback`; state public client + PKCE S256 | CKW confirms both are set | — | H |
-| #2 | Request `offline_access` scope | Same mail; ask whether the client scope can be enabled so refresh tokens survive SSO idle timeout | answer in writing | #1 | H |
+| #1 | Register redirect URIs at CKW | Reply to CKW contact: `https://my.home-assistant.io/redirect/oauth` and `https://<fqdn>/auth/external/callback`; state public client + PKCE S256 | CKW confirms both are set | — | H · **post-MVP** |
+| #2 | Request `offline_access` scope | Same mail; ask whether the client scope can be enabled so refresh tokens survive SSO idle timeout | answer in writing | #1 | H · **post-MVP** |
 | #3 | Ask about device authorization grant | Optional, enables headless login without SMS | answer in writing | #1 | H |
-| #4 | Ask about MFA in browser login | Is OTP enforced on the web login page or only in the API login flow? | answer in writing | — | H |
+| #4 | Ask about MFA in browser login | Is OTP enforced on the web login page or only in the API login flow? | answer in writing | — | H · **post-MVP** |
 | #5 | Verify API access with real token | Login in browser, exchange code with PKCE, `GET /api/v1/smartmeter/customer` → expect 200 (403/401 = audience/role problem → escalate to <openenergy@ckw.ch>) | 200 with customer + ≥1 meter | #1 | H |
 | #6 | Capture redacted fixtures | Save customer, `…/days`, `…/months` responses; redact `deliverypointnumber`, customer ids, addresses | 3 JSON files in `tests/fixtures/` | #5 | AI+H |
 | #7 | Confirm meter topology | Number of delivery points, `type`/`fuel` values, whether PV feed-in is a separate delivery point | documented in `docs/ckw-openenergy-api.md` | #5 | H |
