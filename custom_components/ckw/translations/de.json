@@ -109,6 +109,24 @@
       "message": "Kein geladenes CKW-Konto zum Nachladen; richten Sie die Integration zuerst ein."
     }
   },
+  "issues": {
+    "meter_exchanged": {
+      "title": "CKW-Zähler für {deliverypoint} ersetzt",
+      "description": "CKW meldet für den Zählpunkt {deliverypoint} das Lieferbeginn-Datum {date}. Die Statistik dieses Zählpunkts behält die Historie des alten Zählers unter der alten Statistik-ID, und der neue Zähler läuft unter seiner eigenen ID weiter; deshalb zeigen die Summe und das Energie-Dashboard beim Wechsel einen Bruch. Prüfen Sie die Summe nach dem Wechsel und laden Sie die Historie mit dem Dienst ckw.backfill neu, wenn die Reihe neu aufgebaut werden soll."
+    },
+    "data_quality": {
+      "title": "CKW meldet Datenqualitätsprobleme für {deliverypoint}",
+      "description": "CKW meldet für {count} Intervalle des Zählpunkts {deliverypoint} innerhalb der letzten {days} Tage mehr als eine Zeitreihe (`anzahl_linien_*`). Die Integration lässt diese Intervalle aus den Summen und aus der importierten Statistik weg, damit die Summe eine Lücke hat statt eines falschen Werts. Die Ursache liegt bei CKW; das Problem verschwindet, sobald im Fenster kein Intervall mehr markiert ist."
+    },
+    "stale_publication": {
+      "title": "CKW publiziert seit {date} keine Daten mehr für {deliverypoint}",
+      "description": "Das neueste veröffentlichte Intervall des Zählpunkts {deliverypoint} endet am {date} und ist damit älter als {days} Tage. CKW veröffentlicht normalerweise mit 1 bis 3 Tagen Verzögerung; ein so langer Stillstand bedeutet, dass die Datenlieferung steht. Prüfen Sie das CKW-Portal oder kontaktieren Sie CKW; das Problem verschwindet, sobald ein neueres Intervall eintrifft."
+    },
+    "quarter_hour_retention": {
+      "title": "Viertelstunden-Historie von {deliverypoint} wird nach {days} Tagen gelöscht",
+      "description": "Der Viertelstundensensor des Zählpunkts {deliverypoint} ist aktiviert, aber der Recorder von Home Assistant behält Entitäts-Zustände nur {days} Tage lang, während mindestens {minimum} Tage empfohlen sind. Viertelstundenwerte werden als Zustände und nie als Statistik gespeichert, deshalb ist alles Ältere als {days} Tage gelöscht und lässt sich nicht nachträglich importieren. Erhöhen Sie `recorder.purge_keep_days` auf {minimum} Tage oder mehr, oder exportieren Sie die Werte in einen externen Speicher; die Anleitung erklärt beides."
+    }
+  },
   "services": {
     "backfill": {
       "name": "Statistik nachladen",

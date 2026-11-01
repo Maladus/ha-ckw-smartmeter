@@ -85,6 +85,7 @@ from .const import (
     WINDOW_END_DAYS_BACK,
 )
 from .exceptions import format_reset_seconds
+from .repairs import async_check_repairs
 
 __all__ = ["CkwCoordinator", "CkwData", "MeterTotals", "QuarterHourReading"]
 
@@ -216,10 +217,30 @@ class CkwCoordinator(DataUpdateCoordinator[CkwData]):
     async def _async_update_data(self) -> CkwData:
         """Fetch, merge and log one poll, mapping failures as documented."""
         try:
-            return await self._async_collect()
+            data = await self._async_collect()
         except HomeAssistantError as err:
             self._log_failure(err)
             raise
+        await self._async_check_repairs(data)
+        return data
+
+    async def _async_check_repairs(self, data: CkwData) -> None:
+        """Raise or clear this entry's repair issues (#133, #157).
+
+        The checks are a side effect of a successful poll: a failure in them is
+        logged and swallowed, because a repair issue is information and must
+        never cost the user the reading that was just fetched.
+        """
+        entry = self.config_entry
+        if entry is None:
+            return
+        try:
+            await async_check_repairs(self.hass, entry, data)
+        except Exception:  # noqa: BLE001 - a repair check must not fail the data poll
+            _LOGGER.exception(
+                "checking the repair issues for %s failed",
+                mask_deliverypoint(self.deliverypoint),
+            )
 
     async def _async_collect(self) -> CkwData:
         """Run one poll: fetch the window, merge it, log what changed."""

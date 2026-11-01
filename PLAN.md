@@ -558,7 +558,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | ✅ #130 | Exception translations (Gold) | Every user-facing error from `strings.json` `exceptions:`, raised as `HomeAssistantError` with `translation_domain`/`translation_key`: invalid auth, rate limit (with reset time), no meters, unsupported meter, API unavailable; nothing raw reaches the UI | every failure path translated de/en, tests assert keys not strings | #63, #15 | S | AI |
 | ✅ #131 | Icon translations (Gold) | `icons.json` keyed by `translation_key`; no `_attr_icon` in Python | hassfest icons check green, zero icons in code | #76 | S | AI |
 | ✅ #132 | Entity disabled by default (Gold) | Rare entities registered with `entity_registry_enabled_default=False`: HT/NT detail, quality flags, raw timestamps — instead of an options toggle | fresh setup enables exactly the 4 core entities per meter | #80 | S | AI |
-| #133 | Repair issues (Gold) | `issue_registry` for user-fixable problems, deleted on recovery: meter exchange (`supply_start_date` change), persistent quality flags (`anzahl_linien_* > 1`), repeated 403 with CKW contact, missing statistics after a long outage | each issue has a translation key, severity and fix path; create/delete symmetric and tested | #87, #130 | M | AI |
+| ✅ #133 | Repair issues (Gold) | `repairs.py` raises and clears four `issue_registry` issues per entry, id `ckw_<entry_id>_<condition>`: a meter exchange (`supply_start_date` changed against the stored baseline, #124), persistent quality flags (`anzahl_linien_* > 1` on more than three intervals of the rolling window), a publication stalled beyond `PUBLICATION_STALL_DAYS` (#149), and quarter-hour retention below 30 days (#157) | each issue has a translation key, severity and fix path; create/delete symmetric and tested | #87, #130 | M | AI |
 | #134 | Dynamic and stale devices (Gold) | New delivery points appear at runtime without reload; vanished meters are marked stale and removable by the user (history stays attached) | second meter in the CKW portal shows up within one poll; vanished meter marked stale | #76, #70 | M | AI |
 | ✅ #135 | Parallel updates (Silver) | `PARALLEL_UPDATES = 0` per platform with a one-line reason | constant set, noted in `reference/conventions.md` (#129) | #76 | S | AI |
 | #136 | Test coverage >= 95% (Silver) | `--cov-fail-under=95`; fixtures for multi-meter, DST day, quality flags, missing intervals; config flow + coordinator error paths included | CI enforces the threshold, report attached to the release checklist | #19, #32 | L | AI |
@@ -629,9 +629,9 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 5 Entities | 14 | 13 |
 | 6 Statistics | 7 | 5 |
 | 7 Docs | 24 | 19 |
-| 8 Quality/Release | 18 | 4 |
+| 8 Quality/Release | 18 | 5 |
 | 9 Optional | 8 | 1 |
-| **Total** | **152** | **77** |
+| **Total** | **152** | **78** |
 
 ## Critical path
 

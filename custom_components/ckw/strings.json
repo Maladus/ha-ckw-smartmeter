@@ -109,6 +109,24 @@
       "message": "No loaded CKW account to backfill; set up the integration first."
     }
   },
+  "issues": {
+    "meter_exchanged": {
+      "title": "CKW meter exchanged for {deliverypoint}",
+      "description": "CKW reports the supply start date {date} for the delivery point {deliverypoint}. The statistics of this delivery point keep the history of the old meter under the old statistic id, and the new meter continues with its own id, so the total and the Energy dashboard show a break at the exchange. Check the total after the exchange and re-import the history with the ckw.backfill service if the series should be rebuilt."
+    },
+    "data_quality": {
+      "title": "CKW flags data quality for {deliverypoint}",
+      "description": "CKW reports more than one timeseries (`anzahl_linien_*`) for {count} intervals of the delivery point {deliverypoint} within the last {days} days. The integration leaves those intervals out of the totals and out of the imported statistics, so the total has a gap instead of a wrong number. The cause is at CKW; the issue disappears as soon as no interval of the window is flagged any more."
+    },
+    "stale_publication": {
+      "title": "CKW has not published data for {deliverypoint} since {date}",
+      "description": "The newest published interval of the delivery point {deliverypoint} ends on {date}, more than {days} days ago. CKW normally publishes 1 to 3 days late, so a stall this long means the feed has stopped. Check the CKW portal or contact CKW; the issue disappears as soon as a newer interval arrives."
+    },
+    "quarter_hour_retention": {
+      "title": "Quarter-hour history of {deliverypoint} is deleted after {days} days",
+      "description": "The quarter-hour sensor of the delivery point {deliverypoint} is enabled, but Home Assistant's recorder keeps entity states for only {days} days, while at least {minimum} days are recommended. Quarter-hour values are stored as entity states and never as statistics, so anything older than {days} days is gone and cannot be imported again. Raise `recorder.purge_keep_days` to {minimum} days or more, or export the values to an external store; the how-to explains both."
+    }
+  },
   "services": {
     "backfill": {
       "name": "Backfill statistics",

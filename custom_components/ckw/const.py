@@ -129,6 +129,37 @@ PUBLICATION_STALL_DAYS: Final[int] = 4
 
 REFRESH_SKEW_SECONDS: Final[int] = 60
 
+# ---------------------------------------------------------------------------
+# Repair issues (#133, #157)
+# ---------------------------------------------------------------------------
+
+#: One store per entry, holding what the repair checks last saw. It is the only
+#: memory that survives a restart, so a meter exchange cannot be lost in one.
+STORAGE_KEY_REPAIRS: Final = f"{DOMAIN}.repairs"
+STORAGE_VERSION_REPAIRS: Final[int] = 1
+
+#: Issue-id suffix and translation key of each repair issue. The value is part
+#: of the user's UI state (an issue id is never renamed), so these are frozen.
+ISSUE_METER_EXCHANGED: Final = "meter_exchanged"
+ISSUE_DATA_QUALITY: Final = "data_quality"
+ISSUE_STALE_PUBLICATION: Final = "stale_publication"
+ISSUE_QUARTER_HOUR_RETENTION: Final = "quarter_hour_retention"
+
+#: More quality-flagged intervals than this within the rolling window raise the
+#: data-quality issue (``anzahl_linien_* > 1`` on two days is still noise).
+DATA_QUALITY_FLAG_INTERVALS: Final[int] = 3
+
+#: The quarter-hour sensor key, whose history lives in recorder states only.
+QUARTER_HOUR_ENTITY_KEY: Final = "quarter_hour"
+#: Recorder retention below this many days deletes quarter-hour history early.
+QUARTER_HOUR_MIN_RETENTION_DAYS: Final[int] = 30
+
+REPOSITORY_URL: Final = "https://github.com/Maladus/ha-ckw-smartmeter"
+#: The how-to behind the retention issue (#157).
+DOCS_QUARTER_HOUR_RETENTION_URL: Final = (
+    f"{REPOSITORY_URL}/blob/main/docs/how-to/keep-quarter-hour-history.md"
+)
+
 #: HTTP statuses of a failed token refresh: the chain is dead, a human must sign
 #: in again (ADR-0007). The coordinator and the statistics backfill share it.
 REAUTH_STATUSES: Final[frozenset[int]] = frozenset({400, 401, 403})

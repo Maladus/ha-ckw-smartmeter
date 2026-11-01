@@ -104,15 +104,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: CkwConfigEntry) -> bool:
         base_url=api_base_url(),
     )
     coordinator = CkwCoordinator(hass, entry, client)
-    # Before any platform is forwarded: a dead login or an unreachable API
-    # raises ConfigEntryNotReady here, and nothing is left half-built.
-    await coordinator.async_config_entry_first_refresh()
-
+    # Published before the first refresh on purpose: the repair check runs inside
+    # that refresh and reads the coordinator back through the runtime data.
     entry.runtime_data = CkwRuntimeData(
         api=client,
         coordinator=coordinator,
         statistics_state=StatisticsState(),
     )
+    # Before any platform is forwarded: a dead login or an unreachable API
+    # raises ConfigEntryNotReady here, and nothing is left half-built.
+    await coordinator.async_config_entry_first_refresh()
     _async_register_service_device(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
