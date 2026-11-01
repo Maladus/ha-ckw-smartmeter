@@ -1,7 +1,7 @@
 # Contributing
 
-This page answers: how do I set up this repository, run the local instance, get a change merged, and
-which duties come with it?
+This page answers: how do I set up this repository, run the local instance, get a change merged through
+a pull request, and which duties come with it?
 
 Scope first: [GOAL.md](GOAL.md) says what this integration is and is deliberately not, [PLAN.md](PLAN.md)
 holds the task tables, the gates and the decisions. Do not build outside that scope; an idea that is
@@ -69,7 +69,7 @@ A pull request is only reviewable when all of this is green, locally and in CI. 
 - [ ] `mise run types` — `mypy --strict` over the integration; a separate CI step, not part of G-1…G-3
 - [ ] G-4 hassfest — green in CI; run it in the same pull request that touches `manifest.json`,
       `strings.json`, `icons.json` or `quality_scale.yaml`
-- [ ] G-5 HACS action — green in CI once the repository is public
+- [ ] G-5 HACS action — green in CI (the repository is public since #110)
 - [ ] G-6 `mise run dev-smoke` — green, and `mise run dev-logs` shows no traceback from
       `custom_components.ckw`
 - [ ] G-7 the diff stays near 400 changed lines, and every behaviour change carries a test
@@ -79,12 +79,64 @@ A pull request is only reviewable when all of this is green, locally and in CI. 
 `mise run check` runs G-1, the docs check, G-2 and G-3 in one go, then G-6 when the dev container is
 running — and prints the reason when it skips it; G-4 and G-5 are separate.
 
+## Open the pull request
+
+`main` is branch-protected (#110), so a change reaches it through a pull request and never as a push
+to `main` or a local merge. The required checks are *Gates (mise run)*, *Hassfest* and
+*HACS validation*, and the rule is strict: the branch has to be up to date with `main` before it can
+merge.
+
+1. Branch off `main`: `gh issue develop <N> --checkout` (or `git switch -c ckw-<topic>` when the
+   change has no issue). Work, then `mise run check` until it is green.
+2. Commit in the conventional style — `fix: …`, `feat: …`, `docs: …`, `chore: …` — imperative, no
+   trailing period. The `Co-Authored-By: pi (<model>)` trailer is added by the `commit-msg` hook; do
+   not write it by hand. Types: [docs/how-to/commits.md](docs/how-to/commits.md).
+3. `git push -u origin <branch>`; the pre-push hook runs `mise run check` first.
+4. Open the pull request:
+
+   ```bash
+   gh pr create --base main --head <branch> \
+     --title "<the commit subject>" \
+     --body "<what changed, why, how it was verified> — Closes #N"
+   ```
+
+5. Wait for the three required checks, then merge with `gh pr merge --squash --delete-branch`.
+6. Never `git push` to `main`, never merge locally, never `gh pr merge --admin`.
+
+`Closes #N` in the body closes the issue when the pull request merges — one issue per pull request,
+so the issue number stays the task identifier. The same pull request marks the task's `PLAN.md` row
+✅; a shipped task with an unmarked row is plan drift, and `mise run issues` reports it.
+
+The local pre-push gate stays the fast inner loop: it tells you in about 20 s whether the branch is
+ready to push. The pull request checks are the authoritative gate, because they run on a clean
+runner and nobody can skip them.
+
+### When a check is red
+
+Open the job from the checks list at the bottom of the pull request — *Details* next to the red job,
+then its log — and read the failing step. Each step names its gate, and each gate is one command you
+can reproduce locally:
+
+| Red job | Step that failed | Run locally |
+| --- | --- | --- |
+| *Gates (mise run)* | *Gate G-1 - lint* | `mise run lint` |
+| *Gates (mise run)* | *Docs* | `mise run docs` |
+| *Gates (mise run)* | *Gate G-2 - tests* | `mise run test` |
+| *Gates (mise run)* | *Types* | `mise run types` |
+| *Gates (mise run)* | *Gate G-3 - hooks* | `mise run hooks` |
+| *Hassfest* | *Run hassfest* | hassfest in the same pull request ([PLAN.md](PLAN.md) G-4) |
+| *HACS validation* | *Run HACS action* | [PLAN.md](PLAN.md) G-5 |
+
+Fix the finding on the branch and push again — the checks re-run on the new commit. A red gate is not
+negotiated with, and never merged past.
+
 ## The pre-push gate
 
-GitHub will not protect a branch on a private repository without a paid plan, so the equivalent gate
-runs locally. `.pre-commit-config.yaml` adds a `pre-push` hook that runs `mise run check` and aborts the
-push when anything is red, before a commit leaves your machine; the same stage scans the full history
-with gitleaks.
+`main` is branch-protected since #110, so a push to it is refused and a red branch has to be fixed
+before it can merge at all. The local hook is not a substitute for that protection; it is the fast
+inner loop in front of the pull request checks. `.pre-commit-config.yaml` adds a `pre-push` hook that
+runs `mise run check` and aborts the push when anything is red, before a commit leaves your machine;
+the same stage scans the full history with gitleaks.
 
 - A red gate is not negotiated with. Fix the finding.
 - `MISE_SKIP_GATE=1 git push` is the escape hatch and prints a loud warning. It exists for the release
@@ -101,7 +153,7 @@ with gitleaks.
 - Commit `<type>: <summary>`, imperative, no trailing period. Types, examples and the automatic
   `Co-Authored-By: pi (<model>)` trailer: [docs/how-to/commits.md](docs/how-to/commits.md).
 - Do not bypass the hooks. `git commit --no-verify` also skips the secret scan.
-- The pull request body carries `Closes #N`; merging closes the issue.
+- The pull request body carries `Closes #N`; merging the pull request closes the issue.
 - Which task can start now, and where plan and tracker drift apart: `mise run next`, documented in
   [docs/how-to/next-task.md](docs/how-to/next-task.md).
 

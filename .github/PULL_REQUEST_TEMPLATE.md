@@ -1,11 +1,26 @@
 # Pull request
 
 One branch per issue (`gh issue develop <N> --checkout`), and the issue number is the task identifier.
-`CONTRIBUTING.md` explains the gates below; `AGENTS.md` is the same contract for an AI agent.
+The change reaches `main` through this pull request and three required checks — *Gates (mise run)*,
+*Hassfest*, *HACS validation*. Never push to `main` and never merge locally; `CONTRIBUTING.md` explains
+the gates below and the flow, `AGENTS.md` is the same contract for an AI agent.
 
-## What this changes
+## What changed
 
-<!-- One paragraph: the symptom or the missing capability, and what the change does about it. -->
+<!-- One paragraph: the files and behaviours the diff touches. -->
+
+## Why
+
+<!-- The symptom or the missing capability, the issue it belongs to, and what this change does about it. -->
+
+## How it was verified
+
+<!-- Paste the last lines of `mise run check` (and `mise run types`, `mise run dev-smoke` when they ran).
+     If a check could not run, say which and why. A green CI run is not a substitute for saying what you ran. -->
+
+```text
+check: green in 21s
+```
 
 ## Checklist
 
@@ -18,8 +33,8 @@ One branch per issue (`gh issue develop <N> --checkout`), and the issue number i
       and `CHANGELOG.md` has its entry
 - [ ] An ADR is added under `docs/explanation/decisions/` and its index row added, when the change touches
       auth, tokens, statistics, entity or unique ids, user-visible behaviour, or adds a dependency
-- [ ] This body contains `Closes #N`
-- [ ] The `PLAN.md` row is marked ✅
+- [ ] This body contains `Closes #N`, which closes the issue when this pull request merges
+- [ ] The task's `PLAN.md` row is marked ✅ in this pull request
 
 ## Notes for the reviewer
 

@@ -45,12 +45,14 @@ repos:
         pass_filenames: false
         stages: [pre-push]
 
-      # Local branch protection (#142). GitHub will not protect a branch on a
-      # private repository without a paid plan, so every push runs the same gate
-      # as CI before it leaves the working copy. `always_run` because the gate
-      # checks the tree, not the files of this push, and because an empty push
-      # must not slip past it. The escape hatch, MISE_SKIP_GATE=1, is handled in
-      # the script and documented in CONTRIBUTING.md, "The pre-push gate".
+      # Fast inner loop in front of the pull request checks (#142, #159). `main`
+      # is branch-protected since #110, so the merge decision is the PR's three
+      # required checks; this hook runs the same gate as CI before the push
+      # leaves the working copy, so a red branch never reaches a PR. `always_run`
+      # because the gate checks the tree, not the files of this push, and because
+      # an empty push must not slip past it. The escape hatch, MISE_SKIP_GATE=1,
+      # is handled in the script and documented in CONTRIBUTING.md, "The pre-push
+      # gate".
       - id: pre-push-gate
         name: mise run check (full local gate; MISE_SKIP_GATE=1 to skip)
         entry: scripts/hooks/pre_push_gate.sh

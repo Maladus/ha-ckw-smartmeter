@@ -39,6 +39,15 @@ user-visible behaviour in a minor release; every such change is listed.
   The repository now answers "what happened", "where do I ask" and "where do I report a vulnerability"
   before the first issue is opened (#21, #25, #26, #28).
 
+### Changed
+
+- Changes reach `main` through a pull request with three required checks — *Gates (mise run)*,
+  *Hassfest* and *HACS validation* — instead of a local fast-forward: the branch is pushed, the pull
+  request body says what changed, why and how it was verified plus `Closes #N`, and it is merged with
+  `gh pr merge --squash --delete-branch`. The local `mise run check` pre-push hook stays the fast inner
+  loop in front of those checks. `AGENTS.md`, `CONTRIBUTING.md` and the pull-request template describe
+  the flow (#159).
+
 ## [0.1.0] - 2026-11-01
 
 The first version that runs. It is exercised against the mock CKW API, the recorded fixtures and the
