@@ -27,7 +27,7 @@ Netzbetreiber); every definition below is the single wording this project uses e
 ## Related
 
 - [OpenEnergy API reference](ckw-openenergy-api.md) — the endpoints and fields every term above comes from.
-- [Data model](../explanation/data-model.md) — why readings stop at yesterday, HT/NT, the quality flags,
+- [Data model](../explanation/data-model.md) — why readings arrive 1 to 3 days late, HT/NT, the quality flags,
   and why there is no live power sensor.
 - [Conventions](conventions.md) — the crosscutting rules (error mapping, redaction, Europe/Zurich) that use
   these terms.

@@ -11,15 +11,15 @@ Status: early development. The first installable release is v0.1.0.
 
 ## What you get
 
-- Daily consumption in kWh per delivery point (Zählpunkt), including the HT/NT split
-- Daily cost in CHF, as billed by CKW and excluding VAT
+- Daily consumption in kWh per delivery point (Zählpunkt), including the HT/NT split, 1–3 days behind
+- Daily cost in CHF, as billed by CKW and excluding VAT, on the same 1–3 day delay
 - One Home Assistant device per delivery point, with long-term statistics for the Energy dashboard
 - Roughly two years of history backfilled on first setup
 - Install and update through HACS (now Home Assistant Marketplace)
 - German and English UI
 
 There is no live power sensor, and there will not be one: your Netzbetreiber may legally read the
-meter once per day. The newest value you see is yesterday.
+meter once per day. The newest value is 1–3 days old (CKW publishes late), never live.
 
 ## Before you start
 

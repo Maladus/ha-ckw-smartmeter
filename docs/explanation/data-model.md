@@ -1,27 +1,41 @@
 # Data model
 
-This page answers: why the numbers stop at yesterday, what HT/NT and the CHF amounts actually mean,
-why some intervals are flagged instead of summed, and which meters this integration can serve.
+This page answers: why the numbers arrive 1 to 3 days late, what HT/NT and the CHF amounts actually
+mean, why some intervals are flagged instead of summed, and which meters this integration can serve.
 
 The integration does not invent a data model — it inherits CKW's. Every field it exposes comes from
 the two GET endpoints documented in the [API reference](../reference/ckw-openenergy-api.md); where
 that contract is silent, this page says so instead of guessing.
 
-## Data stops at yesterday
+## Data arrives 1 to 3 days late
 
-The OpenEnergy API serves data up to yesterday, never today: one value per delivery point per closed
-day at the `days` aggregation. CKW's own sample data is quarter-hourly — every measurement example in
-the deployed model is 15 minutes wide, no 1-minute example exists, and the public price feed returns
-96 quarter-hour slots per day. `minute` and `minutes` are therefore the finest *available* resolution,
-not one row per minute; whether a `minute(s)` request returns 60 rows an hour with 15 populated, or
-only four, is open. This integration requests `days` only — a product decision (PLAN #65), not an API
-limitation.
+The contract says the OpenEnergy API serves data up to yesterday, never today: one value per delivery
+point per closed day at the `days` aggregation, because the meter may legally be read only once per
+day. In practice, the newest interval is **1 to 3 days old** — the delay varies by meter and by day,
+and "up to yesterday" is a ceiling, not the observed arrival time. CKW's own sample data is
+quarter-hourly — every measurement example in the deployed model is 15 minutes wide, no 1-minute
+example exists, and the public price feed returns 96 quarter-hour slots per day. `minute` and
+`minutes` are therefore the finest *available* resolution, not one row per minute; whether a
+`minute(s)` request returns 60 rows an hour with 15 populated, or only four, is open. This integration
+requests `days` only — a product decision (PLAN #65), not an API limitation.
 
-Consequence: **no live power sensor**. Today's values do not exist yet, so there is nothing to show
-for "now"; a `W` sensor built from quarter-hour history would be an average over a past interval, not
-a reading. Anyone promising a real-time card in this integration is describing a different product. The
-freshest value Home Assistant can show is the last closed day, delivered by the 2 h poll
-([ADR-0004](decisions/0004-poll-interval-and-data-lag.md)).
+Consequence: **no live power sensor**. Today's values do not exist yet, and yesterday's may not have
+arrived either, so there is nothing to show for "now"; a `W` sensor built from quarter-hour history
+would be an average over a past interval, not a reading. Anyone promising a real-time card in this
+integration is describing a different product. The newest value Home Assistant can show is 1 to 3 days
+old, delivered by the 2 h poll ([ADR-0004](decisions/0004-poll-interval-and-data-lag.md)).
+
+Because the delay varies, the daily sensor's newest value can be 1 to 3 days old and the Energy
+dashboard will show a flat tail at the right edge: the last bar stays where it is for a day or two, or
+a day is simply missing for now. That is expected — it reflects when CKW published the data, not a
+broken integration, a stalled poll or a misconfigured sensor. The value moves when the day is
+published, and the next poll picks it up within two hours.
+
+The delay also shapes how history is imported. A day can arrive late, after its nominal date has
+passed. The rolling 7-day refetch window ([ADR-0004](decisions/0004-poll-interval-and-data-lag.md))
+exists precisely to pick up intervals that appear after their nominal day had passed: every poll
+re-reads the last seven days, so a late interval is imported when it shows up and a CKW correction
+overwrites the earlier value.
 
 Why not import the finer history that may exist? Because the product is daily consumption and cost in
 the Energy dashboard. 96 intervals per day multiply every statistic row, every entity update and every
@@ -135,7 +149,8 @@ Quality-scale rule `docs-data-update`.
   follow-up #53 for the range itself.
 - Each poll refetches the last **7 days** (`days` aggregation), so missed polls and CKW corrections
   repair themselves; anything older only changes through the backfill.
-- Data is available **until yesterday** — the sensors show the last closed day, never today.
+- Data arrives **1 to 3 days late** — the newest sensor value is not today's, and usually not
+  yesterday's either; the contract only promises readings up to yesterday.
 - Backfill at first setup: **730 days**, paced by the rate limit (see above), imported idempotently and
   re-importable after a recorder wipe or a meter exchange
   ([backfill history](../how-to/backfill-history.md)).
@@ -146,8 +161,8 @@ Quality-scale rule `docs-known-limitations`.
 
 | Limitation | What it means for you |
 |---|---|
-| One-day lag | Today's consumption is invisible; there is no workaround, only patience. |
-| No live values | No power (`W`) for *now*, no current; the freshest value is yesterday's. Minute-level history is not imported (PLAN #65). |
+| 1–3 day lag | The newest value is 1 to 3 days old, and how old varies by meter and day; there is no workaround, only patience. |
+| No live values | No power (`W`) for *now*, no current; the freshest value is 1–3 days old. Minute-level history is not imported (PLAN #65). |
 | Paced backfill | First setup imports 730 days over several minutes rather than instantly; the history fills in. |
 | Base price only | CHF values exclude VAT and surcharges and will not match the invoice. |
 | CKW only | Other grid operators need their own integration; this one has one provider. |
@@ -159,7 +174,7 @@ Quality-scale rule `docs-known-limitations`.
 
 - [Architecture](architecture.md) — where the coordinator and the statistics import sit.
 - [ADR-0002](decisions/0002-statistics-strategy.md) — why history is imported as entity statistics.
-- [ADR-0004](decisions/0004-poll-interval-and-data-lag.md) — why 2 h, why 7 days, why one day late.
+- [ADR-0004](decisions/0004-poll-interval-and-data-lag.md) — why 2 h, why 7 days, and the observed 1–3 day lag.
 - [Session lifetime](session-lifetime.md) — how long a login holds, and what forces a reauth.
 - [OpenEnergy API reference](../reference/ckw-openenergy-api.md) — every field named on this page.
 - [Glossary](../reference/glossary.md) — HT/NT, Zählpunkt, billed vs physical quantity.

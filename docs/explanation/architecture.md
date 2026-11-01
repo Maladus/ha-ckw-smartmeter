@@ -25,7 +25,7 @@ flowchart LR
 ```
 
 - Home Assistant never talks to the meter. CKW's infrastructure reads it; the API serves the
-  resulting daily aggregates, up to yesterday.
+  resulting daily aggregates, 1 to 3 days late (the contract promises only up to yesterday).
 - The browser is needed at setup and at reauth only; steady state is a token refresh plus two GET
   requests per poll. Only outbound HTTPS leaves the instance: no inbound port, no webhook, no LAN
   discovery, which is why `discovery` is exempt from the quality scale.
@@ -38,7 +38,7 @@ flowchart LR
   → [ADR-0002](decisions/0002-statistics-strategy.md)
 - **One device per delivery point**, ids append-only from the config entry.
   → [ADR-0003](decisions/0003-meter-device-mapping.md)
-- **Poll every 2 h over a rolling 7-day window**, accepting the one-day lag.
+- **Poll every 2 h over a rolling 7-day window**, accepting the observed 1–3 day lag.
   → [ADR-0004](decisions/0004-poll-interval-and-data-lag.md)
 - **Diátaxis documents, arc42-lite architecture**: block, decision and consequence one link apart.
   → [ADR-0005](decisions/0005-doc-structure-diataxis-arc42-lite.md)
@@ -84,7 +84,7 @@ sequenceDiagram
     U->>HA: choose the delivery point
     HA->>HA: create the config entry and load platforms
     CO->>API: GET /smartmeter/measurement/…/days (730-day backfill, chunked)
-    API-->>CO: daily measurements per meter, until yesterday
+    API-->>CO: daily measurements per meter, 1 to 3 days late
     CO->>ST: import statistics for the backfill window
     ST-->>HA: kWh and CHF history for the Energy dashboard
     HA-->>U: sensors available

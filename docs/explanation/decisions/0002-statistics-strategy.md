@@ -28,7 +28,7 @@ The cumulative kWh and CHF sensors import long-term statistics via `async_import
 **Follow-ups**
 
 - #62/#87 implement the import and the backfill; #133 covers the meter-exchange repair.
-- The one-day lag and the "aggregated daily values" caveat are stated in `data-model.md` (#125).
+- The observed 1–3 day lag and the "aggregated daily values" caveat are stated in `data-model.md` (#125).
 
 ## Alternatives considered
 

@@ -1,6 +1,6 @@
 # 0004 — Poll every two hours over a rolling seven-day window
 
-- Status: proposed
+- Status: proposed, amended 2026-11-01: observed lag is 1-3 days, not one day
 - Date: 2026-11-01
 - Deciders: Martin Wigger
 
@@ -29,6 +29,15 @@ The coordinator polls every 2 hours, each time refetching a rolling 7-day window
 
 - `ConfigEntryAuthFailed` must fail the update and start reauth — never retry with a fresh login. On the SMS-OTP fallback (#53) a retry loop means an SMS per attempt and a lockout risk.
 - #125 documents the one-day lag, the interval and the repair window; #64/#123 own the chunked backfill and its manual re-run.
+
+### Amendment (2026-11-01)
+
+Observed against a live meter: the newest interval is **1 to 3 days old**, not one. The spread varies by
+meter and by day, and the contract's "up to yesterday" is a ceiling the API does not always reach. The
+decision above does not change: a 2 h poll refetches the rolling 7-day window, so it picks up a day
+within two hours of publication and covers the whole observed spread without a second code path. The
+positive and negative consequences above stand, with "yesterday's number" read as "the newest
+published day, 1–3 days old".
 
 ## Alternatives considered
 

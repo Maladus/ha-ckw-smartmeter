@@ -8,7 +8,7 @@ status live in [`PLAN.md`](PLAN.md) and the GitHub issue tracker.
 ## v0.1.0: first usable release (Bronze)
 
 - Log in with your CKW Single Sign-On account and pick your Zählpunkt
-- Daily kWh and CHF appear as sensors for each delivery point
+- Daily kWh and CHF appear as sensors for each delivery point, 1–3 days behind (CKW publishes late)
 - The Energy dashboard fills with your consumption and cost history, backfilled about two years
 - Install and update through HACS
 

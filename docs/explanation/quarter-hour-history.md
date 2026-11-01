@@ -247,7 +247,7 @@ podman rm -f ha-spike && rm -rf /tmp/ha-spike
 
 ## Related
 
-- [data-model.md](data-model.md) — why the integration's numbers stop at yesterday and what the
+- [data-model.md](data-model.md) — why the integration's numbers arrive 1 to 3 days late and what the
   quarter-hour sensor is for.
 - [ADR-0002](decisions/0002-statistics-strategy.md) — the daily entity-statistics import this
   experiment leaves standing.
