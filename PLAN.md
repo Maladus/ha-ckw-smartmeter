@@ -514,10 +514,10 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | ✅ #99 | `docs/how-to/debug-connection.md` | Symptoms → cause → fix for 401/403/429/network, raising the log level, dumping diagnostics, what is redacted, where the data ends up. No theory (link to explanation) | the three most likely failures each have a concrete fix path | #66 | AI |
 | ✅ #100 | Documentation-maintenance rule | PR-template checkbox + CONTRIBUTING line: behaviour change ⇒ affected quadrant doc + CHANGELOG updated; `docs/README.md` index kept current; quadrant placement + links checked by `mise run docs` (#127); stale doc = bug | checkbox present, `mise run docs` enforced in CI, checked during #102 audit | #27 | AI |
 | ✅ #119 | `docs/tutorial/getting-started.md` | One linear 15-minute path: request the CKW client → install → log in → populated Energy dashboard. Prerequisites as a checklist, every step with its expected visible result, no alternatives (they live in how-to) | a first-time HACS user reaches a populated dashboard without asking | #120, #121 | AI |
-| #120 | `docs/how-to/request-ckw-client.md` | The CKW OpenEnergy access form, what to enter, the mail with the redirect URIs (`https://my.home-assistant.io/redirect/oauth`, `https://<fqdn>/auth/external/callback`), the `offline_access` request, expected reply contents, what is *not* needed (public client, no secret) | request can be sent without questions; answer can be used directly | #1 | AI |
+| ✅ #120 | `docs/how-to/request-ckw-client.md` | The CKW OpenEnergy access form, what to enter, the mail with the redirect URIs (`https://my.home-assistant.io/redirect/oauth`, `https://<fqdn>/auth/external/callback`), the `offline_access` request, expected reply contents, what is *not* needed (public client, no secret) | request can be sent without questions; answer can be used directly | #1 | AI |
 | ✅ #121 | `docs/how-to/install.md` | HACS custom repository and manual `custom_components/ckw` copy, restart, then "add integration"; note that HACS cannot install a private repo until #110; removal steps | both paths verified on a clean instance (#107) | #94 | AI |
-| #122 | `docs/how-to/reauthenticate.md` | Symptoms (entity unavailable, reauth notification, `ConfigEntryAuthFailed`) → exact fix path in the UI; what *not* to do (repeated logins, revoking the client); SMS/OTP variant once #53 exists | symptom→cause→fix table, no advice that triggers repeated SMS or lockout | #48 | AI |
-| #123 | `docs/how-to/backfill-history.md` | Re-import 730 days after a meter exchange or recorder wipe, delete statistics for a statistic id in Developer Tools, `mise run dev-reset` for the dev instance, what re-import overwrites (idempotent sums, #86) and what it cannot repair | history restorable without hand-editing the database; duplicate-sum pitfall called out | #87, #89 | AI |
+| ✅ #122 | `docs/how-to/reauthenticate.md` | Symptoms (entity unavailable, reauth notification, `ConfigEntryAuthFailed`) → exact fix path in the UI; what *not* to do (repeated logins, revoking the client); SMS/OTP variant once #53 exists | symptom→cause→fix table, no advice that triggers repeated SMS or lockout | #48 | AI |
+| ✅ #123 | `docs/how-to/backfill-history.md` | Re-import 730 days after a meter exchange or recorder wipe, delete statistics for a statistic id in Developer Tools, `mise run dev-reset` for the dev instance, what re-import overwrites (idempotent sums, #86) and what it cannot repair | history restorable without hand-editing the database; duplicate-sum pitfall called out | #87, #89 | AI |
 | ✅ #124 | `docs/reference/entities.md` | Per meter: entity name, `unique_id` shape, unit, `device_class`, `state_class`, `last_reset` behaviour, statistic id, update cadence, availability semantics; which entities are Energy-dashboard eligible; append-only id rule | every created entity appears with exact attributes, generated from the entity descriptions | #76, #78 | AI |
 | ✅ #125 | `docs/explanation/data-model.md` | Why data stops at yesterday (legal once-per-day read), HT/NT semantics, CHF amounts as base price without VAT/surcharges, meaning of `anzahl_linien_*` quality flags, why there is no live power sensor | reader understands the constraints without reading code or the CKW spec; every claim linked to its source. Owns the Gold doc rules `docs-supported-devices` (CKW smart meters yes, legacy/non-CKW meters no), `docs-data-update` (2 h poll, data until yesterday) and `docs-known-limitations` | #91 | AI |
 | ✅ #126 | `docs/reference/glossary.md` | arc42 §12 harvested: deliverypointnumber/Zählpunkt, HT/NT, aggregation (`day(s)`, `month(s)`, …), statistic id, billed vs physical quantity, blind current, `anzahl_linien_*`, base price vs VAT | every German/API term used in code or docs has one canonical English definition | #91 | S | AI |
@@ -559,7 +559,7 @@ registering `ckw.backfill` in `async_setup` — and `docs-actions` applies too, 
 | #104 | Silver: `config-entry-unloading` | reload from UI works | verified | #71 | AI+H |
 | ✅ #105 | Gold: `diagnostics` | `diagnostics.py` downloadable, redacted: masked delivery points, a hashed customer id, token booleans only, and a final pass that drops any credential-named value | dump inspected manually, `tests/test_diagnostics.py` | #66 | AI |
 | ✅ #106 | Silver: docs parameters | installation + options parameters documented | matches config flow | #94 | AI |
-| #107 | Fresh-instance smoke test | Second HA instance (or clean docker volume): HACS custom repo install → setup → dashboard | works end to end | all above | H |
+| ✅ #107 | Fresh-instance smoke test | Second HA instance (or clean docker volume): HACS custom repo install → setup → dashboard | works end to end | all above | H |
 | #108 | Marketplace submission | PR to `hacs/default` (integration list), expect months of review | PR opened | #107 | H |
 | #109 | Release | `git tag v0.1.0`, notes generated, `hacs.json` version alignment | HACS shows the release | #107 | H |
 | ✅ #110 | Publish the repo | Flip `gh repo edit --visibility public --accept-visibility-change-consequences` **only when**: README complete, no secrets in history (`git log -p \| grep -i token`), fixtures redacted, CI green, LICENSE detected. Then re-check topics + description, run `#107` as a stranger would | repo public, HACS custom-repo install works from a clean instance | #101, #94 | S | H |
@@ -639,10 +639,10 @@ rejects a red push (#142). Locally that includes G-6 whenever the dev container 
 | 4 Coordinator | 8 | 8 |
 | 5 Entities | 14 | 13 |
 | 6 Statistics | 7 | 5 |
-| 7 Docs | 24 | 23 |
-| 8 Quality/Release | 18 | 13 |
+| 7 Docs | 24 | 24 |
+| 8 Quality/Release | 18 | 14 |
 | 9 Optional | 8 | 1 |
-| **Total** | **152** | **84** |
+| **Total** | **152** | **92** |
 
 ## Critical path
 
