@@ -26,6 +26,10 @@ exclude = [
     "scripts/dev/mock/generate_fixtures.py",
     "scripts/dev/mock/keycloak.py",
     "tests/test_mock_api.py",
+    # Ruff also formats the Python code blocks inside Markdown. Those blocks are
+    # prose examples wrapped for the page, not code that is imported, so they
+    # follow the 100-column limit of the code they illustrate only by accident.
+    "**/*.md",
 ]
 
 [tool.pytest.ini_options]

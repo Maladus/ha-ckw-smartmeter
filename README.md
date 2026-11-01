@@ -68,12 +68,18 @@ below are still being written before v0.1.0.
 | look up entities, options or API details | [reference: entities](docs/reference/entities.md), [reference: configuration](docs/reference/configuration.md) |
 | understand why it works this way | [explanation: architecture](docs/explanation/architecture.md), [explanation: data model](docs/explanation/data-model.md) |
 
+## Troubleshooting
+
+If something does not work, read [reference: quality scale](docs/reference/quality-scale.md): it lists what
+is verified today and every known gap with the issue that closes it, including the missing
+symptom-by-symptom page `docs/how-to/debug-connection.md` (#99).
+
 ## License
 
 MIT, see [LICENSE](LICENSE). Copyright (c) 2026 Martin Wigger.
 
 ## Development
 
-CI runs the pre-commit hooks, the Markdown lint, the Python tests, hassfest and the HACS action on
-every push to `main` and every pull request. Jobs whose artefacts do not exist yet are skipped, so the
+CI runs the pre-commit hooks, the Markdown lint, the docs layout and quality-scale check, the Python
+tests, hassfest and the HACS action on every push to `main` and every pull request. Jobs whose artefacts do not exist yet are skipped, so the
 pipeline stays green while the integration grows. A green CI run is required before a merge.

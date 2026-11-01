@@ -6,6 +6,26 @@ python = "3.13"
 ruff = "0.17.3"
 uv = "latest"
 
+[tasks.lint]
+description = "Lint and format check the Python code (gate G-1)"
+run = "ruff check . && ruff format --check ."
+
+[tasks.fmt]
+description = "Fix lint findings and format the Python code (gate G-1, writing)"
+run = "ruff check --fix . && ruff format ."
+
+[tasks.test]
+description = "Run pytest with the coverage threshold from pyproject.toml (gate G-2)"
+run = "python -m pytest -q --cov=custom_components/ckw --cov-report=term-missing"
+
+[tasks.hooks]
+description = "Run the pre-commit hooks on every file, secret scan included (gate G-3)"
+run = "pre-commit run --all-files"
+
+[tasks.check]
+description = "Full local gate: lint, docs, test and hooks; re-checks the quality-scale audit"
+depends = ["lint", "docs", "test", "hooks"]
+
 [tasks.dev-up]
 description = "Start (or restart) the Home Assistant dev instance in rootless Podman"
 run = "bash scripts/dev/up.sh"
@@ -39,7 +59,7 @@ description = "Start the local mock CKW API + fake Keycloak"
 run = "uv run python scripts/dev/mock/app.py --port 8787"
 
 [tasks.docs]
-description = "Lint Markdown and validate the Diataxis layout"
+description = "Lint Markdown, validate the Diataxis layout and summarise the quality-scale audit"
 run = "markdownlint-cli2 \"**/*.md\" \"#node_modules\" && bash scripts/docs-check.sh"
 
 [tasks.next]

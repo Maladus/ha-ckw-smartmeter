@@ -10,7 +10,7 @@ exactly one quadrant; entries marked `planned` are not written yet and name the 
 ## Start here
 
 - **I want to use it** — [getting-started](tutorial/getting-started.md) → [install](how-to/install.md).
-- **I want to change code** — [architecture](explanation/architecture.md) → conventions (planned, #129)
+- **I want to change code** — [architecture](explanation/architecture.md) → [conventions](reference/conventions.md)
   → work-with-ai-agents (planned, #98).
 - **Something is broken** — debug-connection (planned, #99) → reauthenticate (planned, #122).
 
@@ -49,10 +49,10 @@ Lookup only: exact names, values and limits, with no steps.
 | [ckw-openenergy-api-verification.md](reference/ckw-openenergy-api-verification.md) | What the live endpoints and the deployed API model actually return, and where that contradicts the transcription. | Contributors |
 | [glossary.md](reference/glossary.md) | One definition per CKW and Home Assistant term used anywhere in this repository. | Everyone |
 | [entities.md](reference/entities.md) | Every entity and statistic with its unit, device class, unique id, statistic id, cadence and Energy-dashboard eligibility. | Users, contributors |
-| `reference/configuration.md` (planned, #106) | The parameters a user sets at setup and later in the options flow. | Users |
-| `reference/quality-scale.md` (planned, #102) | The quality-scale rules, their tier, and the document or code that satisfies each. | Contributors |
+| [configuration.md](reference/configuration.md) | Every setup and options field with its type, allowed values, default and effect, plus the `ckw.backfill` action and the development-only endpoint overrides. | Users |
+| [quality-scale.md](reference/quality-scale.md) | The 51 Bronze, Silver and Gold quality-scale rules, their status, the file or test that proves each, and the open gaps. | Contributors |
+| [conventions.md](reference/conventions.md) | The crosscutting rules: error mapping, redaction, Europe/Zurich, unique ids, logging, gates. | Contributors |
 | `reference/examples.md` (planned, #128) | Copy-paste automations, dashboard cards and template sensors built on the integration. | Users |
-| `reference/conventions.md` (planned, #129) | The crosscutting rules: error mapping, redaction, Europe/Zurich, unique ids, logging. | Contributors |
 
 ## Explanation
 

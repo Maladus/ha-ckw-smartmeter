@@ -36,7 +36,7 @@ jobs:
         run: pre-commit run --all-files --show-diff-on-failure
 
   docs:
-    name: Markdown lint
+    name: Markdown lint and docs layout
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -53,6 +53,11 @@ jobs:
       - name: Run markdownlint-cli2
         if: steps.detect.outputs.enabled == 'true'
         run: npx --yes markdownlint-cli2 "**/*.md" "#node_modules"
+      # Same script as `mise run docs` (#127): quadrant placement, relative links
+      # and the quality-scale audit (which hassfest only checks inside core).
+      - name: Check the docs layout and the quality-scale audit
+        if: steps.detect.outputs.enabled == 'true'
+        run: bash scripts/docs-check.sh
 
   tests:
     name: Python tests

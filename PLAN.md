@@ -104,7 +104,7 @@ jump you use at work — block → decision → consequence — works in this re
 | `docs-high-level-description` | Bronze | `README.md` (#94) |
 | `docs-installation-instructions` | Bronze | `docs/how-to/request-ckw-client.md` (#120), `docs/tutorial/getting-started.md` (#119), `docs/how-to/install.md` (#121) |
 | `docs-removal-instructions` | Bronze | `docs/how-to/install.md` (#121) |
-| `docs-actions`, `docs-triggers`, `docs-conditions` | Bronze | exempt — no services/triggers/conditions; reason recorded in `quality_scale.yaml` (#101) |
+| `docs-actions`, `docs-triggers`, `docs-conditions` | Bronze | `docs-actions`: `docs/reference/configuration.md` (#106) — the integration adds one action, `ckw.backfill`. `docs-triggers`/`docs-conditions`: exempt, no triggers or conditions, reason in `quality_scale.yaml` (#101) |
 | `brands` | Bronze | `custom_components/ckw/brand/` (#12); brands repo PR at #116 |
 | `docs-installation-parameters` | Silver | `docs/reference/configuration.md` (#106) |
 | `docs-configuration-parameters` | Silver | `docs/reference/configuration.md` (#106) |
@@ -536,10 +536,13 @@ that tier **and all lower tiers** is `done` or `exempt` with a reason. Tracking:
 | **Gold** | #92/#124/#125/#126/#128 (docs), #105 (diagnostics), #52 (reconfigure), #80 (device class/category) | #130 `exception-translations`, #131 `icon-translations`, #132 `entity-disabled-by-default`, #133 `repair-issues`, #134 `dynamic-devices` + `stale-devices` |
 | **Platinum** | **deferred — revisit only after Gold is verified at v1.0.0** | needs a separately published client library (`async-dependency`, `inject-websession`) plus strict typing on top of all 54 rules. No user-visible benefit; cost: second repo, PyPI releases, version pinning. #139/#140 closed as not planned; reopening them is a conscious post-Gold decision, not a work item |
 
-Expected `exempt` (with reason, checked by #137): `discovery`, `discovery-update-info` (cloud service,
-nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `docs-actions`,
-`docs-triggers`, `docs-conditions` (no services, triggers or conditions), `dependency-transparency`
-(no third-party requirement — everything runs on HA and stdlib).
+Verified `exempt` (with reason, checked by #137): `discovery`, `discovery-update-info` (cloud service,
+nothing on the LAN to discover; identity comes from OAuth), `docs-triggers`, `docs-conditions` (no
+triggers or conditions), `dependency-transparency` (no third-party requirement — everything runs on HA
+and stdlib). Two rules the plan expected to be exempt are not, now that the rule texts are checked:
+`action-setup` (an action exists, so the rule applies — and the action is registered in
+`async_setup_entry`, which the rule forbids) and `docs-actions` (an action exists, so it is documented
+in `docs/reference/configuration.md` instead).
 
 ## Phase 8 — Quality scale, verification, release
 
@@ -562,7 +565,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | ✅ #134 | Dynamic and stale devices (Gold) | The sensor platform listens to the coordinator (`CkwData.meters_present` vs the accumulated `meters`): a delivery point CKW starts to return gets its seven entities and its device on the next poll, no reload. A meter missing for more than `STALE_AFTER_DAYS` is stale. Entities and history stay, the sensors are unavailable, `stale_since` sits on Consumption total, one `INFO` line marks it going stale and one its return, and no repair issue is raised because a meter can come back. `async_remove_config_entry_device` lets the user delete a vanished meter's device, and it is only registered again while the meter is present | second meter in the CKW portal shows up within one poll; vanished meter marked stale; a deleted device is not resurrected until its meter returns | #76, #70 | M | AI |
 | ✅ #135 | Parallel updates (Silver) | `PARALLEL_UPDATES = 0` per platform with a one-line reason | constant set, noted in `reference/conventions.md` (#129) | #76 | S | AI |
 | ✅ #136 | Test coverage >= 95% (Silver) | `[tool.coverage]` in `pyproject.toml` (`branch`, `fail_under = 95`, `show_missing`); CI runs pytest with `--cov=custom_components/ckw --cov-report=term-missing`; fixtures for multi-meter, DST day, quality flags, missing intervals; config flow, coordinator, statistics, repairs and availability error paths included | CI enforces the threshold and the local gate prints per-module coverage (measured 99%) | #19, #32 | L | AI |
-| #137 | Silver + Gold audit and tier claim | All 54 rules accounted for with evidence in `reference/quality-scale.md` and `quality_scale.yaml`; expected `exempt`: `discovery`, `discovery-update-info`, `action-setup`, `docs-actions/triggers/conditions`, `dependency-transparency` | every `done` links code/docs, every `exempt` states why | #102, #130, #131, #132, #133, #134, #136 | M | AI |
+| #137 | Silver + Gold audit and tier claim | All 54 rules accounted for with evidence in `reference/quality-scale.md` and `quality_scale.yaml`; verified `exempt`: `discovery`, `discovery-update-info`, `docs-triggers/conditions`, `dependency-transparency` (not `action-setup`, which the rule texts do not exempt) | every `done` links code/docs, every `exempt` states why, every `todo` names its closing issue | #102, #130, #131, #132, #133, #134, #136 | M | AI |
 
 ## Phase 9 — Later / optional
 

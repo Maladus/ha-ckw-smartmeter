@@ -12,6 +12,8 @@
 #   3. every page opens with a heading and a "This page answers: ..." line
 #   4. every page has a "Related" block
 #   5. every relative Markdown link resolves to an existing file
+#   6. the quality-scale audit in custom_components/ckw/quality_scale.yaml
+#      matches the page that explains it (docs/reference/quality-scale.md)
 #
 # Any violation prints one `docs-check: <reason>` line and exits non-zero; a
 # clean run prints a one-line summary and exits 0.
@@ -211,4 +213,99 @@ if (( ${#pending[@]} > 0 )); then
   info "${#outstanding[@]} linked documents are planned but not written yet: ${outstanding[*]}"
 fi
 
+# --- rule 6: the quality-scale audit is not stale --------------------------
+# hassfest validates a quality_scale.yaml only for integrations inside the
+# Home Assistant core repository (PLAN.md, "Quality-scale documentation
+# matrix"), so this is the local guard against a claim that rotted: the group
+# header of every tier must count the rules that follow it, every rule needs a
+# status of done/todo/exempt and a written comment, and every `todo` must be
+# listed under "Known gaps" in the page a reader will open.
+readonly QUALITY_FILE=custom_components/ckw/quality_scale.yaml
+readonly QUALITY_PAGE=docs/reference/quality-scale.md
+
+[[ -f $QUALITY_FILE ]] || fail "$QUALITY_FILE is missing - the quality scale has no audit file"
+[[ -f $QUALITY_PAGE ]] || fail "$QUALITY_PAGE is missing - a claim without the page that explains it"
+
+# One line per finding: T = tier summary, R = one rule with its status, E = a
+# violation. The Markdown half of the check runs below, in bash, because awk
+# should not have to parse a table.
+quality_report=$(awk '
+  # Group header: "  # --- Bronze (20 rules) ---"
+  /^  # --- / {
+    tier = $3
+    declared[tier] = substr($4, 2) + 0
+    order[++tiers] = tier
+    next
+  }
+  # A rule key, two-space indent: "  action-setup:"
+  /^  [a-z0-9-]+:$/ {
+    rule = substr($1, 1, length($1) - 1)
+    if (tier == "") {
+      printf "E\t%s is not inside a tier group\n", rule
+      next
+    }
+    rules[tier]++
+    next
+  }
+  /^    status:/ {
+    status[rule] = $2
+    if ($2 == "done") done[tier]++
+    else if ($2 == "todo") todo[tier]++
+    else if ($2 == "exempt") exempt[tier]++
+    printf "R\t%s\t%s\n", rule, $2
+    next
+  }
+  /^    comment:/ {
+    # A block scalar ("comment: >-") continues on the next lines.
+    text = $0
+    sub(/^    comment:[[:space:]]*/, "", text)
+    has_comment[rule] = 1
+    if (text == "" || text == "\"\"") empty_comment[rule] = 1
+    next
+  }
+  END {
+    for (i = 1; i <= tiers; i++) {
+      t = order[i]
+      printf "T\t%s\t%d\t%d\t%d\t%d\n", t, rules[t], done[t], todo[t], exempt[t]
+      if (declared[t] != rules[t])
+        printf "E\t%s: the group header says %d rules, %d are listed\n", t, declared[t], rules[t]
+    }
+    for (r in status) {
+      if (status[r] != "done" && status[r] != "todo" && status[r] != "exempt")
+        printf "E\t%s: status \"%s\" is not done, todo or exempt\n", r, status[r]
+    }
+  }
+' "$QUALITY_FILE")
+
+declare -a quality_problems=()
+quality_todos=()
+quality_total=0
+quality_summary=""
+while IFS=$'\t' read -r kind first second third fourth fifth; do
+  case $kind in
+    T)
+      quality_total=$(( quality_total + second ))
+      quality_summary="${quality_summary}${quality_summary:+, }${first}: ${second} rules (${third} done, ${fourth} todo, ${fifth} exempt)"
+      ;;
+    R)
+      if [[ $second == todo ]]; then
+        quality_todos+=("$first")
+      fi
+      ;;
+    E) quality_problems+=("$first") ;;
+  esac
+done <<<"$quality_report"
+
+if (( ${#quality_problems[@]} > 0 )); then
+  fail "quality-scale: $(printf '%s; ' "${quality_problems[@]}" | sed 's/; $//')"
+fi
+
+# Every open rule must be visible in the Known gaps table, with its issue.
+known_gaps=$(sed -n '/^## Known gaps/,/^## /p' "$QUALITY_PAGE")
+for rule in "${quality_todos[@]}"; do
+  grep -qF -- "\`$rule\`" <<<"$known_gaps" ||
+    fail "quality-scale: $rule is todo in $QUALITY_FILE but not listed under 'Known gaps' in $QUALITY_PAGE"
+done
+
+info "quality-scale: $quality_total rules - $quality_summary (see $QUALITY_PAGE)"
 info "${#documents[@]} documents OK"

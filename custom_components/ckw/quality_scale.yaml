@@ -1,0 +1,396 @@
+# Quality-scale evidence for the CKW Smart Meter integration (#101, #102, #137).
+#
+# One entry per rule of Bronze (20), Silver (10) and Gold (21). `done` names the
+# file and line, test or ADR that proves it; `exempt` states why the rule cannot
+# apply to a cloud-polled service; `todo` states what is missing and which issue
+# closes it. The readable version of this file, with links, is
+# docs/reference/quality-scale.md.
+#
+# Platinum is deliberately not listed: it grades a separately published client
+# library and is out of scope until Gold is verified (PLAN.md, GOAL.md).
+#
+# Status: this is an audit, not a claim. Two Bronze rules are still `todo`
+# (action-setup, config-flow-test-coverage), so `quality_scale: bronze` in
+# manifest.json is ahead of the evidence until they are fixed.
+
+rules:
+  # --- Bronze (20 rules) ---
+
+  action-setup:
+    status: todo
+    comment: >-
+      The integration has one action, ckw.backfill, and it is registered from
+      async_setup_entry (__init__.py:127 -> statistics.py:707), not from
+      async_setup. The rule wants the action to exist as soon as the domain
+      loads and the target entry validated inside it. The rule's "no actions of
+      its own" exception therefore does not apply. No issue exists yet for the
+      move; #102 (audit) and #137 (tier claim) stay blocked on it.
+
+  appropriate-polling:
+    status: done
+    comment: >-
+      Daily cloud data, nothing to poll faster than it changes: default 2 h and
+      a picker of 1/2/4/6/12 h (const.py:60-64), applied as the coordinator's
+      update_interval (coordinator.py:215). ADR-0004, #53.
+
+  brands:
+    status: done
+    comment: >-
+      custom_components/ckw/brand/icon.png and brand/logo.png (#12); the brands
+      repository PR is part of the core submission (#116).
+
+  common-modules:
+    status: done
+    comment: >-
+      Uses the Home Assistant helpers instead of private copies:
+      DataUpdateCoordinator (coordinator.py:171), config_entry_oauth2_flow
+      (__init__.py:95-110), ConfigEntry runtime_data, Store (repairs.py:99,
+      statistics.py), issue_registry and entity_registry (repairs.py),
+      DeviceInfo (entity.py:78).
+
+  config-flow:
+    status: done
+    comment: >-
+      config_flow.py: OAuth2 user flow via application_credentials
+      (async_step_user:92), delivery-point picker (async_step_meter:140),
+      reauth (:163), reconfigure (:178), options (CkwOptionsFlow:377). Every
+      string is in strings.json config/options.
+
+  config-flow-test-coverage:
+    status: todo
+    comment: >-
+      tests/test_config_flow.py covers every step, error and abort, but not
+      100 % of config_flow.py: the two-implementation branch of
+      async_step_pick_implementation (config_flow.py:109) is the one uncovered
+      line (98 %). The rule asks for 100 %. Closes with one test under
+      #102/#137.
+
+  dependency-transparency:
+    status: exempt
+    comment: >-
+      No external dependency: manifest.json has "requirements": [] and api.py
+      uses only the aiohttp that Home Assistant itself ships. The rule's own
+      exception - "if the integration does not have any external dependencies,
+      this rule does not apply" - is what is used here.
+
+  docs-actions:
+    status: done
+    comment: >-
+      One action exists, ckw.backfill; every field (entry_id, days, force) and
+      what it does are documented in docs/reference/configuration.md, in
+      services.yaml and in strings.json services.backfill. Not exempt: the
+      integration does add an action.
+
+  docs-conditions:
+    status: exempt
+    comment: >-
+      No conditions: no condition platform, no async_register_condition and no
+      device_condition.py anywhere in the package.
+
+  docs-high-level-description:
+    status: done
+    comment: >-
+      README.md ("CKW smart meter for Home Assistant", What you get, Before you
+      start) and GOAL.md; both say what the integration does and what it is not.
+
+  docs-installation-instructions:
+    status: done
+    comment: >-
+      docs/tutorial/getting-started.md (step by step),
+      docs/how-to/install.md (HACS and manual) and the README quickstart.
+
+  docs-removal-instructions:
+    status: done
+    comment: >-
+      docs/how-to/install.md, sections "Remove" and "Delete the leftover
+      statistics and entities", including the application credential.
+
+  docs-triggers:
+    status: exempt
+    comment: >-
+      No triggers: no trigger platform, no async_register_trigger and no
+      device_trigger.py; a polled sensor platform has nothing that fires.
+
+  entity-event-setup:
+    status: done
+    comment: >-
+      Subscriptions are made in async_setup_entry and released with the entry:
+      entry.async_on_unload(coordinator.async_add_listener(...)) in
+      sensor.py:239; nothing subscribes in __init__.py.
+
+  entity-unique-id:
+    status: done
+    comment: >-
+      meter_entity_unique_id() (entity.py:44) is the one definition of
+      "{entry_id}_{deliverypoint}_{key}" and every entity sets it
+      (entity.py:116). Append-only by hard rule 4, ADR-0003.
+
+  has-entity-name:
+    status: done
+    comment: >-
+      _attr_has_entity_name = True (entity.py:98), a translation_key per
+      description (sensor.py:117-178) and the names in strings.json
+      entity.sensor.
+
+  runtime-data:
+    status: done
+    comment: >-
+      CkwRuntimeData dataclass (__init__.py:59) hung on the typed entry
+      (type CkwConfigEntry = ConfigEntry[CkwRuntimeData], __init__.py:74);
+      platforms and statistics read entry.runtime_data, never a global.
+
+  test-before-configure:
+    status: done
+    comment: >-
+      The flow probes GET /smartmeter/customer before it creates the entry
+      (config_flow.py:111-126) and aborts with invalid_auth, cannot_connect or
+      unknown; tests/test_config_flow.py::test_probe_failures_are_mapped_to_abort_reasons.
+
+  test-before-setup:
+    status: done
+    comment: >-
+      await coordinator.async_config_entry_first_refresh() (__init__.py:117)
+      raises ConfigEntryNotReady and ConfigEntryAuthFailed before any platform
+      is forwarded; tests/test_coordinator.py::test_a_failed_first_refresh_is_not_ready.
+
+  unique-config-entry:
+    status: done
+    comment: >-
+      async_set_unique_id(customer.id) plus _abort_if_unique_id_configured()
+      (config_flow.py:128,134); tests/test_config_flow.py::test_same_customer_cannot_be_added_twice.
+
+  # --- Silver (10 rules) ---
+
+  action-exceptions:
+    status: done
+    comment: >-
+      exceptions.py maps every failure to a translated HomeAssistantError
+      (translation_domain and translation_key are set in exceptions.py);
+      ckw.backfill raises them (statistics.py:715-726), asserted by
+      tests/test_exceptions.py:242-306. No raw text reaches the UI.
+
+  config-entry-unloading:
+    status: done
+    comment: >-
+      async_unload_entry (__init__.py:203) unloads the platforms and drops
+      entry.runtime_data; the coordinator registers its own shutdown as an
+      entry unload callback. tests/test_coordinator.py::test_setup_registers_the_service_device_and_unload_clears_the_entry.
+
+  docs-configuration-parameters:
+    status: done
+    comment: >-
+      docs/reference/configuration.md lists every options field (poll_hours,
+      backfill_enabled) with type, allowed values, default and effect, plus the
+      data the flow stores. Matches config_flow.py:377-403 and strings.json
+      options.
+
+  docs-installation-parameters:
+    status: done
+    comment: >-
+      docs/reference/configuration.md lists the installation parameters: the
+      application credential (client id, empty secret, redirect URI), the CKW
+      endpoints, and the development-only endpoint overrides
+      (CKW_API_BASE_URL, CKW_AUTHORIZE_URL, CKW_TOKEN_URL).
+
+  entity-unavailable:
+    status: done
+    comment: >-
+      CkwEntity.available (entity.py:120) requires a successful poll and the
+      meter in CkwData.meters_present. tests/test_sensor.py::
+      test_a_failed_poll_makes_every_sensor_unavailable_and_recovery_restores_it
+      and test_a_meter_without_data_is_unavailable_not_removed.
+
+  integration-owner:
+    status: done
+    comment: >-
+      manifest.json "codeowners": ["@Maladus"] - at least one owner, as the
+      rule requires.
+
+  log-when-unavailable:
+    status: done
+    comment: >-
+      CkwCoordinator._log_failure (coordinator.py:549): one warning on the
+      first failure, debug while the same cause repeats, and the coordinator's
+      info line on recovery. tests/test_coordinator.py::test_a_failure_warns_once_and_the_recovery_is_info.
+
+  parallel-updates:
+    status: done
+    comment: >-
+      PARALLEL_UPDATES = 0 in sensor.py:51, with the reason in the module
+      docstring: every entity reads the same coordinator data, so a poll must
+      not be multiplied per sensor. Noted in docs/reference/conventions.md.
+
+  reauthentication-flow:
+    status: done
+    comment: >-
+      async_step_reauth/async_step_reauth_confirm (config_flow.py:163,167)
+      restart the OAuth2 flow and keep the entry id; reached from
+      ConfigEntryAuthFailed (coordinator.py:398). tests/test_config_flow.py::
+      test_reauth_updates_the_entry_and_keeps_its_id, tests/test_coordinator.py::
+      test_an_auth_failure_asks_for_reauth.
+
+  test-coverage:
+    status: done
+    comment: >-
+      [tool.coverage.report] fail_under = 95 in pyproject.toml, CI runs pytest
+      with --cov=custom_components/ckw --cov-report=term-missing. Measured
+      99 % (1836 statements, 486 branches, 241 tests) on 2026-02; #136.
+
+  # --- Gold (21 rules) ---
+
+  devices:
+    status: done
+    comment: >-
+      One device per delivery point under the entry's service device:
+      CkwDeviceInfo (entity.py:78) with via_device=(DOMAIN, entry_id) and the
+      service device created in __init__.py:222. ADR-0003, #80.
+
+  diagnostics:
+    status: todo
+    comment: >-
+      No diagnostics.py: the redacted config-entry dump the rule asks for does
+      not exist yet. #105 owns it; docs/reference/conventions.md already states
+      the redaction set it must apply.
+
+  discovery:
+    status: exempt
+    comment: >-
+      Cloud service over HTTPS (manifest.json "iot_class": "cloud_polling");
+      nothing on the LAN to discover, the account identity comes from the OAuth
+      login. No async_step_dhcp/zeroconf/ssdp/usb handler exists.
+
+  discovery-update-info:
+    status: exempt
+    comment: >-
+      No discovery source can supply device info. The meter metadata (model,
+      type, fuel, Zählpunkt) is read from GET /smartmeter/customer on every poll
+      (coordinator.py:_async_fetch_customer) and is fresher than any discovery
+      payload would be.
+
+  docs-data-update:
+    status: done
+    comment: >-
+      docs/explanation/data-model.md "Update cadence": poll interval, the 7-day
+      self-healing window, the 1-3 day lag and the 730-day backfill. ADR-0004.
+
+  docs-examples:
+    status: todo
+    comment: >-
+      No examples page: docs/reference/examples.md is planned (#128) and
+      nothing in docs/ shows an automation, a dashboard card or a template
+      sensor built on the integration. #128 closes it.
+
+  docs-known-limitations:
+    status: done
+    comment: >-
+      docs/explanation/data-model.md "Known limitations": lag, no live values,
+      paced backfill, base price only, CKW only, no feed-in tariff, 7-day
+      window, session length.
+
+  docs-supported-devices:
+    status: done
+    comment: >-
+      docs/explanation/data-model.md "Supported devices" (CKW smart meters,
+      electricity, several delivery points; gas, legacy meters and other grid
+      operators not supported) and docs/reference/entities.md "Not supported".
+
+  docs-supported-functions:
+    status: done
+    comment: >-
+      docs/reference/entities.md: every sensor with unit, device class, state
+      class, last_reset, unique id, statistic id, cadence and Energy-dashboard
+      eligibility.
+
+  docs-troubleshooting:
+    status: todo
+    comment: >-
+      No symptom -> cause -> resolution section anywhere. docs/how-to/
+      debug-connection.md (#99) and docs/how-to/reauthenticate.md (#122) are
+      planned; keep-quarter-hour-history.md covers one symptom only, and the
+      README currently points at docs/reference/quality-scale.md instead. #99
+      closes it.
+
+  docs-use-cases:
+    status: done
+    comment: >-
+      docs/tutorial/getting-started.md (install to a populated Energy dashboard
+      in one pass) and README.md "What you get"; the HT/NT and CHF use cases are
+      explained in docs/explanation/data-model.md.
+
+  dynamic-devices:
+    status: done
+    comment: >-
+      The sensor platform follows the coordinator: a delivery point the poll
+      starts to return gets its seven entities and its device without a reload
+      (sensor.py:218 _async_add_new_meters, registered at :239).
+      tests/test_dynamic_devices.py::test_a_new_delivery_point_gets_its_entities_without_a_reload. #134.
+
+  entity-category:
+    status: done
+    comment: >-
+      EntityCategory.DIAGNOSTIC on last_update and last_published_interval
+      (sensor.py:139,147); the measurements carry no category because they are
+      primary data.
+
+  entity-device-class:
+    status: done
+    comment: >-
+      SensorDeviceClass.ENERGY for the five kWh sensors and TIMESTAMP for the
+      two diagnostic timestamps (sensor.py:118-178), each with the matching
+      native unit. #80.
+
+  entity-disabled-by-default:
+    status: done
+    comment: >-
+      The three detail entities are registered with
+      entity_registry_enabled_default=False (sensor.py:158,168,178: high
+      tariff, low tariff, quarter hour), so a fresh setup enables exactly the
+      four core entities per meter. #132.
+
+  entity-translations:
+    status: done
+    comment: >-
+      A translation_key per description (sensor.py:117-178) and the names in
+      strings.json entity.sensor, translated in translations/de.json and
+      translations/en.json.
+
+  exception-translations:
+    status: done
+    comment: >-
+      strings.json exceptions holds all 11 keys; every one is raised as
+      HomeAssistantError or UpdateFailed with translation_domain/
+      translation_key (coordinator.py:659-701, exceptions.py,
+      statistics.py). tests/test_exceptions.py:99,145 assert keys, not strings,
+      in both languages. #130.
+
+  icon-translations:
+    status: done
+    comment: >-
+      icons.json maps every translation_key to an mdi icon; no _attr_icon
+      remains in Python. #131.
+
+  reconfiguration-flow:
+    status: done
+    comment: >-
+      async_step_reconfigure (config_flow.py:178) re-reads the account and moves
+      the entry to another delivery point through
+      async_update_reload_and_abort, keeping the entry id and its history.
+      tests/test_config_flow.py::test_reconfigure_changes_the_delivery_point_and_keeps_the_entry.
+
+  repair-issues:
+    status: done
+    comment: >-
+      repairs.py raises and clears four issues per entry, ids
+      ckw_<entry_id>_<condition>: meter_exchanged, data_quality,
+      stale_publication, quarter_hour_retention; each has a title, description,
+      severity and a strings.json issues entry. #133, #157.
+
+  stale-devices:
+    status: done
+    comment: >-
+      A meter missing for more than STALE_AFTER_DAYS (const.py:160) is reported
+      in CkwData.stale_since (coordinator.py:_track_presence), its entities stay
+      and go unavailable, stale_since surfaces on Consumption total, and
+      async_remove_config_entry_device (__init__.py:172) lets the user delete the
+      device without it being resurrected (entity.py:62).
+      tests/test_dynamic_devices.py:414-664. #134.
