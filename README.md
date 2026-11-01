@@ -67,3 +67,9 @@ below are still being written before v0.1.0.
 ## License
 
 MIT, see [LICENSE](LICENSE). Copyright (c) 2026 Martin Wigger.
+
+## Development
+
+CI runs the pre-commit hooks, the Markdown lint, the Python tests, hassfest and the HACS action on
+every push to `main` and every pull request. Jobs whose artefacts do not exist yet are skipped, so the
+pipeline stays green while the integration grows. A green CI run is required before a merge.
