@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: <https://github.com/Maladus/ha-ckw-smartmeter> (`custom_components/ckw`) — private until #110
-Issues: #1–#147, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
+Issues: #1–#148, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -392,6 +392,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | #49 | `unique-config-entry` | Abort if an entry with the same customer id exists (`async_set_unique_id`) | second setup aborts `already_configured` | #48 | S | AI |
 | #50 | Meter selection step | If >1 `deliverypointnumber`, `async_step_meter` picker; store in entry data | multi-meter fixture → picker shown; single meter → skipped | #48, #6 | M | AI |
 | #51 | Reauth flow | `async_step_reauth` → same OAuth2 flow, update tokens, `async_update_reload_and_abort` | simulated 401 on refresh → reauth offered, flow reloads entry | #47 | M | AI |
+| ✅ #148 | Session lifetime analysis + keep-alive rule | `docs/explanation/session-lifetime.md` (lifetime model in Keycloak terms, tolerance table, probe procedure, open questions incl. the unverified Android-app observation) and `docs/explanation/decisions/0007-token-lifetime-and-keepalive.md` (2 h poll, refresh before every request, single-flight lock, persist rotated token before next use, reauth on dead refresh token, ask CKW for `offline_access`) | lifetime model with numbers, keep-alive rule implementable without further analysis | #71, #51 | M | AI |
 | #52 | Reconfigure flow | Change client id / meter without deleting the entry | reconfigure reloads entry, statistics ids unchanged | #50 | S | AI |
 | #53 | Options flow | Poll interval (1–12 h, default 2 h) | options persist, coordinator picks up on reload | #50 | S | AI |
 | #54 | Config-flow tests | `pytest-homeassistant-custom-component`: happy path, invalid auth, cannot connect, already configured, multi-meter, reauth | `test_config_flow.py` ≥ 6 cases green | #48–#53 | M | AI |
@@ -580,7 +581,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 0 External | 8 | 0 |
 | 1 Setup & governance | 30 | 8 |
 | 1b Podman dev instance | 12 | 2 |
-| 2 Auth | 12 | 0 |
+| 2 Auth | 13 | 1 |
 | 3 API | 10 | 0 |
 | 4 Coordinator | 7 | 0 |
 | 5 Entities | 10 | 0 |
@@ -588,7 +589,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 7 Docs | 24 | 13 |
 | 8 Quality/Release | 18 | 0 |
 | 9 Optional | 7 | 0 |
-| **Total** | **144** | **22** |
+| **Total** | **145** | **23** |
 
 ## Critical path
 
