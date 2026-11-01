@@ -460,7 +460,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | ✅ #69 | Rolling window | Refetch last 7 days (`days`) on every poll; merge into per-meter cumulative totals kept in `runtime_data`; ignore duplicate intervals | test: repeated poll does not change totals | #68 | M | AI |
 | ✅ #70 | Exception mapping | `CkwAuthError`→`ConfigEntryAuthFailed`; `CkwRateLimitError`→`UpdateFailed` with reset time; network→`ConfigEntryNotReady` at setup / `UpdateFailed` at runtime | tests per case | #63 | M | AI |
 | ✅ #71 | Setup/unload | `async_setup_entry` creates API+coordinator, `EntryType.SERVICE` device, forwards platforms; `async_unload_entry` unloads platforms and clears listeners | unload/reload test green (Silver `config-entry-unloading`) | #67 | M | AI |
-| ✅ #149 | Log published grid data inside the integration | Coordinator logging only, no probe tool: DEBUG per poll with requested window, interval count, newest `zeitstempel_bis_utc` and computed `lag_hours`; INFO exactly once per publication event ("new grid data published: <date>, lag <h> h"); WARNING when the lag exceeds **96 h** (expected spread is 1-3 days) or the newest interval stalls for four days; attributes `publication_delay_h` + `last_published_interval` on the consumption sensor | with `logger: custom_components.ckw: debug` the poll-by-poll lag is visible, exactly one INFO line per published day, both attributes move with it | #71, #83 | S | AI |
+| ✅ #149 | Log published grid data inside the integration | Coordinator logging only, no probe tool: DEBUG per poll with requested window, interval count, newest `zeitstempel_bis_utc` and computed `lag_hours`; INFO exactly once per publication event (`new grid data published: YYYY-MM-DD, lag 14.2 h`); WARNING when the lag exceeds **96 h** (expected spread is 1-3 days) or the newest interval stalls for four days; attributes `publication_delay_h` + `last_published_interval` on the consumption sensor | with `logger: custom_components.ckw: debug` the poll-by-poll lag is visible, exactly one INFO line per published day, both attributes move with it | #71, #83 | S | AI |
 | ✅ #72 | `log-when-unavailable` | First failure logs warning once, recovery logs info | log assertions in test | #70 | S | AI |
 | ✅ #73 | Timezone discipline | All date math in `Europe/Zurich`; API dates are `YYYYMMDD`, timestamps UTC `dateTimeOnly` | DST test (23 h / 25 h days) | #69 | M | AI |
 
@@ -479,9 +479,9 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | #82 | Availability | `available` false when coordinator fails; entities restore on success | matches Silver `entity-unavailable` | #70 | S | AI |
 | #83 | Sensor tests | State + attributes from fixtures, multi-meter fan-out, missing interval (None) handling | `test_sensor.py` ≥ 5 cases | #76–#80 | M | AI |
 | #152 | Quarter-hour sensor (finest resolution) | `sensor.ckw_<meter>_quarter_hour`: kWh per 15-minute interval, `MEASUREMENT`, disabled by default, attributes `interval_start`/`interval_end`/`publication_delay_h`; fetched per poll for the current day only, no retroactive import (states are not writable in the past) | newest quarter-hour visible, history survives `purge_keep_days`, docs state the limits | #71, #124, #147 | M | AI |
-| #155 | Document the live-data gap and the companion path | `README.md` + `docs/explanation/data-model.md` state plainly: no live values, newest data is yesterday's, entity names/descriptions say so; a `docs/how-to/live-and-archive.md` explains pairing the archive (CKW) with a local live sensor (P1/IR reader or CT clamp) for automations, and why the totals of the two will differ (billed vs instantaneous) | a user understands within one screen why nothing is live and what to add if they need it | #94, #125 | S | AI |
+| ✅ #155 | Document the live-data gap and the companion path | `README.md` + `docs/explanation/data-model.md` state plainly: no live values, newest data is yesterday's, entity names/descriptions say so; a `docs/how-to/live-and-archive.md` explains pairing the archive (CKW) with a local live sensor (P1/IR reader or CT clamp) for automations, and why the totals of the two will differ (billed vs instantaneous) | a user understands within one screen why nothing is live and what to add if they need it | #94, #125 | S | AI |
 | #157 | Keep 15-minute history in HA's own DB | Quarter-hour states + `recorder.purge_keep_days` guidance (how-to), startup log line with the effective retention, and a low-severity repair issue when retention < 30 days; size estimate per meter-year; InfluxDB only for long retention or retroactive data | user with default settings is told how to keep it backend-free; two weeks visible in the history card | #152, #133, #124 | S | AI |
-| #153 | ADR-0009: resolution and storage | Hourly long-term statistics for the dashboard; quarter-hour sensor bounded by `purge_keep_days`; no 15-min statistics import (dashboard resamples hourly); InfluxDB as the supported long-retention path; index + data-model updated | ADR merged | #93, #148 | S | AI |
+| ✅ #153 | ADR-0009: resolution and storage | Hourly long-term statistics for the dashboard; quarter-hour sensor bounded by `purge_keep_days`; no 15-min statistics import (dashboard resamples hourly); InfluxDB as the supported long-retention path; index + data-model updated | ADR merged | #93, #148 | S | AI |
 
 ## Phase 6 — Long-term statistics
 
@@ -626,12 +626,12 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 2 Auth | 14 | 10 |
 | 3 API | 10 | 9 |
 | 4 Coordinator | 8 | 8 |
-| 5 Entities | 14 | 1 |
+| 5 Entities | 14 | 3 |
 | 6 Statistics | 7 | 0 |
 | 7 Docs | 24 | 13 |
 | 8 Quality/Release | 18 | 0 |
 | 9 Optional | 8 | 1 |
-| **Total** | **152** | **53** |
+| **Total** | **152** | **55** |
 
 ## Critical path
 
