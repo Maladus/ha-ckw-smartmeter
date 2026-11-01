@@ -3,7 +3,7 @@
   "von": "20260922",
   "bis": "20261031",
   "series": {
-    "CH0000000000000000000000000000001": [
+    "CH1003601234500000000000000000000": [
       {
         "zeitstempel_von_utc": "2026-09-21T22:00:00",
         "zeitstempel_bis_utc": "2026-09-22T22:00:00",
@@ -12,8 +12,8 @@
         "menge_fakturiert_ht": 14.5,
         "menge_fakturiert_nt": 9.1,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-22T22:00:00",
@@ -23,8 +23,8 @@
         "menge_fakturiert_ht": 9.9,
         "menge_fakturiert_nt": 5.5,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-23T22:00:00",
@@ -34,8 +34,8 @@
         "menge_fakturiert_ht": 5.6,
         "menge_fakturiert_nt": 4.5,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-24T22:00:00",
@@ -45,8 +45,8 @@
         "menge_fakturiert_ht": 11.8,
         "menge_fakturiert_nt": 7.9,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-25T22:00:00",
@@ -56,8 +56,8 @@
         "menge_fakturiert_ht": 6.8,
         "menge_fakturiert_nt": 4.2,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-26T22:00:00",
@@ -67,8 +67,8 @@
         "menge_fakturiert_ht": 11.8,
         "menge_fakturiert_nt": 7.3,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-27T22:00:00",
@@ -78,8 +78,8 @@
         "menge_fakturiert_ht": 14.1,
         "menge_fakturiert_nt": 8.7,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-28T22:00:00",
@@ -89,8 +89,8 @@
         "menge_fakturiert_ht": 10.1,
         "menge_fakturiert_nt": 7.6,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-29T22:00:00",
@@ -100,8 +100,8 @@
         "menge_fakturiert_ht": 13.8,
         "menge_fakturiert_nt": 9.1,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-30T22:00:00",
@@ -111,8 +111,8 @@
         "menge_fakturiert_ht": 7.2,
         "menge_fakturiert_nt": 4.4,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-01T22:00:00",
@@ -122,8 +122,8 @@
         "menge_fakturiert_ht": 7.4,
         "menge_fakturiert_nt": 5.7,
         "anzahl_linien_p": 2,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-02T22:00:00",
@@ -133,8 +133,8 @@
         "menge_fakturiert_ht": 15.5,
         "menge_fakturiert_nt": 8.6,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-03T22:00:00",
@@ -144,8 +144,8 @@
         "menge_fakturiert_ht": 7.1,
         "menge_fakturiert_nt": 4.4,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-04T22:00:00",
@@ -155,8 +155,8 @@
         "menge_fakturiert_ht": 13.3,
         "menge_fakturiert_nt": 10.5,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-05T22:00:00",
@@ -166,8 +166,8 @@
         "menge_fakturiert_ht": 6.8,
         "menge_fakturiert_nt": 5.0,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-06T22:00:00",
@@ -177,8 +177,8 @@
         "menge_fakturiert_ht": 7.3,
         "menge_fakturiert_nt": 5.8,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-07T22:00:00",
@@ -188,8 +188,8 @@
         "menge_fakturiert_ht": 9.0,
         "menge_fakturiert_nt": 5.7,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-08T22:00:00",
@@ -199,8 +199,8 @@
         "menge_fakturiert_ht": 5.8,
         "menge_fakturiert_nt": 4.5,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-09T22:00:00",
@@ -210,8 +210,8 @@
         "menge_fakturiert_ht": 11.5,
         "menge_fakturiert_nt": 7.5,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-10T22:00:00",
@@ -221,8 +221,8 @@
         "menge_fakturiert_ht": 14.1,
         "menge_fakturiert_nt": 10.6,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-11T22:00:00",
@@ -232,8 +232,8 @@
         "menge_fakturiert_ht": 12.8,
         "menge_fakturiert_nt": 10.3,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-12T22:00:00",
@@ -243,8 +243,8 @@
         "menge_fakturiert_ht": 12.5,
         "menge_fakturiert_nt": 9.6,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-13T22:00:00",
@@ -254,8 +254,8 @@
         "menge_fakturiert_ht": 8.0,
         "menge_fakturiert_nt": 4.9,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-14T22:00:00",
@@ -265,8 +265,8 @@
         "menge_fakturiert_ht": 7.2,
         "menge_fakturiert_nt": 5.9,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-15T22:00:00",
@@ -276,8 +276,8 @@
         "menge_fakturiert_ht": 11.0,
         "menge_fakturiert_nt": 8.6,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-16T22:00:00",
@@ -287,8 +287,8 @@
         "menge_fakturiert_ht": 10.7,
         "menge_fakturiert_nt": 7.5,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-17T22:00:00",
@@ -298,8 +298,8 @@
         "menge_fakturiert_ht": 6.6,
         "menge_fakturiert_nt": 4.7,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-18T22:00:00",
@@ -309,8 +309,8 @@
         "menge_fakturiert_ht": 11.4,
         "menge_fakturiert_nt": 8.2,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-19T22:00:00",
@@ -320,8 +320,8 @@
         "menge_fakturiert_ht": 7.8,
         "menge_fakturiert_nt": 6.1,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-20T22:00:00",
@@ -331,8 +331,8 @@
         "menge_fakturiert_ht": 13.2,
         "menge_fakturiert_nt": 9.9,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-21T22:00:00",
@@ -342,8 +342,8 @@
         "menge_fakturiert_ht": 11.5,
         "menge_fakturiert_nt": 7.4,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-22T22:00:00",
@@ -353,8 +353,8 @@
         "menge_fakturiert_ht": 9.6,
         "menge_fakturiert_nt": 5.3,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-23T22:00:00",
@@ -364,8 +364,8 @@
         "menge_fakturiert_ht": 13.0,
         "menge_fakturiert_nt": 10.1,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-24T22:00:00",
@@ -375,8 +375,8 @@
         "menge_fakturiert_ht": 13.9,
         "menge_fakturiert_nt": 7.7,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-25T23:00:00",
@@ -386,8 +386,8 @@
         "menge_fakturiert_ht": 7.7,
         "menge_fakturiert_nt": 5.5,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-26T23:00:00",
@@ -397,8 +397,8 @@
         "menge_fakturiert_ht": 10.3,
         "menge_fakturiert_nt": 7.7,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-27T23:00:00",
@@ -408,8 +408,8 @@
         "menge_fakturiert_ht": 6.8,
         "menge_fakturiert_nt": 3.7,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-28T23:00:00",
@@ -419,8 +419,8 @@
         "menge_fakturiert_ht": 6.8,
         "menge_fakturiert_nt": 3.8,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-29T23:00:00",
@@ -430,8 +430,8 @@
         "menge_fakturiert_ht": 11.7,
         "menge_fakturiert_nt": 7.1,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-30T23:00:00",
@@ -441,11 +441,11 @@
         "menge_fakturiert_ht": 8.6,
         "menge_fakturiert_nt": 6.7,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       }
     ],
-    "CH0000000000000000000000000000002": [
+    "CH1003601234500000000000000000001": [
       {
         "zeitstempel_von_utc": "2026-09-21T22:00:00",
         "zeitstempel_bis_utc": "2026-09-22T22:00:00",
@@ -454,8 +454,8 @@
         "menge_fakturiert_ht": 7.3,
         "menge_fakturiert_nt": 4.5,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-22T22:00:00",
@@ -465,8 +465,8 @@
         "menge_fakturiert_ht": 10.5,
         "menge_fakturiert_nt": 7.7,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-23T22:00:00",
@@ -476,8 +476,8 @@
         "menge_fakturiert_ht": 8.8,
         "menge_fakturiert_nt": 6.2,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-24T22:00:00",
@@ -487,8 +487,8 @@
         "menge_fakturiert_ht": 13.2,
         "menge_fakturiert_nt": 8.1,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-25T22:00:00",
@@ -498,8 +498,8 @@
         "menge_fakturiert_ht": 11.0,
         "menge_fakturiert_nt": 8.9,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-26T22:00:00",
@@ -509,8 +509,8 @@
         "menge_fakturiert_ht": 12.4,
         "menge_fakturiert_nt": 10.0,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-27T22:00:00",
@@ -520,8 +520,8 @@
         "menge_fakturiert_ht": 6.8,
         "menge_fakturiert_nt": 5.4,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-28T22:00:00",
@@ -531,8 +531,8 @@
         "menge_fakturiert_ht": 5.7,
         "menge_fakturiert_nt": 4.6,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-29T22:00:00",
@@ -542,8 +542,8 @@
         "menge_fakturiert_ht": 12.7,
         "menge_fakturiert_nt": 8.7,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-09-30T22:00:00",
@@ -553,8 +553,8 @@
         "menge_fakturiert_ht": 6.7,
         "menge_fakturiert_nt": 5.2,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-01T22:00:00",
@@ -564,8 +564,8 @@
         "menge_fakturiert_ht": 12.8,
         "menge_fakturiert_nt": 9.0,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-02T22:00:00",
@@ -575,8 +575,8 @@
         "menge_fakturiert_ht": 14.4,
         "menge_fakturiert_nt": 7.9,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-03T22:00:00",
@@ -586,8 +586,8 @@
         "menge_fakturiert_ht": 14.3,
         "menge_fakturiert_nt": 8.1,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-04T22:00:00",
@@ -597,8 +597,8 @@
         "menge_fakturiert_ht": 14.8,
         "menge_fakturiert_nt": 8.4,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-05T22:00:00",
@@ -608,8 +608,8 @@
         "menge_fakturiert_ht": 13.5,
         "menge_fakturiert_nt": 9.2,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-06T22:00:00",
@@ -619,8 +619,8 @@
         "menge_fakturiert_ht": 11.2,
         "menge_fakturiert_nt": 7.5,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-07T22:00:00",
@@ -630,8 +630,8 @@
         "menge_fakturiert_ht": 13.9,
         "menge_fakturiert_nt": 10.4,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-08T22:00:00",
@@ -641,8 +641,8 @@
         "menge_fakturiert_ht": 10.6,
         "menge_fakturiert_nt": 7.7,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-09T22:00:00",
@@ -652,8 +652,8 @@
         "menge_fakturiert_ht": 6.7,
         "menge_fakturiert_nt": 3.6,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-10T22:00:00",
@@ -663,8 +663,8 @@
         "menge_fakturiert_ht": 15.1,
         "menge_fakturiert_nt": 8.6,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-11T22:00:00",
@@ -674,8 +674,8 @@
         "menge_fakturiert_ht": 12.4,
         "menge_fakturiert_nt": 9.2,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-12T22:00:00",
@@ -685,8 +685,8 @@
         "menge_fakturiert_ht": 7.7,
         "menge_fakturiert_nt": 5.0,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-13T22:00:00",
@@ -696,8 +696,8 @@
         "menge_fakturiert_ht": 9.3,
         "menge_fakturiert_nt": 5.4,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-14T22:00:00",
@@ -707,8 +707,8 @@
         "menge_fakturiert_ht": 9.0,
         "menge_fakturiert_nt": 6.7,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-15T22:00:00",
@@ -718,8 +718,8 @@
         "menge_fakturiert_ht": 9.7,
         "menge_fakturiert_nt": 7.9,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-16T22:00:00",
@@ -729,8 +729,8 @@
         "menge_fakturiert_ht": 8.1,
         "menge_fakturiert_nt": 5.9,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-17T22:00:00",
@@ -740,8 +740,8 @@
         "menge_fakturiert_ht": 7.4,
         "menge_fakturiert_nt": 4.3,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-18T22:00:00",
@@ -751,8 +751,8 @@
         "menge_fakturiert_ht": 12.8,
         "menge_fakturiert_nt": 7.3,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-19T22:00:00",
@@ -762,8 +762,8 @@
         "menge_fakturiert_ht": 13.5,
         "menge_fakturiert_nt": 10.5,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-20T22:00:00",
@@ -773,8 +773,8 @@
         "menge_fakturiert_ht": 10.4,
         "menge_fakturiert_nt": 7.1,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-21T22:00:00",
@@ -784,8 +784,8 @@
         "menge_fakturiert_ht": 13.7,
         "menge_fakturiert_nt": 7.7,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-22T22:00:00",
@@ -795,8 +795,8 @@
         "menge_fakturiert_ht": 12.1,
         "menge_fakturiert_nt": 8.8,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-23T22:00:00",
@@ -806,8 +806,8 @@
         "menge_fakturiert_ht": 10.2,
         "menge_fakturiert_nt": 6.7,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-24T22:00:00",
@@ -817,8 +817,8 @@
         "menge_fakturiert_ht": 9.8,
         "menge_fakturiert_nt": 7.5,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-25T23:00:00",
@@ -828,8 +828,8 @@
         "menge_fakturiert_ht": 10.8,
         "menge_fakturiert_nt": 6.0,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-26T23:00:00",
@@ -839,8 +839,8 @@
         "menge_fakturiert_ht": 9.6,
         "menge_fakturiert_nt": 6.8,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-27T23:00:00",
@@ -850,8 +850,8 @@
         "menge_fakturiert_ht": 12.1,
         "menge_fakturiert_nt": 8.5,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-28T23:00:00",
@@ -861,8 +861,8 @@
         "menge_fakturiert_ht": 11.8,
         "menge_fakturiert_nt": 6.4,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-29T23:00:00",
@@ -872,8 +872,8 @@
         "menge_fakturiert_ht": 10.7,
         "menge_fakturiert_nt": 6.8,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       },
       {
         "zeitstempel_von_utc": "2026-10-30T23:00:00",
@@ -883,8 +883,450 @@
         "menge_fakturiert_ht": 10.2,
         "menge_fakturiert_nt": 6.3,
         "anzahl_linien_p": 1,
-        "anzahl_linien_fw": 0,
-        "anzahl_linien_fb": 0
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      }
+    ],
+    "CH1003601234500000000000000000002": [
+      {
+        "zeitstempel_von_utc": "2026-09-21T22:00:00",
+        "zeitstempel_bis_utc": "2026-09-22T22:00:00",
+        "betrag_ht": 2.21,
+        "betrag_nt": 1.14,
+        "menge_fakturiert_ht": 9.2,
+        "menge_fakturiert_nt": 6.0,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-09-22T22:00:00",
+        "zeitstempel_bis_utc": "2026-09-23T22:00:00",
+        "betrag_ht": 3.19,
+        "betrag_nt": 1.67,
+        "menge_fakturiert_ht": 13.3,
+        "menge_fakturiert_nt": 8.8,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-09-23T22:00:00",
+        "zeitstempel_bis_utc": "2026-09-24T22:00:00",
+        "betrag_ht": 3.12,
+        "betrag_nt": 1.75,
+        "menge_fakturiert_ht": 13.0,
+        "menge_fakturiert_nt": 9.2,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-09-24T22:00:00",
+        "zeitstempel_bis_utc": "2026-09-25T22:00:00",
+        "betrag_ht": 2.42,
+        "betrag_nt": 1.08,
+        "menge_fakturiert_ht": 10.1,
+        "menge_fakturiert_nt": 5.7,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-09-25T22:00:00",
+        "zeitstempel_bis_utc": "2026-09-26T22:00:00",
+        "betrag_ht": 3.43,
+        "betrag_nt": 1.9,
+        "menge_fakturiert_ht": 14.3,
+        "menge_fakturiert_nt": 10.0,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-09-26T22:00:00",
+        "zeitstempel_bis_utc": "2026-09-27T22:00:00",
+        "betrag_ht": 3.29,
+        "betrag_nt": 1.54,
+        "menge_fakturiert_ht": 13.7,
+        "menge_fakturiert_nt": 8.1,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-09-27T22:00:00",
+        "zeitstempel_bis_utc": "2026-09-28T22:00:00",
+        "betrag_ht": 2.5,
+        "betrag_nt": 1.5,
+        "menge_fakturiert_ht": 10.4,
+        "menge_fakturiert_nt": 7.9,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-09-28T22:00:00",
+        "zeitstempel_bis_utc": "2026-09-29T22:00:00",
+        "betrag_ht": 1.87,
+        "betrag_nt": 0.8,
+        "menge_fakturiert_ht": 7.8,
+        "menge_fakturiert_nt": 4.2,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-09-29T22:00:00",
+        "zeitstempel_bis_utc": "2026-09-30T22:00:00",
+        "betrag_ht": 3.1,
+        "betrag_nt": 1.71,
+        "menge_fakturiert_ht": 12.9,
+        "menge_fakturiert_nt": 9.0,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-09-30T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-01T22:00:00",
+        "betrag_ht": 2.93,
+        "betrag_nt": 1.88,
+        "menge_fakturiert_ht": 12.2,
+        "menge_fakturiert_nt": 9.9,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-01T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-02T22:00:00",
+        "betrag_ht": 1.9,
+        "betrag_nt": 0.97,
+        "menge_fakturiert_ht": 7.9,
+        "menge_fakturiert_nt": 5.1,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-02T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-03T22:00:00",
+        "betrag_ht": 2.71,
+        "betrag_nt": 1.29,
+        "menge_fakturiert_ht": 11.3,
+        "menge_fakturiert_nt": 6.8,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-03T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-04T22:00:00",
+        "betrag_ht": 1.87,
+        "betrag_nt": 0.99,
+        "menge_fakturiert_ht": 7.8,
+        "menge_fakturiert_nt": 5.2,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-04T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-05T22:00:00",
+        "betrag_ht": 3.05,
+        "betrag_nt": 1.65,
+        "menge_fakturiert_ht": 12.7,
+        "menge_fakturiert_nt": 8.7,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-05T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-06T22:00:00",
+        "betrag_ht": 3.34,
+        "betrag_nt": 1.84,
+        "menge_fakturiert_ht": 13.9,
+        "menge_fakturiert_nt": 9.7,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-06T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-07T22:00:00",
+        "betrag_ht": 2.59,
+        "betrag_nt": 1.52,
+        "menge_fakturiert_ht": 10.8,
+        "menge_fakturiert_nt": 8.0,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-07T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-08T22:00:00",
+        "betrag_ht": 2.18,
+        "betrag_nt": 0.99,
+        "menge_fakturiert_ht": 9.1,
+        "menge_fakturiert_nt": 5.2,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-08T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-09T22:00:00",
+        "betrag_ht": 1.99,
+        "betrag_nt": 1.27,
+        "menge_fakturiert_ht": 8.3,
+        "menge_fakturiert_nt": 6.7,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-09T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-10T22:00:00",
+        "betrag_ht": 3.74,
+        "betrag_nt": 1.75,
+        "menge_fakturiert_ht": 15.6,
+        "menge_fakturiert_nt": 9.2,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-10T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-11T22:00:00",
+        "betrag_ht": 2.93,
+        "betrag_nt": 1.56,
+        "menge_fakturiert_ht": 12.2,
+        "menge_fakturiert_nt": 8.2,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-11T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-12T22:00:00",
+        "betrag_ht": 2.14,
+        "betrag_nt": 1.25,
+        "menge_fakturiert_ht": 8.9,
+        "menge_fakturiert_nt": 6.6,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-12T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-13T22:00:00",
+        "betrag_ht": 3.41,
+        "betrag_nt": 1.79,
+        "menge_fakturiert_ht": 14.2,
+        "menge_fakturiert_nt": 9.4,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-13T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-14T22:00:00",
+        "betrag_ht": 2.16,
+        "betrag_nt": 1.03,
+        "menge_fakturiert_ht": 9.0,
+        "menge_fakturiert_nt": 5.4,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-14T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-15T22:00:00",
+        "betrag_ht": 2.3,
+        "betrag_nt": 1.46,
+        "menge_fakturiert_ht": 9.6,
+        "menge_fakturiert_nt": 7.7,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-15T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-16T22:00:00",
+        "betrag_ht": 1.82,
+        "betrag_nt": 0.84,
+        "menge_fakturiert_ht": 7.6,
+        "menge_fakturiert_nt": 4.4,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-16T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-17T22:00:00",
+        "betrag_ht": 1.82,
+        "betrag_nt": 1.08,
+        "menge_fakturiert_ht": 7.6,
+        "menge_fakturiert_nt": 5.7,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-17T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-18T22:00:00",
+        "betrag_ht": 1.97,
+        "betrag_nt": 0.93,
+        "menge_fakturiert_ht": 8.2,
+        "menge_fakturiert_nt": 4.9,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-18T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-19T22:00:00",
+        "betrag_ht": 3.48,
+        "betrag_nt": 1.58,
+        "menge_fakturiert_ht": 14.5,
+        "menge_fakturiert_nt": 8.3,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-19T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-20T22:00:00",
+        "betrag_ht": 3.22,
+        "betrag_nt": 1.79,
+        "menge_fakturiert_ht": 13.4,
+        "menge_fakturiert_nt": 9.4,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-20T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-21T22:00:00",
+        "betrag_ht": 2.54,
+        "betrag_nt": 1.18,
+        "menge_fakturiert_ht": 10.6,
+        "menge_fakturiert_nt": 6.2,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-21T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-22T22:00:00",
+        "betrag_ht": 2.5,
+        "betrag_nt": 1.14,
+        "menge_fakturiert_ht": 10.4,
+        "menge_fakturiert_nt": 6.0,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-22T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-23T22:00:00",
+        "betrag_ht": 2.95,
+        "betrag_nt": 1.46,
+        "menge_fakturiert_ht": 12.3,
+        "menge_fakturiert_nt": 7.7,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-23T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-24T22:00:00",
+        "betrag_ht": 2.21,
+        "betrag_nt": 0.99,
+        "menge_fakturiert_ht": 9.2,
+        "menge_fakturiert_nt": 5.2,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-24T22:00:00",
+        "zeitstempel_bis_utc": "2026-10-25T23:00:00",
+        "betrag_ht": 2.09,
+        "betrag_nt": 1.01,
+        "menge_fakturiert_ht": 8.7,
+        "menge_fakturiert_nt": 5.3,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-25T23:00:00",
+        "zeitstempel_bis_utc": "2026-10-26T23:00:00",
+        "betrag_ht": 2.74,
+        "betrag_nt": 1.35,
+        "menge_fakturiert_ht": 11.4,
+        "menge_fakturiert_nt": 7.1,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-26T23:00:00",
+        "zeitstempel_bis_utc": "2026-10-27T23:00:00",
+        "betrag_ht": 3.29,
+        "betrag_nt": 2.15,
+        "menge_fakturiert_ht": 13.7,
+        "menge_fakturiert_nt": 11.3,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-27T23:00:00",
+        "zeitstempel_bis_utc": "2026-10-28T23:00:00",
+        "betrag_ht": 1.82,
+        "betrag_nt": 1.04,
+        "menge_fakturiert_ht": 7.6,
+        "menge_fakturiert_nt": 5.5,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-28T23:00:00",
+        "zeitstempel_bis_utc": "2026-10-29T23:00:00",
+        "betrag_ht": 3.1,
+        "betrag_nt": 1.54,
+        "menge_fakturiert_ht": 12.9,
+        "menge_fakturiert_nt": 8.1,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-29T23:00:00",
+        "zeitstempel_bis_utc": "2026-10-30T23:00:00",
+        "betrag_ht": 1.68,
+        "betrag_nt": 0.87,
+        "menge_fakturiert_ht": 7.0,
+        "menge_fakturiert_nt": 4.6,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
+      },
+      {
+        "zeitstempel_von_utc": "2026-10-30T23:00:00",
+        "zeitstempel_bis_utc": "2026-10-31T23:00:00",
+        "betrag_ht": 3.24,
+        "betrag_nt": 1.65,
+        "menge_fakturiert_ht": 13.5,
+        "menge_fakturiert_nt": 8.7,
+        "anzahl_linien_p": 1,
+        "anzahl_linien_fw": 1,
+        "anzahl_linien_fb": 1
       }
     ]
   }

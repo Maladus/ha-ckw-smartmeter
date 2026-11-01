@@ -1,32 +1,54 @@
 {
   "customer": {
-    "locations": [
+    "customer_number": "0000000099",
+    "User": [
       {
         "id": "0000000001",
-        "gpnr": "0000000001",
-        "address": {
-          "street_address": "Musterweg 1",
-          "postal_code": "6000",
-          "city": "Luzern"
-        },
-        "meters": [
+        "name": "Max Beispiel",
+        "email": "max@example.invalid",
+        "phone": "+41000000000",
+        "locations": [
           {
             "id": "0000000001",
-            "model": "e450",
-            "type": "electricity",
-            "fuel": "electricity",
-            "deliverypointnumber": "CH0000000000000000000000000000001",
-            "supply_start_date": "2019-04-01",
-            "supply_end_date": ""
-          },
-          {
-            "id": "0000000002",
-            "model": "e450",
-            "type": "production",
-            "fuel": "electricity",
-            "deliverypointnumber": "CH0000000000000000000000000000002",
-            "supply_start_date": "2023-06-01",
-            "supply_end_date": ""
+            "gpnr": "0000000001",
+            "address": {
+              "street_address": "Musterweg 1",
+              "postal_code": "6000",
+              "city": "Luzern"
+            },
+            "meters": [
+              {
+                "id": "0000000001",
+                "model": "SMART",
+                "type": "import",
+                "fuel": "elec",
+                "deliverypointnumber": "CH1003601234500000000000000000000",
+                "supply_start_date": "2019-04-01",
+                "supply_end_date": "",
+                "last_calibration": "2024-03-15"
+              },
+              {
+                "id": "0000000002",
+                "model": "SMART",
+                "type": "export",
+                "fuel": "elec",
+                "deliverypointnumber": "CH1003601234500000000000000000001",
+                "supply_start_date": "2023-06-01",
+                "supply_end_date": ""
+              },
+              {
+                "id": "0000000003",
+                "model": "ANALOGUE",
+                "type": "consumption",
+                "fuel": "gas",
+                "deliverypointnumber": "CH1003601234500000000000000000002",
+                "supply_start_date": "2019-04-01",
+                "supply_end_date": "",
+                "custom": {
+                  "meter_type_indicator": "G4 diaphragm gas meter"
+                }
+              }
+            ]
           }
         ]
       }

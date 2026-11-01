@@ -13,19 +13,28 @@ Run it with::
 The three API endpoints live under ``/api/v1``; the fake Keycloak lives under
 ``/realms`` (see ``keycloak.py``) and is registered by ``build_app``.
 
-Every response carries ``x-ratelimit-limit``, ``x-ratelimit-remaining`` and
-``x-ratelimit-reset``. Failure and slowness can be injected with query
-parameters on any endpoint - see ``README.md`` next to this file.
+Behaviour follows ``docs/reference/ckw-openenergy-api-verification.md`` where that
+page has measurements: the ``400 {"error": "JWT Token is required."}`` gate runs
+before routing, a bad token answers ``401``, the documented error bodies are used
+verbatim, ``aggregation`` picks the interval width, and every response that gets
+past the gate carries ``x-ratelimit-limit: 4`` with a counting-down
+``x-ratelimit-remaining`` and a millisecond ``x-ratelimit-reset``. Failure and
+slowness can still be injected with query parameters on any API endpoint - see
+``README.md`` next to this file.
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
 import json
 import logging
 import random
-from datetime import UTC, date, datetime, time, timedelta
+import time
+from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta
+from datetime import time as time_of_day
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Final
@@ -44,7 +53,8 @@ _LOGGER: Final[logging.Logger] = logging.getLogger("mock-ckw")
 REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
 FIXTURE_DIR: Final[Path] = REPO_ROOT / "tests" / "fixtures"
 CUSTOMER_FIXTURE: Final[Path] = FIXTURE_DIR / "customer.json"
-MEASUREMENTS_FIXTURE: Final[Path] = FIXTURE_DIR / "measurements_days.json"
+MEASUREMENTS_DAYS_FIXTURE: Final[Path] = FIXTURE_DIR / "measurements_days.json"
+MEASUREMENTS_MINUTES_FIXTURE: Final[Path] = FIXTURE_DIR / "measurements_minutes.json"
 
 API_PREFIX: Final[str] = "/api/v1"
 CUSTOMER_PATH: Final[str] = f"{API_PREFIX}/smartmeter/customer"
@@ -53,10 +63,47 @@ MEASUREMENT_PATH: Final[str] = (
 )
 DYNAMIC_PRICE_PATH: Final[str] = f"{API_PREFIX}/energie/dynamische-preise"
 
-RATE_LIMIT_LIMIT: Final[int] = 100
-RATE_LIMIT_REMAINING: Final[int] = 97
-RATE_LIMIT_RESET: Final[int] = 42_000
-INJECTABLE_STATUSES: Final[frozenset[int]] = frozenset({401, 403, 408, 429, 500, 503})
+# Measured on the public CKW host: four requests per roughly one-second window.
+RATE_LIMIT_LIMIT: Final[int] = 4
+RATE_LIMIT_WINDOW_SECONDS: Final[float] = 1.0
+
+# The deployed model's maximum request width is unknown; the error message is not.
+# 400 days keeps a year-plus backfill working and still exercises the cap.
+MAX_RANGE_DAYS: Final[int] = 400
+
+# Error bodies, verbatim from the deployed API model (verification page, item 4).
+ERROR_JWT_REQUIRED: Final[str] = "JWT Token is required."
+ERROR_BAD_TOKEN: Final[str] = (
+    "Bad or expired token. To fix, you should re-authenticate the user."
+)
+ERROR_CLIENT_ID: Final[str] = "The client id validation failed."
+ERROR_TIMEOUT: Final[str] = "Timeout to get customer data was exceeded."
+ERROR_QUOTA: Final[str] = "Quota has been exceeded"
+ERROR_TOO_BIG: Final[str] = (
+    "response too big, please adjust aggregation or duration accordingly"
+)
+ERROR_JWKS: Final[str] = "Error communicating with JWKS server."
+ERROR_GENERIC: Final[str] = "An internal error has occurred."
+
+# Tokens the mock treats as bad/expired. The real API validates a signature; the mock
+# cannot, so these literals (and a JWT-shaped token whose ``exp`` has passed) stand in.
+REJECTED_TOKENS: Final[frozenset[str]] = frozenset(
+    {"invalid", "expired", "bad", "revoked"}
+)
+
+INJECTABLE_FAILURES: Final[frozenset[str]] = frozenset(
+    {"401", "403", "408", "429", "quota", "500", "503"}
+)
+INJECTED_FAILURES: Final[dict[str, tuple[int, str]]] = {
+    "401": (401, ERROR_BAD_TOKEN),
+    "403": (403, ERROR_CLIENT_ID),
+    "408": (408, ERROR_TIMEOUT),
+    "429": (429, ERROR_QUOTA),
+    "quota": (429, ERROR_QUOTA),
+    "500": (500, ERROR_GENERIC),
+    "503": (503, ERROR_JWKS),
+}
+
 # Exactly the ten values of the documented enum: no ``day(s)`` spelling exists in the
 # CKW contract (see docs/reference/ckw-openenergy-api.md), so the mock rejects it too.
 AGGREGATIONS: Final[frozenset[str]] = frozenset(
@@ -73,6 +120,10 @@ AGGREGATIONS: Final[frozenset[str]] = frozenset(
         "minutes",
     }
 )
+INTERVAL_AGGREGATIONS: Final[frozenset[str]] = frozenset({"minute", "minutes"})
+BUCKET_AGGREGATIONS: Final[frozenset[str]] = frozenset(
+    {"year", "years", "month", "months", "week", "weeks"}
+)
 
 DATE_FORMAT: Final[str] = "%Y%m%d"
 STAMP_FORMAT: Final[str] = "%Y-%m-%dT%H:%M:%S"
@@ -84,34 +135,35 @@ DYNAMIC_PRICE_BASE: Final[float] = 0.24
 DYNAMIC_PRICE_MIN: Final[float] = 0.11
 DYNAMIC_PRICE_MAX: Final[float] = 0.42
 
-ERROR_CODES: Final[dict[int, str]] = {
-    400: "bad_request",
-    401: "unauthorized",
-    403: "forbidden",
-    404: "not_found",
-    408: "request_timeout",
-    429: "too_many_requests",
-    500: "internal_server_error",
-    503: "service_unavailable",
-}
+QUANTITY_FIELDS: Final[tuple[str, ...]] = (
+    "betrag_ht",
+    "betrag_nt",
+    "menge_fakturiert_ht",
+    "menge_fakturiert_nt",
+)
+COUNTER_FIELDS: Final[tuple[str, ...]] = (
+    "anzahl_linien_p",
+    "anzahl_linien_fw",
+    "anzahl_linien_fb",
+)
 
 
-def _error_code(status: int) -> str:
-    """Return the snake_case error slug for an HTTP status."""
-    if status in ERROR_CODES:
-        return ERROR_CODES[status]
-    try:
-        return HTTPStatus(status).phrase.lower().replace(" ", "_").replace("-", "_")
-    except ValueError:
-        return "error"
+@dataclass
+class RateLimitWindow:
+    """One in-memory rate-limit window: when it opened and how much it used."""
+
+    started: float
+    used: int
 
 
-def _error_response(status: int, detail: str) -> web.Response:
-    """Build the JSON error body every endpoint uses."""
-    return web.json_response(
-        {"error": _error_code(status), "status": status, "detail": detail},
-        status=status,
-    )
+RATE_LIMIT: Final[web.AppKey[RateLimitWindow]] = web.AppKey(
+    "rate_limit", RateLimitWindow
+)
+
+
+def _error_response(status: int, message: str) -> web.Response:
+    """Build the single-key JSON error body the meter API really returns."""
+    return web.json_response({"error": message}, status=status)
 
 
 def _optional_int(raw: str | None, default: int) -> int:
@@ -135,10 +187,32 @@ def _optional_float(raw: str | None) -> float | None:
     return value if value >= 0 else None
 
 
-def _has_bearer_token(request: web.Request) -> bool:
-    """Check for a syntactically plausible ``Authorization: Bearer`` header."""
+def _bearer_token(request: web.Request) -> str | None:
+    """Return the bearer token, or ``None`` if the header is missing/malformed."""
     scheme, _, token = request.headers.get("Authorization", "").partition(" ")
-    return scheme.lower() == "bearer" and bool(token.strip())
+    token = token.strip()
+    if scheme.lower() != "bearer" or not token:
+        return None
+    return token
+
+
+def _jwt_expired(token: str) -> bool:
+    """Read ``exp`` from a JWT-shaped token; ``False`` if it cannot be decoded."""
+    parts = token.split(".")
+    if len(parts) != 3:
+        return False
+    payload = parts[1] + "=" * (-len(parts[1]) % 4)
+    try:
+        claims = json.loads(base64.urlsafe_b64decode(payload))
+    except (ValueError, json.JSONDecodeError):
+        return False
+    expires = claims.get("exp") if isinstance(claims, dict) else None
+    return isinstance(expires, int | float) and expires < time.time()
+
+
+def _token_is_rejected(token: str) -> bool:
+    """Decide whether the mock treats ``token`` as invalid or expired."""
+    return token.lower() in REJECTED_TOKENS or _jwt_expired(token)
 
 
 def _load_json(path: Path) -> Any:
@@ -157,12 +231,58 @@ def _entry_day(entry: dict[str, Any]) -> date:
     return moment.replace(tzinfo=UTC).astimezone(ZURICH).date()
 
 
+def _bucket_key(day: date, aggregation: str) -> tuple[str, int, int]:
+    """Return the bucket a local day belongs to for week/month/year aggregation."""
+    if aggregation.startswith("week"):
+        iso = day.isocalendar()
+        return ("week", iso.year, iso.week)
+    if aggregation.startswith("month"):
+        return ("month", day.year, day.month)
+    return ("year", day.year, 0)
+
+
+def _aggregate(entries: list[dict[str, Any]], aggregation: str) -> list[dict[str, Any]]:
+    """Sum quantities/costs and max the counters per week, month or year."""
+    buckets: dict[tuple[str, int, int], dict[str, Any]] = {}
+    order: list[tuple[str, int, int]] = []
+    for entry in entries:
+        key = _bucket_key(_entry_day(entry), aggregation)
+        if key not in buckets:
+            buckets[key] = {
+                "zeitstempel_von_utc": entry["zeitstempel_von_utc"],
+                "zeitstempel_bis_utc": entry["zeitstempel_bis_utc"],
+                **dict.fromkeys(QUANTITY_FIELDS, 0.0),
+                **dict.fromkeys(COUNTER_FIELDS, 0),
+            }
+            order.append(key)
+        bucket = buckets[key]
+        bucket["zeitstempel_bis_utc"] = entry["zeitstempel_bis_utc"]
+        for field in QUANTITY_FIELDS:
+            bucket[field] += entry[field]
+        for field in COUNTER_FIELDS:
+            bucket[field] = max(bucket[field], entry[field])
+
+    aggregated: list[dict[str, Any]] = []
+    for key in order:
+        bucket = buckets[key]
+        aggregated.append(
+            {
+                **bucket,
+                "betrag_ht": round(bucket["betrag_ht"], 2),
+                "betrag_nt": round(bucket["betrag_nt"], 2),
+                "menge_fakturiert_ht": round(bucket["menge_fakturiert_ht"], 1),
+                "menge_fakturiert_nt": round(bucket["menge_fakturiert_nt"], 1),
+            }
+        )
+    return aggregated
+
+
 def _dynamic_prices() -> list[dict[str, Any]]:
     """Build 24 deterministic hourly day-ahead prices for one local day."""
     rng = random.Random(DYNAMIC_PRICE_SEED)
-    start = datetime.combine(DYNAMIC_PRICE_DAY, time(0, 0), tzinfo=ZURICH).astimezone(
-        UTC
-    )
+    start = datetime.combine(
+        DYNAMIC_PRICE_DAY, time_of_day(0, 0), tzinfo=ZURICH
+    ).astimezone(UTC)
     prices: list[dict[str, Any]] = []
     price = DYNAMIC_PRICE_BASE
     for hour in range(24):
@@ -182,16 +302,11 @@ def _dynamic_prices() -> list[dict[str, Any]]:
 
 async def handle_customer(request: web.Request) -> web.StreamResponse:
     """``GET /api/v1/smartmeter/customer`` - the customer fixture."""
-    if not _has_bearer_token(request):
-        return _error_response(401, "missing or malformed bearer token")
     return web.json_response(_load_json(CUSTOMER_FIXTURE))
 
 
 async def handle_measurement(request: web.Request) -> web.StreamResponse:
     """``GET /api/v1/smartmeter/measurement/{von}/{bis}/{aggregation}``."""
-    if not _has_bearer_token(request):
-        return _error_response(401, "missing or malformed bearer token")
-
     aggregation = request.match_info["aggregation"]
     if aggregation not in AGGREGATIONS:
         return _error_response(
@@ -207,26 +322,29 @@ async def handle_measurement(request: web.Request) -> web.StreamResponse:
         return _error_response(400, "von and bis must be dates formatted as YYYYMMDD")
     if von > bis:
         return _error_response(400, "von must not be after bis")
+    if request.query.get("range") == "too-big" or (bis - von).days + 1 > MAX_RANGE_DAYS:
+        return _error_response(400, ERROR_TOO_BIG)
 
-    document: dict[str, Any] = _load_json(MEASUREMENTS_FIXTURE)
-    series: dict[str, list[dict[str, Any]]] = document["series"]
-    return web.json_response(
-        [
-            {
-                "deliverypointnumber": deliverypointnumber,
-                "measurements": [
-                    entry for entry in entries if von <= _entry_day(entry) <= bis
-                ],
-            }
-            for deliverypointnumber, entries in series.items()
-        ]
+    fixture = (
+        MEASUREMENTS_MINUTES_FIXTURE
+        if aggregation in INTERVAL_AGGREGATIONS
+        else MEASUREMENTS_DAYS_FIXTURE
     )
+    document: dict[str, Any] = _load_json(fixture)
+    series: dict[str, list[dict[str, Any]]] = document["series"]
+    result = []
+    for deliverypointnumber, entries in series.items():
+        selected = [entry for entry in entries if von <= _entry_day(entry) <= bis]
+        if aggregation in BUCKET_AGGREGATIONS:
+            selected = _aggregate(selected, aggregation)
+        result.append(
+            {"deliverypointnumber": deliverypointnumber, "measurements": selected}
+        )
+    return web.json_response(result)
 
 
 async def handle_dynamic_prices(request: web.Request) -> web.StreamResponse:
     """``GET /api/v1/energie/dynamische-preise`` - 24 hourly CHF/kWh prices."""
-    if not _has_bearer_token(request):
-        return _error_response(401, "missing or malformed bearer token")
     return web.json_response(
         {"day": DYNAMIC_PRICE_DAY.strftime(DATE_FORMAT), "prices": _dynamic_prices()}
     )
@@ -237,42 +355,68 @@ async def handle_not_found(request: web.Request) -> web.StreamResponse:
     return _error_response(404, f"no such endpoint: {request.method} {request.path}")
 
 
-@web.middleware
-async def mock_middleware(request: web.Request, handler: Handler) -> web.StreamResponse:
-    """Add rate-limit headers and implement the error/slowness injection."""
-    remaining = max(
-        _optional_int(request.query.get("ratelimit-remaining"), RATE_LIMIT_REMAINING), 0
-    )
-    reset = max(
-        _optional_int(request.query.get("ratelimit-reset"), RATE_LIMIT_RESET), 0
-    )
-
+async def _dispatch(request: web.Request, handler: Handler) -> web.StreamResponse:
+    """Run the slowness knob, failure injection, and then the handler."""
     delay = _optional_float(request.query.get("slow"))
     if delay:
         await asyncio.sleep(delay)
 
     raw_fail = request.query.get("fail")
-    fail = _optional_int(raw_fail, -1)
-    if raw_fail is not None and fail not in INJECTABLE_STATUSES:
-        response: web.StreamResponse = _error_response(
-            400,
-            f"fail must be one of {', '.join(str(s) for s in sorted(INJECTABLE_STATUSES))}",
-        )
-    elif raw_fail is not None:
-        response = _error_response(fail, f"injected failure {fail} for {request.path}")
-    else:
-        try:
-            response = await handler(request)
-        except web.HTTPRedirection:
-            raise
-        except web.HTTPException as exc:
-            response = _error_response(
-                exc.status, exc.reason or _error_code(exc.status)
+    if raw_fail is not None:
+        if raw_fail not in INJECTABLE_FAILURES:
+            return _error_response(
+                400,
+                f"fail must be one of {', '.join(sorted(INJECTABLE_FAILURES))}",
             )
+        status, message = INJECTED_FAILURES[raw_fail]
+        return _error_response(status, message)
+
+    try:
+        return await handler(request)
+    except web.HTTPRedirection:
+        raise
+    except web.HTTPException as exc:
+        message = exc.reason or HTTPStatus(exc.status).phrase
+        return _error_response(exc.status, message)
+
+
+@web.middleware
+async def mock_middleware(request: web.Request, handler: Handler) -> web.StreamResponse:
+    """Apply the JWT gate, rate-limit headers and the error/slowness injection."""
+    is_api = request.path.startswith(API_PREFIX)
+
+    if is_api:
+        token = _bearer_token(request)
+        if token is None:
+            # The real gate runs before routing and carries no x-ratelimit-* headers.
+            return _error_response(400, ERROR_JWT_REQUIRED)
+        if _token_is_rejected(token):
+            response = _error_response(401, ERROR_BAD_TOKEN)
+        else:
+            response = await _dispatch(request, handler)
+    else:
+        response = await _dispatch(request, handler)
+
+    window = request.app[RATE_LIMIT]
+    now = time.monotonic()
+    if now - window.started >= RATE_LIMIT_WINDOW_SECONDS:
+        window.started = now
+        window.used = 0
+    window.used += 1
+
+    remaining = max(RATE_LIMIT_LIMIT - window.used, 0)
+    reset = max(
+        int((window.started + RATE_LIMIT_WINDOW_SECONDS - now) * 1000),
+        0,
+    )
+    if "ratelimit-remaining" in request.query:
+        remaining = _optional_int(request.query.get("ratelimit-remaining"), remaining)
+    if "ratelimit-reset" in request.query:
+        reset = _optional_int(request.query.get("ratelimit-reset"), reset)
 
     response.headers["x-ratelimit-limit"] = str(RATE_LIMIT_LIMIT)
-    response.headers["x-ratelimit-remaining"] = str(remaining)
-    response.headers["x-ratelimit-reset"] = str(reset)
+    response.headers["x-ratelimit-remaining"] = str(max(remaining, 0))
+    response.headers["x-ratelimit-reset"] = str(max(reset, 0))
     return response
 
 
@@ -286,6 +430,7 @@ def register_api_routes(app: web.Application) -> None:
 def build_app() -> web.Application:
     """Build the complete mock: OpenEnergy API plus fake Keycloak."""
     app = web.Application(middlewares=[mock_middleware])
+    app[RATE_LIMIT] = RateLimitWindow(started=time.monotonic(), used=0)
     register_api_routes(app)
     keycloak.register_keycloak_routes(app)
     app.router.add_route("*", "/{tail:.*}", handle_not_found)
