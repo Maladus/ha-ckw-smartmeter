@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: https://github.com/Maladus/ha-ckw-smartmeter (`custom_components/ckw`) — private until #110
-Issues: #1–#140, one per task row below (✅ = closed / done)
+Issues: #1–#140, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -486,7 +486,7 @@ that tier **and all lower tiers** is `done` or `exempt` with a reason. Tracking:
 | **Bronze** | covered by #10–#35, #101, #102 | — |
 | **Silver** | #48 (reauth), #57 (unload), #63 (exceptions), #99 (logs), #106 (doc params) | #135 `parallel-updates`, #136 `test-coverage` |
 | **Gold** | #92/#124/#125/#126/#128 (docs), #105 (diagnostics), #52 (reconfigure), #80 (device class/category) | #130 `exception-translations`, #131 `icon-translations`, #132 `entity-disabled-by-default`, #133 `repair-issues`, #134 `dynamic-devices` + `stale-devices` |
-| **Platinum** | optional, Phase 9 | `strict-typing` + `inject-websession` + `async-dependency` — preconditions are free if built in from the start (#138), the library extraction (#139) and claim (#140) happen only after Gold and core submission (#116) |
+| **Platinum** | **out of scope** | needs a separately published client library (`async-dependency`, `inject-websession`) plus strict typing on top of all 54 Gold/Silver/Bronze rules. User-visible benefit: none; cost: a second repo, PyPI releases, version pinning. #139/#140 closed as not planned |
 
 Expected `exempt` (with reason, checked by #137): `discovery`, `discovery-update-info` (cloud service,
 nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `docs-actions`,
@@ -507,6 +507,14 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | #108 | Marketplace submission | PR to `hacs/default` (integration list), expect months of review | PR opened | #107 | H |
 | #109 | Release | `git tag v0.1.0`, notes generated, `hacs.json` version alignment | HACS shows the release | #107 | H |
 | #110 | Publish the repo | Flip `gh repo edit --visibility public --accept-visibility-change-consequences` **only when**: README complete, no secrets in history (`git log -p | grep -i token`), fixtures redacted, CI green, LICENSE detected. Then re-check topics + description, run `#107` as a stranger would | repo public, HACS custom-repo install works from a clean instance | #101, #94 | S | H |
+| #130 | Exception translations (Gold) | Every user-facing error from `strings.json` `exceptions:`, raised as `HomeAssistantError` with `translation_domain`/`translation_key`: invalid auth, rate limit (with reset time), no meters, unsupported meter, API unavailable; nothing raw reaches the UI | every failure path translated de/en, tests assert keys not strings | #63, #15 | S | AI |
+| #131 | Icon translations (Gold) | `icons.json` keyed by `translation_key`; no `_attr_icon` in Python | hassfest icons check green, zero icons in code | #76 | S | AI |
+| #132 | Entity disabled by default (Gold) | Rare entities registered with `entity_registry_enabled_default=False`: HT/NT detail, quality flags, raw timestamps — instead of an options toggle | fresh setup enables exactly the 4 core entities per meter | #80 | S | AI |
+| #133 | Repair issues (Gold) | `issue_registry` for user-fixable problems, deleted on recovery: meter exchange (`supply_start_date` change), persistent quality flags (`anzahl_linien_* > 1`), repeated 403 with CKW contact, missing statistics after a long outage | each issue has a translation key, severity and fix path; create/delete symmetric and tested | #87, #130 | M | AI |
+| #134 | Dynamic and stale devices (Gold) | New delivery points appear at runtime without reload; vanished meters are marked stale and removable by the user (history stays attached) | second meter in the CKW portal shows up within one poll; vanished meter marked stale | #76, #70 | M | AI |
+| #135 | Parallel updates (Silver) | `PARALLEL_UPDATES = 0` per platform with a one-line reason | constant set, noted in `reference/conventions.md` (#129) | #76 | S | AI |
+| #136 | Test coverage >= 95% (Silver) | `--cov-fail-under=95`; fixtures for multi-meter, DST day, quality flags, missing intervals; config flow + coordinator error paths included | CI enforces the threshold, report attached to the release checklist | #19, #32 | L | AI |
+| #137 | Silver + Gold audit and tier claim | All 54 rules accounted for with evidence in `reference/quality-scale.md` and `quality_scale.yaml`; expected `exempt`: `discovery`, `discovery-update-info`, `action-setup`, `docs-actions/triggers/conditions`, `dependency-transparency` | every `done` links code/docs, every `exempt` states why | #102, #130, #131, #132, #133, #134, #136 | M | AI |
 
 ## Phase 9 — Later / optional
 
@@ -517,9 +525,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | #113 | Production / PV feed-in meter support | #7 shows separate delivery point with production `type` | AI+H |
 | #114 | Dynamic tariff entities | User wants prices in the same integration (today: companion `swiss-dynamic-tariffs`, public CKW endpoint) | AI |
 | #115 | Device authorization grant login | CKW enables RFC 8628 for `oe-wigger` | AI |
-| #138 | Platinum prep: library-shaped client + strict typing | `api.py` imports nothing from `homeassistant` (coordinator maps the errors), session + token injected as constructor args, full annotations, `mypy --strict` in gates and CI; boundary recorded in `reference/conventions.md` (#129) and ADR-0006 | `api.py` free of HA imports, `mypy --strict` green | #61, #129 | M | AI |
-| #139 | Platinum: extract + publish `ckw-openenergy` | Move the client to its own repo (`src/`, `py.typed`, ruff, mypy strict, pytest), PyPI trusted publishing on tag, integration pins `requirements` and drops the in-tree copy; `dependency-transparency` becomes `done` | install from PyPI, hassfest dependency check done | #138, #116 | L | AI |
-| #140 | Platinum: audit and tier claim | All 57 rules accounted for (Gold plus `async-dependency`, `inject-websession`, `strict-typing`) with evidence in `reference/quality-scale.md` and `quality_scale.yaml` | hassfest would accept `quality_scale: platinum` | #137, #139 | S | AI |
+| #138 | Clean client boundary + strict typing | `api.py` imports nothing from `homeassistant` (the coordinator maps `CkwAuthError`/`CkwRateLimitError` to HA exceptions), session + token injected as constructor arguments, full annotations, `mypy --strict` in the gates and CI; boundary recorded in `reference/conventions.md` (#129) and ADR-0006. Useful on its own — not a Platinum step | `api.py` free of HA imports, `mypy --strict` green | #61, #129 | M | AI |
 | #116 | HA core submission | After 3+ months of stable HACS usage: docs page in `home-assistant.io`, brands repo PR, full test harness, code review | H |
 
 ## Cross-cutting gates (every PR)
@@ -575,8 +581,8 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 6 Statistics | 7 | 0 |
 | 7 Docs | 21 | 0 |
 | 8 Quality/Release | 18 | 0 |
-| 9 Optional | 9 | 0 |
-| **Total** | **140** | **4** |
+| 9 Optional | 7 | 0 |
+| **Total** | **138** | **4** |
 
 ## Critical path
 
