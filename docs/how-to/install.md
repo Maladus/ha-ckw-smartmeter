@@ -9,10 +9,9 @@ the integration.
 
 ## Through HACS
 
-This route needs the repository to be **public**. It is private until #110, and HACS cannot install
-from a private repository: it fetches releases anonymously and a private repository answers `404`.
-**Today the manual route below is the one that works**; the steps here start working on the day the
-repository is made public. The rest of the flow is identical either way.
+This route needs a **public** repository with a release, which is what v0.1.0 is: HACS fetches
+releases anonymously, so a private repository or an untagged `main` answers `404`. Both routes below
+work today; the manual one stays documented for a Home Assistant without HACS.
 
 HACS, now Home Assistant Marketplace, does not know this integration by default, so add the
 repository once:
