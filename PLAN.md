@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: <https://github.com/Maladus/ha-ckw-smartmeter> (`custom_components/ckw`) — private until #110
-Issues: #1–#140, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
+Issues: #1–#143, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -309,7 +309,7 @@ them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritte
 | ✅ #24 | `ROADMAP.md` | Public milestones `v0.1.0` → `v0.3.0` → `v1.0.0`, 3–6 bullets each, link to `PLAN.md` | no task IDs duplicated, roadmap matches phase order | #23 | S | AI |
 | #25 | `CODE_OF_CONDUCT.md` | Contributor Covenant 2.1, enforcement contact, scope (issues, PRs, discussions) | linked from README + CONTRIBUTING | #9 | S | AI |
 | #26 | `SECURITY.md` | Supported versions, private reporting (GitHub security advisories + mail), explicit scope: token handling, reauth flow, never paste tokens/codes into issues; what is redacted in diagnostics | GitHub shows Security policy, linked from README | #9 | S | AI |
-| #27 | `docs/README.md` | The Diátaxis map: four quadrant sections, "start here" per audience (user, contributor, agent), one sentence per document, link to every doc under `docs/`; nothing else | every doc linked, no orphan documents, `mise run docs` green | #9 | S | AI |
+| ✅ #27 | `docs/README.md` | The Diátaxis map: four quadrant sections, "start here" per audience (user, contributor, agent), one sentence per document, link to every doc under `docs/`; nothing else | every doc linked, no orphan documents, `mise run docs` green | #9 | S | AI |
 | #28 | Repo settings & meta | Description, topics (`home-assistant`, `hacs`, `ckw`, `switzerland`, `energy`, `smart-meter`), `.github/CODEOWNERS`, branch protection on `main` with required CI checks, `SUPPORT.md` (where to ask vs. report). Labels/milestones are #30/#31 | CI required on `main`, topics set | #18 | S | H |
 | ✅ #29 | Create GitHub repo | `gh repo create ckw-homeassistant --private` (stays private until #110), verify `gh auth status`, push `main`, enable Dependabot security alerts | repo exists, CI runs on first push | #9 | S | H |
 | #30 | Label taxonomy | `type: feat\|fix\|docs\|chore\|test\|infra`, `phase: 0…9`, `status: backlog\|ready\|blocked\|review`, `owner: ai\|human\|both`, `size: s\|m\|l`, `area: auth\|api\|stats\|entities\|ci\|docs` — created by `gh label create` loop in `scripts/gh-setup.sh` | 5 label families present, naming documented | #29 | S | AI |
@@ -471,9 +471,10 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | #124 | `docs/reference/entities.md` | Per meter: entity name, `unique_id` shape, unit, `device_class`, `state_class`, `last_reset` behaviour, statistic id, update cadence, availability semantics; which entities are Energy-dashboard eligible; append-only id rule | every created entity appears with exact attributes, generated from the entity descriptions | #76, #78 | AI |
 | ✅ #125 | `docs/explanation/data-model.md` | Why data stops at yesterday (legal once-per-day read), HT/NT semantics, CHF amounts as base price without VAT/surcharges, meaning of `anzahl_linien_*` quality flags, why there is no live power sensor | reader understands the constraints without reading code or the CKW spec; every claim linked to its source. Owns the Gold doc rules `docs-supported-devices` (CKW smart meters yes, legacy/non-CKW meters no), `docs-data-update` (2 h poll, data until yesterday) and `docs-known-limitations` | #91 | AI |
 | ✅ #126 | `docs/reference/glossary.md` | arc42 §12 harvested: deliverypointnumber/Zählpunkt, HT/NT, aggregation (`day(s)`, `month(s)`, …), statistic id, billed vs physical quantity, blind current, `anzahl_linien_*`, base price vs VAT | every German/API term used in code or docs has one canonical English definition | #91 | S | AI |
-| #127 | markdownlint + `mise run docs` | `.markdownlint.yaml`, `markdownlint-cli2` pinned in `mise.toml`, `scripts/docs-check.sh`: every file under `docs/` sits in exactly one quadrant folder, is linked from `docs/README.md`, and has the "This page answers:" opening plus a `Related` block; relative links resolve | CI job fails on a misplaced doc, a broken relative link or a lint violation | #117, #27 | M | AI |
+| ✅ #127 | markdownlint + `mise run docs` | `.markdownlint.yaml`, `markdownlint-cli2` pinned in `mise.toml`, `scripts/docs-check.sh`: every file under `docs/` sits in exactly one quadrant folder, is linked from `docs/README.md`, and has the "This page answers:" opening plus a `Related` block; relative links resolve | CI job fails on a misplaced doc, a broken relative link or a lint violation | #117, #27 | M | AI |
+| ✅ #143 | Co-author trailers | `scripts/hooks/co_author.py` as a `commit-msg` hook: appends `Co-Authored-By: pi (<provider>/<model>) <noreply@pi.local>` when `PI_PROVIDER`/`PI_MODEL` are set, never for a plain shell, never twice; how-to in `docs/how-to/commits.md` | agent commit carries one trailer, human commit none | #17, #129 | S | AI |
 | #128 | `docs/reference/examples.md` | Gold `docs-examples`: 3-5 copy-paste automations/blueprints — cost alert (`numerical_state` on month cost), daily consumption notification from statistics, Energy-dashboard card snippet, and an example of using HT/NT split for load shifting | every example renders and works as written; each states its entity ids | #124 | S | AI |
-| #129 | `docs/reference/conventions.md` | arc42 §8 as reference: exception mapping (`CkwAuthError` → `ConfigEntryAuthFailed`, 429 → `UpdateFailed`), redaction rules, Europe/Zurich discipline, append-only unique-id scheme, logging levels per failure class, naming (domain `ckw`, module layout) | every crosscutting rule stated once, testable, and cited from `architecture.md` and `AGENTS.md` | #92, #63 | S | AI |
+| ✅ #129 | `docs/reference/conventions.md` | arc42 §8 as reference: exception mapping (`CkwAuthError` → `ConfigEntryAuthFailed`, 429 → `UpdateFailed`), redaction rules, Europe/Zurich discipline, append-only unique-id scheme, logging levels per failure class, naming (domain `ckw`, module layout) | every crosscutting rule stated once, testable, and cited from `architecture.md` and `AGENTS.md` | #92, #63 | S | AI |
 
 ## Quality-scale target: Gold
 
@@ -571,17 +572,17 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | Phase | Tasks | Done |
 |---|---|---|
 | 0 External | 8 | 0 |
-| 1 Setup & governance | 29 | 7 |
+| 1 Setup & governance | 29 | 8 |
 | 1b Podman dev instance | 10 | 0 |
 | 2 Auth | 12 | 0 |
 | 3 API | 9 | 0 |
 | 4 Coordinator | 7 | 0 |
 | 5 Entities | 10 | 0 |
 | 6 Statistics | 7 | 0 |
-| 7 Docs | 21 | 6 |
+| 7 Docs | 22 | 11 |
 | 8 Quality/Release | 18 | 0 |
 | 9 Optional | 7 | 0 |
-| **Total** | **138** | **13** |
+| **Total** | **139** | **18** |
 
 ## Critical path
 
