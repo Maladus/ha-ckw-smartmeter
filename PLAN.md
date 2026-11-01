@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: https://github.com/Maladus/ha-ckw-smartmeter (`custom_components/ckw`) — private until #110
-Issues: #1–#128, one per task row below (✅ = closed / done)
+Issues: #1–#129, one per task row below (✅ = closed / done)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -74,6 +74,26 @@ one sentence per document, nothing else.
 | `CHANGELOG.md` | users | release history (Keep a Changelog) | released changes |
 | `LICENSE` | legal | MIT | licensing |
 | `scripts/dev/README.md` | devs, agents | Podman dev instance runbook (#44) | local test procedure |
+
+**arc42 chapter index → Diátaxis** (for readers who think in arc42; ADRs are §9, as usual)
+
+| arc42 | Quadrant + document | Issue |
+|---|---|---|
+| 1 Einführung und Ziele | meta: `GOAL.md` + `README.md` | #23, #94 |
+| 2 Randbedingungen | `explanation/data-model.md` (legal once-per-day read, rate limits, VAT) | #125 |
+| 3 Kontextabgrenzung | `explanation/architecture.md` (one context diagram: HA ↔ CKW IdP ↔ OpenEnergy API) | #92 |
+| 4 Lösungsstrategie | `explanation/architecture.md` summary + the ADRs it points to | #92, #93 |
+| 5 Bausteinsicht | `explanation/architecture.md` module table, each block linking its ADRs | #92 |
+| 6 Laufzeitsicht | `explanation/architecture.md`, exactly one sequence (OAuth → coordinator → totals → sensors/statistics) | #92 |
+| 7 Verteilungssicht | `scripts/dev/README.md` (Podman dev instance) + `how-to/install.md` | #44, #121 |
+| 8 Querschnittliche Konzepte | `reference/conventions.md`: error mapping, redaction, Europe/Zurich discipline, unique-id rule, logging | #129 |
+| 9 Architekturentscheidungen | `explanation/decisions/` — ADRs, index in `decisions/README.md` | #93 |
+| 10 Qualitätsanforderungen | `quality_scale.yaml` + `reference/quality-scale.md` | #101, #102 |
+| 11 Risiken und technische Schuld | risk register in this plan + the "Consequences" of each ADR | — |
+| 12 Glossar | `reference/glossary.md` | #126 |
+
+Rule: `architecture.md` (§5) links each building block to the ADRs that shaped it (§9), so the chapter
+jump you use at work — block → decision → consequence — works in this repo too.
 
 **Quality-scale documentation matrix** (source of truth: `quality_scale.yaml` #101, `mise run docs` #127)
 
@@ -415,13 +435,13 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | ID | Task | Details | Done when | Deps | Owner |
 |---|---|---|---|---|---|
 | #91 | `docs/reference/ckw-openenergy-api.md` | Transcribed API reference: 3 endpoints, all fields, aggregations, rate-limit headers, auth, "data until yesterday", error codes, CKW support contact. Lookup only, no procedures | every field traceable to the Anypoint spec | #1 | AI |
-| #92 | `docs/explanation/architecture.md` | arc42-lite: context (one diagram), building-block view as a module table, exactly one runtime sequence (OAuth → coordinator → totals → sensors/statistics), meter↔device mapping, why sensors + import; links to the ADRs it derives from. Explicitly omits arc42 4/5/7 (solution strategy, formal views, deployment — ADRs, module table and the Podman runbook cover them) | explains each module in <= 1 paragraph; a newcomer reads it in 10 minutes | #46 | AI |
+| #92 | `docs/explanation/architecture.md` | arc42 chapters 3/4/5/6 in one document: context diagram, building-block table (each block linking the ADRs that shaped it), one runtime sequence (OAuth → coordinator → totals → sensors/statistics); carries the "arc42 chapter index → Diátaxis" table as appendix. Omitted on purpose: formal view templates and §7 deployment (Podman runbook covers it) | explains each module in <= 1 paragraph; a newcomer reads it in 10 minutes; every block has an ADR link | #46 | AI |
 | #93 | `docs/explanation/decisions/` (ADRs) | `0000-template.md` + `README.md` index + `0001-auth-oauth2-vs-pasted-code.md`, `0002-statistics-strategy.md`, `0003-meter-device-mapping.md`, `0004-poll-interval-and-data-lag.md`, `0005-doc-structure-diataxis-arc42-lite.md` (format and lifecycle per "ADR process") | template + 4 ADRs, every one with real alternatives and a status field | #92 | AI |
 | #94 | `README.md` | Entry point, not a manual: one-paragraph pitch, prerequisites checklist, 5-line quickstart linking `docs/tutorial/getting-started.md`, feature/entity summary table, data lag, consent/Art. 8a–8d StromVV note, links into all four quadrants, install/removal pointer | a stranger knows within 30 seconds whether it fits, and where to start | #102, #76 | AI+H |
 | #95 | `info.md` | Short store blurb for HACS/Marketplace (Markdown), mirrors the README intro | renders in HACS pane | #94 | AI |
 | #96 | Translation review | Native German pass over `translations/de.json` + `strings.json` | no machine-German left | #15 | H |
 | #97 | `CHANGELOG.md` + releases | Keep-a-changelog format, `v0.1.0` release notes, optional release-drafter workflow | release published | milestones | AI |
-| #98 | `docs/how-to/work-with-ai-agents.md` | AI playbook: context files to read first, gate tasks (`mise run check`), hard rules, task prompt templates, review checklist, secret hygiene — plus the arc42 §8 crosscutting concepts (error mapping, redaction, Europe/Zurich discipline, unique-id rule, logging) as the agent's reference card | agent can complete a small issue using it alone | #20 | AI |
+| #98 | `docs/how-to/work-with-ai-agents.md` | AI playbook: context files to read first (arc42 chapter index), gate tasks (`mise run check`), hard rules, task prompt templates, review checklist, secret hygiene; links to `reference/conventions.md` for the crosscutting rules | agent can complete a small issue using it alone | #20, #129 | AI |
 | #99 | `docs/how-to/debug-connection.md` | Symptoms → cause → fix for 401/403/429/network, raising the log level, dumping diagnostics, what is redacted, where the data ends up. No theory (link to explanation) | the three most likely failures each have a concrete fix path | #66 | AI |
 | #100 | Documentation-maintenance rule | PR-template checkbox + CONTRIBUTING line: behaviour change ⇒ affected quadrant doc + CHANGELOG updated; `docs/README.md` index kept current; quadrant placement + links checked by `mise run docs` (#127); stale doc = bug | checkbox present, `mise run docs` enforced in CI, checked during #102 audit | #27 | AI |
 | #119 | `docs/tutorial/getting-started.md` | One linear 15-minute path: request the CKW client → install → log in → populated Energy dashboard. Prerequisites as a checklist, every step with its expected visible result, no alternatives (they live in how-to) | a first-time HACS user reaches a populated dashboard without asking | #120, #121 | AI |
@@ -434,6 +454,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | #126 | `docs/reference/glossary.md` | arc42 §12 harvested: deliverypointnumber/Zählpunkt, HT/NT, aggregation (`day(s)`, `month(s)`, …), statistic id, billed vs physical quantity, blind current, `anzahl_linien_*`, base price vs VAT | every German/API term used in code or docs has one canonical English definition | #91 | S | AI |
 | #127 | markdownlint + `mise run docs` | `.markdownlint.yaml`, `markdownlint-cli2` pinned in `mise.toml`, `scripts/docs-check.sh`: every file under `docs/` sits in exactly one quadrant folder, is linked from `docs/README.md`, and has the "This page answers:" opening plus a `Related` block; relative links resolve | CI job fails on a misplaced doc, a broken relative link or a lint violation | #117, #27 | M | AI |
 | #128 | `docs/reference/examples.md` | Gold `docs-examples`: 3-5 copy-paste automations/blueprints — cost alert (`numerical_state` on month cost), daily consumption notification from statistics, Energy-dashboard card snippet, and an example of using HT/NT split for load shifting | every example renders and works as written; each states its entity ids | #124 | S | AI |
+| #129 | `docs/reference/conventions.md` | arc42 §8 as reference: exception mapping (`CkwAuthError` → `ConfigEntryAuthFailed`, 429 → `UpdateFailed`), redaction rules, Europe/Zurich discipline, append-only unique-id scheme, logging levels per failure class, naming (domain `ckw`, module layout) | every crosscutting rule stated once, testable, and cited from `architecture.md` and `AGENTS.md` | #92, #63 | S | AI |
 
 ## Phase 8 — Quality scale, verification, release
 
@@ -512,10 +533,10 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | 4 Coordinator | 7 | 0 |
 | 5 Entities | 10 | 0 |
 | 6 Statistics | 7 | 0 |
-| 7 Docs | 20 | 0 |
+| 7 Docs | 21 | 0 |
 | 8 Quality/Release | 10 | 0 |
 | 9 Optional | 6 | 0 |
-| **Total** | **128** | **4** |
+| **Total** | **129** | **4** |
 
 ## Critical path
 
@@ -523,4 +544,4 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 
 Everything else can run in parallel; #9–#28 and #91–#93 are safe to do before CKW replies.
 
-Must-have path to v0.1.0: **122 tasks** (all phases except Phase 9).
+Must-have path to v0.1.0: **123 tasks** (all phases except Phase 9).
