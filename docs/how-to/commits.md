@@ -28,21 +28,26 @@ generated one without opening the diff. `.pre-commit-config.yaml` runs `scripts/
 the `commit-msg` stage; the hook appends one trailer when both environment variables are set:
 
 ```text
-Co-Authored-By: pi (<PI_PROVIDER>/<PI_MODEL>) <noreply@pi.local>
+Co-Authored-By: pi (<PI_MODEL>) <noreply@pi.local>
 ```
 
-The model name is taken verbatim from the agent session: `PI_PROVIDER` is the provider and `PI_MODEL`
-is the model id including any tag, so `PI_PROVIDER=ollama-cloud` with
-`PI_MODEL=deepseek-v4.1-flash:1017` produces:
+The model name is taken verbatim from the agent session: `PI_MODEL` is the model id including any tag,
+so `PI_MODEL=deepseek-v4.1-flash:1017` produces:
 
 ```text
-Co-Authored-By: pi (ollama-cloud/deepseek-v4.1-flash:1017) <noreply@pi.local>
+Co-Authored-By: pi (deepseek-v4.1-flash:1017) <noreply@pi.local>
 ```
+
+The provider is deliberately not recorded. `PI_PROVIDER` only decides whether the session is an agent
+session at all; it is never printed, because the same model can be served by a local runtime or a cloud
+provider and the provider is a deployment detail of the model, not a second author. A fully qualified
+model string (`PI_MODEL=ollama-cloud/deepseek-v4.1-flash:1017`) has its leading `<provider>/` stripped,
+so the trailer can never name a provider.
 
 Rules the hook follows:
 
 - both `PI_PROVIDER` and `PI_MODEL` must be set, otherwise the commit message is left alone, which is
-  what happens for a human commit from a plain shell
+  what happens for a human commit from a plain shell; `PI_MODEL` is what appears in the trailer
 - a message that already has any `Co-Authored-By:` line is never touched, so re-running an amend is a
   no-op and a human co-author is not overwritten
 - the trailer is appended after the last trailer block (or as a new block after the body), never in the
@@ -69,10 +74,13 @@ was already written into the message.
 ## Find commits by model
 
 ```bash
-git log --grep='Co-Authored-By: pi'                  # every agent commit
-git log --grep='Co-Authored-By: pi (ollama-cloud/'   # one provider
-git log --grep='Co-Authored-By: pi (ollama-cloud/deepseek-v4.1-flash' --format='%h %s'
+git log --grep='Co-Authored-By: pi'                          # every agent commit
+git log --grep='Co-Authored-By: pi (deepseek-v4.1-flash'    # one model family
+git log --grep='Co-Authored-By: pi (deepseek-v4.1-flash:1017)' --format='%h %s'   # one exact model
 ```
+
+`--grep` matches the trailer text, so a model is found by the id it was committed under. Searching by
+provider finds nothing, by design: the trailer never contains one.
 
 `--grep` is case-sensitive by default; add `-i` if you are unsure how the trailer was spelled.
 

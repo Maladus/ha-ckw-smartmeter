@@ -8,12 +8,15 @@ its only argument:
 
 The trailer is derived from the environment of the agent session:
 
-    Co-Authored-By: pi (<PI_PROVIDER>/<PI_MODEL>) <noreply@pi.local>
+    Co-Authored-By: pi (<PI_MODEL>) <noreply@pi.local>
 
 Rules (issue #143):
 
 * Both PI_PROVIDER and PI_MODEL must be set. The hook is silent when they are
   not, so a human commit started from a plain shell stays untouched.
+  PI_PROVIDER decides *whether* this is an agent session; it is never printed,
+  because the provider in a trailer only ever duplicated the model name (and a
+  provider is a deployment detail of the model, not a different author).
 * A message that already carries any Co-Authored-By line is never modified, so
   a human co-author (or an amend) is respected and repeated runs are no-ops.
 * The trailer is appended after the last trailer block, separated from the
@@ -37,8 +40,22 @@ TRAILER_EMAIL = "<noreply@pi.local>"
 TRAILER_LINE = re.compile(r"^[A-Za-z][A-Za-z0-9-]*:")
 
 
-def build_trailer(provider: str, model: str) -> str:
-    return f"{TRAILER_KEY} pi ({provider}/{model}) {TRAILER_EMAIL}"
+def model_only(model: str, provider: str) -> str:
+    """Drop a leading "<provider>/" so the trailer can never name a provider.
+
+    The session normally exports a bare model id, but a fully qualified
+    "<provider>/<model>" must not leak the provider into the commit message.
+    """
+    prefix = f"{provider}/"
+    if model.lower().startswith(prefix.lower()):
+        stripped = model[len(prefix) :]
+        if stripped:
+            return stripped
+    return model
+
+
+def build_trailer(model: str) -> str:
+    return f"{TRAILER_KEY} pi ({model}) {TRAILER_EMAIL}"
 
 
 def has_co_author(lines: list[str]) -> bool:
@@ -111,7 +128,7 @@ def main(argv: list[str]) -> int:
     if has_co_author(lines):
         return 0
 
-    updated = insert_trailer(lines, build_trailer(provider, model))
+    updated = insert_trailer(lines, build_trailer(model_only(model, provider)))
 
     try:
         with open(path, "w", encoding="utf-8") as handle:
