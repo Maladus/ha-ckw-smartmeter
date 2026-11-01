@@ -348,7 +348,7 @@ them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritte
 | ✅ #19 | Dev instance plan | Dev HA is specified in **Phase 1b** (Podman); this task only reserves the directory `scripts/dev/` | `scripts/dev/` exists or is created by #36 | #14 | S | AI |
 | ✅ #20 | `AGENTS.md` + `CONTRIBUTING.md` | agent contract (commands, gates, hard rules) and human PR checklist | both written, gates referenced by exact command | #17 | S | AI |
 | ✅ #158 | Agents and timer notify the coordinator | `workmux send <handle> "done <handle>: <summary + commit>"` on completion, `blocked <handle>: <reason>` when stuck (silence = still working); `mise run next --notify` prefers `workmux send`, falls back to `notify-send`, then stdout; timer and crontab use the same command | a timer tick with a startable task reaches the coordinator, convention documented in AGENTS.md (#20) | #20 | S | AI |
-| #159 | Merge via GitHub PRs, not local fast-forward | Branch → `git push -u origin <branch>` → `gh pr create --base main --head <branch>` with what/why/verification and `Closes #N` → three required checks (*Gates (mise run)*, *Hassfest*, *HACS validation*) → `gh pr merge --squash --delete-branch`; never push to `main`, never merge locally, never `--admin`; the local `mise run check` pre-push gate stays the fast inner loop. Written into `AGENTS.md`, `CONTRIBUTING.md` and the PR template | the next slice lands as a PR with three green checks and no "Bypassed rule violations" entry, and the documented flow matches it | #110, #158 | S | AI |
+| ✅ #159 | Merge via GitHub PRs, not local fast-forward | Branch → `git push -u origin <branch>` → `gh pr create --base main --head <branch>` with what/why/verification and `Closes #N` → three required checks (*Gates (mise run)*, *Hassfest*, *HACS validation*) → `gh pr merge --squash --delete-branch`; never push to `main`, never merge locally, never `--admin`; the local `mise run check` pre-push gate stays the fast inner loop. Written into `AGENTS.md`, `CONTRIBUTING.md` and the PR template | the next slice lands as a PR with three green checks and no "Bypassed rule violations" entry, and the documented flow matches it | #110, #158 | S | AI |
 | ✅ #21 | Issue/PR templates | `.github/ISSUE_TEMPLATE/{bug,feature}.yml`, `PULL_REQUEST_TEMPLATE.md` with quality-scale checklist | templates visible on GitHub | #9 | S | AI |
 | ✅ #22 | `LICENSE` | Full MIT text, copyright "Martin Wigger" + year, LICENSE section in README. Rationale: HACS-typical, and permissive enough to be relicensed into Apache-2.0 for a later core submission | GitHub detects MIT, badge shown | #9 | S | AI |
 | ✅ #23 | `GOAL.md` | Goal, in/out of scope, success criteria — the "Project goal" block of this plan, maintained separately so it survives plan rewrites | file matches this plan, linked from README | #9 | S | AI |
@@ -638,7 +638,7 @@ rejects a red push (#142). Locally that includes G-6 whenever the dev container 
 | Phase | Tasks | Done |
 |---|---|---|
 | 0 External | 8 | 0 |
-| 1 Setup & governance | 31 | 31 |
+| 1 Setup & governance | 31 | 32 |
 | 1b Podman dev instance | 12 | 7 |
 | 2 Auth | 14 | 10 |
 | 3 API | 10 | 9 |
@@ -648,7 +648,7 @@ rejects a red push (#142). Locally that includes G-6 whenever the dev container 
 | 7 Docs | 24 | 24 |
 | 8 Quality/Release | 18 | 14 |
 | 9 Optional | 8 | 1 |
-| **Total** | **152** | **101** |
+| **Total** | **152** | **102** |
 
 ## Critical path
 
