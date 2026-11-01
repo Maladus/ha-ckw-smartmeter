@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: <https://github.com/Maladus/ha-ckw-smartmeter> (`custom_components/ckw`) — private until #110
-Issues: #1–#151, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
+Issues: #1–#153, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -255,6 +255,19 @@ CI or AGENTS.md. Tracked as #117.
 | `mise run docs` | `markdownlint-cli2` + `scripts/docs-check.sh` | doc lint, quadrant placement, link check (#127) |
 | `mise run issues` | `scripts/sync-issues.sh` | plan/issue drift gate (#32) |
 
+## Decisions (recorded)
+
+| Date | Decision | Answer |
+|---|---|---|
+| 2026-11-01 | Multi-account support | **yes** — one integration, N entries, one per CKW customer (#151, #49) |
+| 2026-11-01 | Cost sensors from `betrag_ht/_nt` | **no** — kWh only; cost fields stay parsed and appear in diagnostics raw payload, no cost entities or statistics (#78 dropped) |
+| 2026-11-01 | UI languages | `de` + `en` (#15, #96) |
+| 2026-11-01 | Repo visibility / merge gate | private + local pre-push gate (#142); flip public before release (#110) |
+| 2026-11-01 | Entities enabled by default | 4 core per meter; HT/NT, quarter-hour and delay diagnostics off (#83, #152) |
+| 2026-11-01 | Poll interval | default 2 h, selectable 1-12 h (#53) |
+| 2026-11-01 | Podman dev instance on this machine | yes — image pulled, `mise run dev-up` is the test path |
+| 2026-11-01 | 15-minute resolution | quarter-hour **sensor** (history from installation, `purge_keep_days`-bounded), no retroactive 15-min import, InfluxDB for longer retention (#152, #153) |
+
 ## MVP definition (no CKW answer required)
 
 The first usable release does **not** wait for CKW. Everything below runs against the local mock
@@ -456,12 +469,14 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | #75 | Sensor descriptions | `SensorEntityDescription` tuple with `key`, `translation_key`, `device_class`, `state_class`, `native_unit`, `suggested_display_precision`, `value_fn` | descriptions covered by strings.json | #74 | S | AI |
 | #76 | `consumption_total` | kWh, `TOTAL_INCREASING`, cumulative since import start, `last_reset` handling on meter change | value matches fixture sums | #75 | M | AI |
 | #77 | `consumption_yesterday` | kWh of last complete day; either attribute of #76 or own sensor with `state_class: total` + `last_reset` | decision recorded in ADR-0003 | #76 | S | AI |
-| #78 | `cost_total` | CHF, `TOTAL` + `last_reset`, `device_class: MONETARY`, documented excl. VAT | value = Σ betrag_ht+nt | #75 | M | AI |
+| ~~#78~~ | ~~cost_total~~ | **dropped (decision A2)** — no cost entities; the CHF fields from `betrag_ht/_nt` remain parsed and visible in diagnostics only | — | — | — | — |
 | #79 | HT/NT detail | Separate `consumption_high_tariff` / `consumption_low_tariff` cumulative sensors (opt-in via options, default off) | toggle works | #76 | M | AI |
 | #80 | `last_update` | `TIMESTAMP`, `entity_category: DIAGNOSTIC` | shows last successful poll | #75 | S | AI |
 | #81 | Unique-id scheme | `f"{entry_id}_{deliverypoint}_{key}"`, append-only; documented rule "never rename, never reuse" | test asserts stable ids | #74 | S | AI |
 | #82 | Availability | `available` false when coordinator fails; entities restore on success | matches Silver `entity-unavailable` | #70 | S | AI |
 | #83 | Sensor tests | State + attributes from fixtures, multi-meter fan-out, missing interval (None) handling | `test_sensor.py` ≥ 5 cases | #76–#80 | M | AI |
+| #152 | Quarter-hour sensor (finest resolution) | `sensor.ckw_<meter>_quarter_hour`: kWh per 15-minute interval, `MEASUREMENT`, disabled by default, attributes `interval_start`/`interval_end`/`publication_delay_h`; fetched per poll for the current day only, no retroactive import (states are not writable in the past) | newest quarter-hour visible, history survives `purge_keep_days`, docs state the limits | #71, #124, #147 | M | AI |
+| #153 | ADR-0009: resolution and storage | Hourly long-term statistics for the dashboard; quarter-hour sensor bounded by `purge_keep_days`; no 15-min statistics import (dashboard resamples hourly); InfluxDB as the supported long-retention path; index + data-model updated | ADR merged | #93, #148 | S | AI |
 
 ## Phase 6 — Long-term statistics
 
@@ -605,12 +620,12 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 2 Auth | 14 | 1 |
 | 3 API | 10 | 0 |
 | 4 Coordinator | 8 | 0 |
-| 5 Entities | 10 | 0 |
+| 5 Entities | 12 | 0 |
 | 6 Statistics | 7 | 0 |
 | 7 Docs | 24 | 13 |
 | 8 Quality/Release | 18 | 0 |
 | 9 Optional | 7 | 0 |
-| **Total** | **146** | **23** |
+| **Total** | **148** | **23** |
 
 ## Critical path
 
