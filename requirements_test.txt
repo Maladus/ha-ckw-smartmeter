@@ -1,22 +1,13 @@
 # Installed by CI (.github/workflows/ci.yml) and by `mise run setup` (issue #117).
 #
-# Do NOT pin aiohttp/aiodns/pycares here: pytest-homeassistant-custom-component
-# already pins the exact Home Assistant stack it tests against, and pinning on top
-# of it produces either a version clash or an unresolvable graph. Add a package
-# here only if it is not part of the Home Assistant dependency tree.
-
-# pytest 9 makes PHCC 0.13.316 recurse inside its `caplog` fixture
-# (RecursionError: maximum recursion depth exceeded), which surfaces as collection
-# errors before any test runs. Keep pytest below 9 until PHCC supports it.
-pytest>=8,<9
-
-# Provides Home Assistant and its test harness; it pins the HA version, so keep it
-# in step with the Home Assistant release CI runs against. No upper bound on purpose:
-# the next release must be allowed to install.
-pytest-homeassistant-custom-component>=0.13
-
+# Pin the harness exactly: pytest-homeassistant-custom-component pins the Home
+# Assistant version the tests run against, so an unpinned range silently moves CI
+# to a different Home Assistant than the developer runs locally (measured: an
+# unpinned resolve gave HA 2025.11.3 and 32 failures, while 0.13.316 / HA 2026.2.3
+# is green). Bump this together with the dev image tag in scripts/dev/.env.example.
+#
+# Do NOT pin aiohttp/aiodns/pycares/asyncio helpers here - the harness owns that
+# stack; pinning on top produces either a version clash or an unresolvable graph.
+pytest-homeassistant-custom-component==0.13.316
+pytest>=9
 mypy>=1.11
-
-# aiodns 3.x (what this harness installs) imports `pycares.ares_query_a_result`,
-# which pycares 5 removed. Keep pycares on the 4.x line so the import succeeds.
-pycares>=4.9,<5
