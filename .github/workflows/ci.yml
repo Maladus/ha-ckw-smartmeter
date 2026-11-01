@@ -63,6 +63,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements_test.txt
       - name: Detect Python tests
         id: detect
         run: |
@@ -76,11 +78,8 @@ jobs:
         if: steps.detect.outputs.enabled == 'true'
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements_test.txt ] && grep -q 'pytest-homeassistant-custom-component' requirements_test.txt; then
-            python -m pip install pytest pytest-homeassistant-custom-component
+          if [ -f requirements_test.txt ]; then
             python -m pip install -r requirements_test.txt
-          elif [ -f pyproject.toml ] && grep -q 'pytest-homeassistant-custom-component' pyproject.toml; then
-            python -m pip install pytest pytest-homeassistant-custom-component
           else
             python -m pip install pytest
           fi

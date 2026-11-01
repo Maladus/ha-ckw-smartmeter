@@ -1,0 +1,3 @@
+# Installed by CI (.github/workflows/ci.yml) and by `mise run setup` (issue #117).
+pytest>=8
+aiohttp>=3.9
