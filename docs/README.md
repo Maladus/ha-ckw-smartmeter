@@ -79,4 +79,6 @@ Why it is like this, and which alternatives lost.
 
 - [PLAN.md](../PLAN.md) — what the work is, task by task, with gates.
 - [GOAL.md](../GOAL.md) — why the project exists and what it deliberately is not.
-- `CONTRIBUTING.md` (planned, #20) — dev setup, gates and the pull-request checklist.
+- [CONTRIBUTING.md](../CONTRIBUTING.md) — dev setup, gates, the pull-request checklist and the
+  release duty.
+- [AGENTS.md](../AGENTS.md) — the agent contract: what to read first, the commands, the hard rules.
