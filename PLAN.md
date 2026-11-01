@@ -424,6 +424,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | #69 | Rolling window | Refetch last 7 days (`days`) on every poll; merge into per-meter cumulative totals kept in `runtime_data`; ignore duplicate intervals | test: repeated poll does not change totals | #68 | M | AI |
 | #70 | Exception mapping | `CkwAuthError`→`ConfigEntryAuthFailed`; `CkwRateLimitError`→`UpdateFailed` with reset time; network→`ConfigEntryNotReady` at setup / `UpdateFailed` at runtime | tests per case | #63 | M | AI |
 | #71 | Setup/unload | `async_setup_entry` creates API+coordinator, `EntryType.SERVICE` device, forwards platforms; `async_unload_entry` unloads platforms and clears listeners | unload/reload test green (Silver `config-entry-unloading`) | #67 | M | AI |
+| #149 | Log published grid data inside the integration | Coordinator logging only, no probe tool: DEBUG per poll with requested window, interval count, newest `zeitstempel_bis_utc` and computed `lag_hours`; INFO exactly once per publication event ("new grid data published: <date>, lag <h> h"); WARNING when the lag exceeds 48 h or the newest interval stalls for two days; attributes `publication_delay_h` + `last_published_interval` on the consumption sensor | with `logger: custom_components.ckw: debug` the poll-by-poll lag is visible, exactly one INFO line per published day, both attributes move with it | #71, #83 | S | AI |
 | #72 | `log-when-unavailable` | First failure logs warning once, recovery logs info | log assertions in test | #70 | S | AI |
 | #73 | Timezone discipline | All date math in `Europe/Zurich`; API dates are `YYYYMMDD`, timestamps UTC `dateTimeOnly` | DST test (23 h / 25 h days) | #69 | M | AI |
 
@@ -583,7 +584,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 1b Podman dev instance | 12 | 2 |
 | 2 Auth | 13 | 1 |
 | 3 API | 10 | 0 |
-| 4 Coordinator | 7 | 0 |
+| 4 Coordinator | 8 | 0 |
 | 5 Entities | 10 | 0 |
 | 6 Statistics | 7 | 0 |
 | 7 Docs | 24 | 13 |
