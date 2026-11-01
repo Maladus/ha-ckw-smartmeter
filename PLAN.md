@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: <https://github.com/Maladus/ha-ckw-smartmeter> (`custom_components/ckw`) — private until #110
-Issues: #1–#155, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
+Issues: #1–#156, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -572,6 +572,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | #115 | Device authorization grant login | CKW enables RFC 8628 for `oe-wigger` | AI |
 | #138 | Clean client boundary + strict typing | `api.py` imports nothing from `homeassistant` (the coordinator maps `CkwAuthError`/`CkwRateLimitError` to HA exceptions), session + token injected as constructor arguments, full annotations, `mypy --strict` in the gates and CI; boundary recorded in `reference/conventions.md` (#129) and ADR-0006. Useful on its own — not a Platinum step | `api.py` free of HA imports, `mypy --strict` green | #61, #129 | M | AI |
 | #116 | HA core submission | After 3+ months of stable HACS usage: docs page in `home-assistant.io`, brands repo PR, full test harness, code review | H |
+| #156 | Backfill 15-minute history into InfluxDB | Standalone `scripts/ckw-influx-backfill.py` (not part of the integration): paced `minute(s)` fetching, monthly chunks, resumable, writes InfluxDB line protocol (`kwh_ht`, `kwh_nt`, `chf_ht`, `chf_nt` tags/last4 delivery point), `--dry-run`; how-to explains why it exists (HA exports states only, no `influxdb.write` service) | dry run against the mock produces valid line protocol for 30 days | #152, #154, #147 | M | AI |
 
 ## Cross-cutting gates (every PR)
 
@@ -626,8 +627,8 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 6 Statistics | 7 | 0 |
 | 7 Docs | 24 | 13 |
 | 8 Quality/Release | 18 | 0 |
-| 9 Optional | 7 | 0 |
-| **Total** | **149** | **24** |
+| 9 Optional | 8 | 0 |
+| **Total** | **150** | **24** |
 
 ## Critical path
 
