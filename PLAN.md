@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: https://github.com/Maladus/ha-ckw-smartmeter (`custom_components/ckw`) — private until #110
-Issues: #1–#118, one per task row below (✅ = closed / done)
+Issues: #1–#127, one per task row below (✅ = closed / done)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -38,40 +38,59 @@ the CKW password.
 - CI green on ruff, pytest, hassfest and the HACS action; all Bronze rules `done`
 - A second maintainer can pick up any task from `PLAN.md` without asking questions
 
-## Document structure (what lives where)
+## Document structure (Diátaxis, Markdown only)
+
+**Format: Markdown everywhere.** Home Assistant itself has no AsciiDoc pipeline — `home-assistant.io`
+uses Jekyll/kramdown with `source/_integrations/<domain>.markdown`, `developers.home-assistant.io` uses
+Docusaurus/MDX, HACS renders `README.md`/`info.md`. So every document here is `.md`, no front matter
+(except if text is later lifted into a core docs page for #116). Linting via `markdownlint-cli2` (#127).
+
+Documentation follows [Diátaxis](https://diataxis.fr/) — four quadrants, one document belongs to exactly one:
+
+| Quadrant | Question it answers | Folder | Documents |
+|---|---|---|---|
+| **Tutorial** | "teach me, I'm new" | `docs/tutorial/` | `getting-started.md` (#119) |
+| **How-to** | "how do I do X" | `docs/how-to/` | `request-ckw-client.md` (#120), `install.md` (#121), `reauthenticate.md` (#122), `backfill-history.md` (#123), `debug-connection.md` (#99), `work-with-ai-agents.md` (#98) |
+| **Reference** | "what exactly is X" | `docs/reference/` | `ckw-openenergy-api.md` (#91), `entities.md` (#124), `configuration.md` (#106), `quality-scale.md` (#102) |
+| **Explanation** | "why is it like this" | `docs/explanation/` | `architecture.md` (#92), `data-model.md` (#125), `decisions/` (ADRs, #93) |
+
+`docs/README.md` (#27) is the map: four sections, "start here" per audience (user, contributor, agent),
+one sentence per document, nothing else.
+
+**Project meta (repo root, not part of the quadrants)**
 
 | File | Audience | Purpose | Single source of truth for |
 |---|---|---|---|
-| `README.md` | users | install, configure, entities, troubleshooting | user instructions |
+| `README.md` | users | pitch, prerequisites, 5-line quickstart linking the tutorial | project entry point |
 | `info.md` | HACS/Marketplace | store blurb | — (mirrors README intro only) |
-| `GOAL.md` | contributors, agents, reviewers | goal, scope, non-goals, success criteria | *why* the project exists |
-| `ROADMAP.md` | users, contributors | curated public milestones | *when* things land (user-facing summary) |
-| `PLAN.md` | maintainer, agents | full task breakdown, IDs, deps, gates (this file) | *how* work is sliced |
-| GitHub issues + Project | contributors, agents | one issue per task, status, discussion | *who* is doing what, *when* |
+| `GOAL.md` | contributors, agents | goal, scope, non-goals, success criteria | *why* |
+| `ROADMAP.md` | users, contributors | curated public milestones | *when* (user-facing) |
+| `PLAN.md` | maintainer, agents | tasks, deps, gates (this file) | *what* |
+| GitHub issues + Project | contributors, agents | one issue per task, status, discussion | *who*, *progress* |
 | `CONTRIBUTING.md` | contributors | dev setup, gates, PR checklist | contribution process |
-| `CODE_OF_CONDUCT.md` | community | behaviour expectations + enforcement | conduct |
-| `SECURITY.md` | everyone | vulnerability reporting, token/secret handling | security policy |
+| `CODE_OF_CONDUCT.md` | community | behaviour + enforcement | conduct |
+| `SECURITY.md` | everyone | vulnerability reporting, token handling | security policy |
 | `AGENTS.md` | AI agents | context, gates, hard rules | agent contract |
-| `docs/README.md` | contributors | doc index + conventions | doc layout |
-| `docs/ckw-openenergy-api.md` | devs, agents | transcribed CKW API reference | API facts |
-| `docs/architecture.md` | devs, reviewers | module map, data flow | design overview |
-| `docs/adr/NNNN-*.md` | devs, agents | one decision per file | decisions |
-| `docs/quality-scale.md` | reviewers | Bronze/Silver rule evidence | compliance status |
-| `docs/ai-development.md` | agents, humans | AI playbook | AI usage |
-| `scripts/dev/README.md` | devs, agents | Podman dev instance: up, smoke, fixture/real switch, teardown | local test procedure |
 | `CHANGELOG.md` | users | release history (Keep a Changelog) | released changes |
 | `LICENSE` | legal | MIT | licensing |
+| `scripts/dev/README.md` | devs, agents | Podman dev instance runbook (#44) | local test procedure |
 
 **Documentation rules**
 
 1. `PLAN.md` tracks *what* the work is (scope, deps, gates); the issue with the same number tracks *status*.
    The plan row stays authoritative for scope, the issue for progress — when they disagree, fix the
    plan first, then the issue.
-2. Every behaviour change updates README (if user-visible), `docs/ckw-openenergy-api.md` (if
-   API-facing), `CHANGELOG.md`, and records non-obvious decisions as a new ADR.
+2. Every behaviour change updates the affected quadrant document, `CHANGELOG.md`, and records
+   non-obvious decisions as a new ADR.
 3. ADRs are append-only: supersede with a new number, never rewrite an accepted one.
 4. English for everything; German only for CKW domain terms (Zählpunkt, HT/NT, Netzbetreiber).
 5. A doc that contradicts the code is a bug — fix in the same PR or open an issue the same day.
+6. **One document = one quadrant.** If a page starts explaining *why* in the middle of a procedure,
+   the explanation moves to `docs/explanation/` and is linked. Tutorials contain no alternatives,
+   reference contains no steps, how-tos contain no theory.
+7. Every document opens with one line "This page answers: …" and ends with a `Related` block linking
+   its neighbours in the other quadrants — Diátaxis only works if the map is walkable.
+8. `mise run docs` (#127) enforces quadrant placement, markdownlint rules and relative links in CI.
 
 ### ADR process (architecture decision records)
 
@@ -104,6 +123,27 @@ ADR that supersedes the old one. The ADR ships in the same PR as the change, or 
 **Linkage:** implementing code and docs cite `ADR-0002`; the PR body links it; the plan row is marked ✅.
 **Enforcement:** PR template asks "ADR needed? linked?"; AGENTS.md makes it a hard rule — no dependency
 and no auth change without an ADR.
+
+### ADRs inside Diátaxis
+
+Diátaxis sorts by *user need*, ADRs sort by *time*. They intersect in one place only: ADRs are
+**explanation**, and they live in `docs/explanation/decisions/`.
+
+| Concern | Where it goes | Never |
+|---|---|---|
+Current behaviour/spec (what is true now) | `docs/reference/`, `docs/how-to/` | an ADR — it would rot on the next change |
+Why the current shape exists, what was rejected | ADR in `docs/explanation/decisions/` | `architecture.md` prose (history would be lost) |
+The system as it is today, in one narrative | `docs/explanation/architecture.md` | a second copy of ADR contents |
+Chronological log of decisions | `decisions/README.md` index (no, title, date, status) | `CHANGELOG.md` (that's releases, not reasoning) |
+Work to be done | the issue with the same number | an ADR |
+
+**Linking direction:** reference/how-to point *up* to explanation when the reason matters
+(`→ ADR-0002`); explanation/architecture points *out* to reference for current details; tutorials and
+how-tos never cite ADRs — users don't need the archaeology. `data-model.md` (#125) links every
+constraint to the ADR that derived a decision from it.
+
+**Status is part of the explanation:** `superseded by NNNN` is itself the history, so a superseded ADR
+stays in place and keeps its links. The current truth always lives in reference/how-to, never only in ADRs.
 
 **Planned:** 0001 auth (OAuth2+PKCE vs pasted code vs password+SMS-OTP) · 0002 statistics strategy
 (entity statistics via `async_import_statistics` vs external statistics) · 0003 meter↔device mapping and
@@ -153,6 +193,7 @@ CI or AGENTS.md. Tracked as #117.
 | `ruff` | 0.17.3 | lint + format (gate G-1) |
 | `gitleaks` | 8.30.1 | secret scan (gates G-3, #118) |
 | `pipx:pre-commit` | 4.7.0 | hook manager (gate G-3, #17) |
+| `npm:markdownlint-cli2` | latest | Markdown lint for every doc (#127) |
 | `podman` | system, >= 4.9, rootless | dev HA instance; **not** mise-pinned — rootless setup is host-level (subuid/subgid, `net.ipv4.ip_unprivileged_port_start`), documented in #44 |
 
 | Task | Runs | Purpose |
@@ -167,7 +208,8 @@ CI or AGENTS.md. Tracked as #117.
 | `mise run lint` / `mise run fmt` | `ruff check` / `ruff format` | gate G-1 |
 | `mise run test` | `pytest -q` | gate G-2 |
 | `mise run hooks` | `pre-commit run --all-files` | gate G-3 |
-| `mise run check` | lint + test + hooks + dev-smoke | full local gate |
+| `mise run check` | lint + docs + test + hooks + dev-smoke | full local gate |
+| `mise run docs` | `markdownlint-cli2` + `scripts/docs-check.sh` | doc lint, quadrant placement, link check (#127) |
 | `mise run issues` | `scripts/sync-issues.sh` | plan/issue drift gate (#32) |
 
 ## Phase 0 — External prerequisites (blocking)
@@ -207,7 +249,7 @@ CI or AGENTS.md. Tracked as #117.
 | #24 | `ROADMAP.md` | Public milestones `v0.1.0` → `v0.3.0` → `v1.0.0`, 3–6 bullets each, link to `PLAN.md` | no task IDs duplicated, roadmap matches phase order | #23 | S | AI |
 | #25 | `CODE_OF_CONDUCT.md` | Contributor Covenant 2.1, enforcement contact, scope (issues, PRs, discussions) | linked from README + CONTRIBUTING | #9 | S | AI |
 | #26 | `SECURITY.md` | Supported versions, private reporting (GitHub security advisories + mail), explicit scope: token handling, reauth flow, never paste tokens/codes into issues; what is redacted in diagnostics | GitHub shows Security policy, linked from README | #9 | S | AI |
-| #27 | `docs/README.md` | Doc index mirroring the "Document structure" table + the five documentation rules | every doc listed, no orphan docs | #9 | S | AI |
+| #27 | `docs/README.md` | The Diátaxis map: four quadrant sections, "start here" per audience (user, contributor, agent), one sentence per document, link to every doc under `docs/`; nothing else | every doc linked, no orphan documents, `mise run docs` green | #9 | S | AI |
 | #28 | Repo settings & meta | Description, topics (`home-assistant`, `hacs`, `ckw`, `switzerland`, `energy`, `smart-meter`), `.github/CODEOWNERS`, branch protection on `main` with required CI checks, `SUPPORT.md` (where to ask vs. report). Labels/milestones are #30/#31 | CI required on `main`, topics set | #18 | S | H |
 | ✅ #29 | Create GitHub repo | `gh repo create ckw-homeassistant --private` (stays private until #110), verify `gh auth status`, push `main`, enable Dependabot security alerts | repo exists, CI runs on first push | #9 | S | H |
 | #30 | Label taxonomy | `type: feat\|fix\|docs\|chore\|test\|infra`, `phase: 0…9`, `status: backlog\|ready\|blocked\|review`, `owner: ai\|human\|both`, `size: s\|m\|l`, `area: auth\|api\|stats\|entities\|ci\|docs` — created by `gh label create` loop in `scripts/gh-setup.sh` | 5 label families present, naming documented | #29 | S | AI |
@@ -351,16 +393,25 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 
 | ID | Task | Details | Done when | Deps | Owner |
 |---|---|---|---|---|---|
-| #91 | `docs/ckw-openenergy-api.md` | Transcribed API reference: 3 endpoints, all fields, aggregations, rate-limit headers, auth, "data until yesterday", error codes, CKW support contact | every field traceable to the Anypoint spec | #5 | AI |
-| #92 | `docs/architecture.md` | Module map, data flow (OAuth → coordinator → totals → sensors/statistics), meter↔device mapping, why sensors + import | explains each module in ≤ 1 paragraph | #67 | AI |
-| #93 | ADRs | `0000-template.md` + `README.md` index + `0001-auth-oauth2-vs-pasted-code.md`, `0002-statistics-strategy.md`, `0003-meter-device-mapping.md`, `0004-poll-interval-and-data-lag.md` (format and lifecycle per "ADR process") | template + 4 ADRs, every one with real alternatives and a status field | #92 | AI |
-| #94 | `README.md` | High-level description, prerequisites (CKW client + redirect registration), step-by-step install (HACS + manual), config fields table, entities table, data lag (1 day), removal instructions, troubleshooting (401/403/429), consent/Art. 8a–8d StromVV note, debug log instructions | a stranger installs it without asking | #54, #76 | AI+H |
-| #95 | `info.md` | Short store blurb for HACS/Marketplace | renders in HACS pane | #94 | AI |
+| #91 | `docs/reference/ckw-openenergy-api.md` | Transcribed API reference: 3 endpoints, all fields, aggregations, rate-limit headers, auth, "data until yesterday", error codes, CKW support contact. Lookup only, no procedures | every field traceable to the Anypoint spec | #1 | AI |
+| #92 | `docs/explanation/architecture.md` | arc42-lite: context (one diagram), building-block view as a module table, exactly one runtime sequence (OAuth → coordinator → totals → sensors/statistics), meter↔device mapping, why sensors + import; links to the ADRs it derives from. Explicitly omits arc42 4/5/7 (solution strategy, formal views, deployment — ADRs, module table and the Podman runbook cover them) | explains each module in <= 1 paragraph; a newcomer reads it in 10 minutes | #46 | AI |
+| #93 | `docs/explanation/decisions/` (ADRs) | `0000-template.md` + `README.md` index + `0001-auth-oauth2-vs-pasted-code.md`, `0002-statistics-strategy.md`, `0003-meter-device-mapping.md`, `0004-poll-interval-and-data-lag.md`, `0005-doc-structure-diataxis-arc42-lite.md` (format and lifecycle per "ADR process") | template + 4 ADRs, every one with real alternatives and a status field | #92 | AI |
+| #94 | `README.md` | Entry point, not a manual: one-paragraph pitch, prerequisites checklist, 5-line quickstart linking `docs/tutorial/getting-started.md`, feature/entity summary table, data lag, consent/Art. 8a–8d StromVV note, links into all four quadrants, install/removal pointer | a stranger knows within 30 seconds whether it fits, and where to start | #102, #76 | AI+H |
+| #95 | `info.md` | Short store blurb for HACS/Marketplace (Markdown), mirrors the README intro | renders in HACS pane | #94 | AI |
 | #96 | Translation review | Native German pass over `translations/de.json` + `strings.json` | no machine-German left | #15 | H |
 | #97 | `CHANGELOG.md` + releases | Keep-a-changelog format, `v0.1.0` release notes, optional release-drafter workflow | release published | milestones | AI |
-| #98 | `docs/ai-development.md` | AI playbook: context files to read first, gates, hard rules, task prompt templates, review checklist, secret hygiene | agent can complete a small issue using it alone | #20 | AI |
-| #99 | Debug section | How to raise log level, what is redacted, how to dump diagnostics | documented | #66 | AI |
-| #100 | Documentation-maintenance rule | PR-template checkbox + CONTRIBUTING line: behaviour change ⇒ README / `docs/` / CHANGELOG updated; `docs/README.md` index kept current; stale doc = bug | checkbox present, checked during #102 audit | #27 | AI |
+| #98 | `docs/how-to/work-with-ai-agents.md` | AI playbook: context files to read first, gate tasks (`mise run check`), hard rules, task prompt templates, review checklist, secret hygiene — plus the arc42 §8 crosscutting concepts (error mapping, redaction, Europe/Zurich discipline, unique-id rule, logging) as the agent's reference card | agent can complete a small issue using it alone | #20 | AI |
+| #99 | `docs/how-to/debug-connection.md` | Symptoms → cause → fix for 401/403/429/network, raising the log level, dumping diagnostics, what is redacted, where the data ends up. No theory (link to explanation) | the three most likely failures each have a concrete fix path | #66 | AI |
+| #100 | Documentation-maintenance rule | PR-template checkbox + CONTRIBUTING line: behaviour change ⇒ affected quadrant doc + CHANGELOG updated; `docs/README.md` index kept current; quadrant placement + links checked by `mise run docs` (#127); stale doc = bug | checkbox present, `mise run docs` enforced in CI, checked during #102 audit | #27 | AI |
+| #119 | `docs/tutorial/getting-started.md` | One linear 15-minute path: request the CKW client → install → log in → populated Energy dashboard. Prerequisites as a checklist, every step with its expected visible result, no alternatives (they live in how-to) | a first-time HACS user reaches a populated dashboard without asking | #120, #121 | AI |
+| #120 | `docs/how-to/request-ckw-client.md` | The CKW OpenEnergy access form, what to enter, the mail with the redirect URIs (`https://my.home-assistant.io/redirect/oauth`, `https://<fqdn>/auth/external/callback`), the `offline_access` request, expected reply contents, what is *not* needed (public client, no secret) | request can be sent without questions; answer can be used directly | #1 | AI |
+| #121 | `docs/how-to/install.md` | HACS custom repository and manual `custom_components/ckw` copy, restart, then "add integration"; note that HACS cannot install a private repo until #110; removal steps | both paths verified on a clean instance (#107) | #94 | AI |
+| #122 | `docs/how-to/reauthenticate.md` | Symptoms (entity unavailable, reauth notification, `ConfigEntryAuthFailed`) → exact fix path in the UI; what *not* to do (repeated logins, revoking the client); SMS/OTP variant once #53 exists | symptom→cause→fix table, no advice that triggers repeated SMS or lockout | #48 | AI |
+| #123 | `docs/how-to/backfill-history.md` | Re-import 730 days after a meter exchange or recorder wipe, delete statistics for a statistic id in Developer Tools, `mise run dev-reset` for the dev instance, what re-import overwrites (idempotent sums, #86) and what it cannot repair | history restorable without hand-editing the database; duplicate-sum pitfall called out | #87, #89 | AI |
+| #124 | `docs/reference/entities.md` | Per meter: entity name, `unique_id` shape, unit, `device_class`, `state_class`, `last_reset` behaviour, statistic id, update cadence, availability semantics; which entities are Energy-dashboard eligible; append-only id rule | every created entity appears with exact attributes, generated from the entity descriptions | #76, #78 | AI |
+| #125 | `docs/explanation/data-model.md` | Why data stops at yesterday (legal once-per-day read), HT/NT semantics, CHF amounts as base price without VAT/surcharges, meaning of `anzahl_linien_*` quality flags, why there is no live power sensor | reader understands the constraints without reading code or the CKW spec; every claim linked to its source | #91 | AI |
+| #126 | `docs/reference/glossary.md` | arc42 §12 harvested: deliverypointnumber/Zählpunkt, HT/NT, aggregation (`day(s)`, `month(s)`, …), statistic id, billed vs physical quantity, blind current, `anzahl_linien_*`, base price vs VAT | every German/API term used in code or docs has one canonical English definition | #91 | S | AI |
+| #127 | markdownlint + `mise run docs` | `.markdownlint.yaml`, `markdownlint-cli2` pinned in `mise.toml`, `scripts/docs-check.sh`: every file under `docs/` sits in exactly one quadrant folder, is linked from `docs/README.md`, and has the "This page answers:" opening plus a `Related` block; relative links resolve | CI job fails on a misplaced doc, a broken relative link or a lint violation | #117, #27 | M | AI |
 
 ## Phase 8 — Quality scale, verification, release
 
@@ -439,10 +490,10 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | 4 Coordinator | 7 | 0 |
 | 5 Entities | 10 | 0 |
 | 6 Statistics | 7 | 0 |
-| 7 Docs | 10 | 0 |
+| 7 Docs | 19 | 0 |
 | 8 Quality/Release | 10 | 0 |
 | 9 Optional | 6 | 0 |
-| **Total** | **118** | **4** |
+| **Total** | **127** | **4** |
 
 ## Critical path
 
@@ -450,4 +501,4 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 
 Everything else can run in parallel; #9–#28 and #91–#93 are safe to do before CKW replies.
 
-Must-have path to v0.1.0: **112 tasks** (all phases except Phase 9).
+Must-have path to v0.1.0: **121 tasks** (all phases except Phase 9).
