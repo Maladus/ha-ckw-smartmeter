@@ -10,7 +10,7 @@ the change *is*, not which files it touches.
 
 | Type | Use for | Example subject |
 | --- | --- | --- |
-| `feat` | user-visible behaviour or a new capability | `feat: add CHF cost sensors per delivery point` |
+| `feat` | user-visible behaviour or a new capability | `feat: add the quarter-hour consumption sensor per delivery point` |
 | `fix` | a defect in shipped behaviour | `fix: keep the refresh token across a Home Assistant restart` |
 | `docs` | documentation only, including ADRs and this page | `docs: add architecture and data model explanations` |
 | `test` | tests and fixtures, no production change | `test: add local mock CKW API and fake Keycloak` |

@@ -2,13 +2,16 @@
 
 This page answers: why does this integration exist, and what is it deliberately not?
 
-CKW customers get their smart-meter consumption and cost inside Home Assistant. Daily kWh and CHF land
-in the Energy dashboard, read from the official CKW OpenEnergy API. No portal scraping, no stored CKW
-password.
+CKW customers get their smart-meter consumption inside Home Assistant. Daily kWh lands in the Energy
+dashboard, read from the official CKW OpenEnergy API. No portal scraping, no stored CKW password.
+
+The CHF amounts CKW returns are parsed but deliberately not exposed: they are base prices without VAT
+and surcharges, so a cost sensor would be a number nobody can reconcile with a bill. There are no cost
+entities in this integration.
 
 ## In scope
 
-- Official CKW OpenEnergy API with the public client `oe-wigger`: daily aggregates, HT/NT split, cost in CHF
+- Official CKW OpenEnergy API with the public client `oe-wigger`: daily aggregates, HT/NT split
 - One device per delivery point (Zählpunkt), long-term statistics, roughly two years of backfilled history
 - Installable from HACS (now Home Assistant Marketplace)
 - Quality scale Gold at v1.0.0, German and English UI
