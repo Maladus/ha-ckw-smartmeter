@@ -11,8 +11,8 @@
 #
 # Status: this is an audit, not a claim. All 20 Bronze and all 10 Silver rules
 # are `done` or `exempt` with a written reason, so manifest.json may claim
-# `quality_scale: silver`. Gold still has one open rule (diagnostics), with its
-# closing issue below.
+# `quality_scale: gold`: every rule of Bronze, Silver and Gold is `done` or
+# `exempt`, each with a written reason. (`#105` closed the last one.)
 
 rules:
   # --- Bronze (20 rules) ---
@@ -255,11 +255,18 @@ rules:
       service device created in __init__.py:233. ADR-0003, #80.
 
   diagnostics:
-    status: todo
+    status: done
     comment: >-
-      No diagnostics.py: the redacted config-entry dump the rule asks for does
-      not exist yet. #105 owns it; docs/reference/conventions.md already states
-      the redaction set it must apply.
+      async_get_config_entry_diagnostics in diagnostics.py builds the dump:
+      version, redacted title and options, the customer id as a six-character
+      sha256, one row per delivery point with a masked deliverypointnumber
+      (api.mask_deliverypoint), the coordinator's health with the last exception
+      type only, the statistics state and two token booleans with the expiry
+      time. _redact_secrets walks the finished dict and drops every value under
+      a token/secret/password/authorization key, booleans kept, so a field added
+      later cannot leak. No token, no raw customer id, no address, no e-mail:
+      docs/reference/conventions.md "Redaction"; tests/test_diagnostics.py
+      asserts all four on the serialized dump. #105.
 
   discovery:
     status: exempt

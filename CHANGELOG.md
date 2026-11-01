@@ -8,7 +8,13 @@ user-visible behaviour in a minor release; every such change is listed.
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+
+- A redacted diagnostics download on the entry's page, for a bug report: version, options, one row per
+  delivery point with only its last four characters, the coordinator's health (last poll, exception
+  type, rate limit), the statistics progress and two token booleans. No token, no customer number (only
+  a short hash), no address and no e-mail address ever reach the file. Gold rule `diagnostics`, #105 -
+  the last open rule of that tier, so `manifest.json` now claims `quality_scale: gold`.
 
 ## [0.1.0] - 2026-11-01
 
@@ -92,15 +98,16 @@ limitations".
   diagnostics field exposes them.
 - **No retroactive 15-minute history.** The quarter-hour sensor starts at installation time and its
   history is bounded by `recorder.purge_keep_days`.
-- **No diagnostics export yet**, and no symptom-by-symptom troubleshooting page.
+- **No symptom-by-symptom troubleshooting page.** The diagnostics download is the only debugging aid;
+  nothing yet walks a failing poll from symptom to fix.
 - **A real CKW login is not verified yet.** The browser flow needs a redirect URI registered at CKW for
   your Home Assistant address; until that is in place the flow is covered by tests and the mock only, so
   the first real login is still the first real test. The backfilled sums are likewise not yet compared
   against the charts in the CKW portal.
-- **The quality-scale audit is not complete.** Bronze and Silver are done or exempt and
-  `manifest.json` claims `quality_scale: silver`; Gold still has `diagnostics`, `docs-examples` and
-  `docs-troubleshooting` open. The open rules and their evidence are listed in
-  [docs/reference/quality-scale.md](docs/reference/quality-scale.md#known-gaps).
+- **The quality-scale audit is a claim, not a verified fact.** Bronze, Silver and Gold are done or
+  exempt and `manifest.json` claims `quality_scale: gold`, but hassfest only checks that file inside
+  Home Assistant core; here it is our own audit, kept honest by
+  [docs/reference/quality-scale.md](docs/reference/quality-scale.md).
 - **Not installable from HACS yet.** HACS cannot install from a private repository. Until the
   repository is public, install by copying `custom_components/ckw/` into your Home Assistant
   configuration, as described in [docs/how-to/install.md](docs/how-to/install.md).

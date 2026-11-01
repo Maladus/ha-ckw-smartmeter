@@ -114,7 +114,7 @@ jump you use at work — block → decision → consequence — works in this re
 | `docs-use-cases` | Gold | `docs/tutorial/getting-started.md` (#119) |
 | `docs-examples` | Gold | `docs/reference/examples.md` (#128) |
 
-Note: hassfest only validates `quality_scale.yaml` **inside core**. In a HACS repo `quality_scale: silver`
+Note: hassfest only validates `quality_scale.yaml` **inside core**. In a HACS repo `quality_scale: gold`
 in `manifest.json` is a claim, not a checked fact — keep it only while #116 (core submission) is a goal,
 and treat `quality_scale.yaml` as our own audit checklist until then.
 
@@ -448,7 +448,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | ✅ #63 | Error mapping | 400/408/401/403/429/500/503 → typed exceptions; the 400 missing-token bodies map to `CkwAuthError`, the 400 range cap to `CkwRangeTooBigError`; `x-ratelimit-limit/-remaining/-reset` parsed into `RateLimitInfo` on every response (also errors) and exposed as `CkwClient.last_rate_limit` | test per status code | #58 | M | AI |
 | ✅ #64 | Range chunking | Split a range into ≤ N-day chunks (respect API limits, `BACKFILL_DAYS`), yield `(from, to)` pairs, Europe/Zurich safe | property test: chunks cover range without overlap/gap | #61 | M | AI |
 | ✅ #65 | Aggregation helpers | Map user-facing interval to API enum (`day(s)`, `month(s)`, `week(s)`), document `minute(s)` as unsupported by product decision | unit test | #61 | S | AI |
-| ✅ #66 | Diagnostics redaction | `mask_deliverypoint()` (last 4 chars) in `api.py`, used by its debug logging; wiring into `diagnostics.py` lands with that module (#105) | used in `diagnostics.py` + debug logging | #59 | S | AI |
+| ✅ #66 | Diagnostics redaction | `mask_deliverypoint()` (last 4 chars) in `api.py`, used by its debug logging and by `diagnostics.py`, which also keeps the customer id to a six-character hash | used in `diagnostics.py` + debug logging, asserted by `tests/test_diagnostics.py` | #59 | S | AI |
 | ✅ #147 | Pace requests against the rate limit | Chunker respects `x-ratelimit-remaining`/`-reset` (observed: 4 requests per ~1 s), conservative range size verified against the "response too big" 400, resumable backfill, 429 = wait not fail | 730-day backfill completes without 429; simulated exhaustion makes the client sleep | #62, #66 | S | AI |
 
 ## Phase 4 — Setup, coordinator, runtime data
@@ -542,9 +542,8 @@ triggers or conditions), `dependency-transparency` (no third-party requirement �
 and stdlib). The plan expected `action-setup`, `docs-actions` and `dependency-transparency` to be
 exempt, but the rule texts only exempt the third: an action exists, so `action-setup` applies — met by
 registering `ckw.backfill` in `async_setup` — and `docs-actions` applies too, documented in
-`docs/reference/configuration.md`. Bronze and Silver are therefore complete (`quality_scale: silver` in
-`manifest.json`); Gold still has `diagnostics` (#105), `docs-examples` (#128) and `docs-troubleshooting`
-(#99, #122) open.
+`docs/reference/configuration.md`. Bronze, Silver and Gold are therefore complete
+(`quality_scale: gold` in `manifest.json`); `diagnostics` (#105) was the last one.
 
 ## Phase 8 — Quality scale, verification, release
 
@@ -554,7 +553,7 @@ registering `ckw.backfill` in `async_setup` — and `docs-actions` applies too, 
 | ✅ #102 | Bronze audit | Walk every Bronze rule (action-setup, appropriate-polling, brands, common-modules, config-flow, config-flow-test-coverage, dependency-transparency, docs-*, entity-event-setup, entity-unique-id, has-entity-name, runtime-data, test-before-configure, test-before-setup, unique-config-entry) and record evidence | table in `docs/quality-scale.md` | #101 | AI+H |
 | #103 | Silver: `entity-unavailable` + `log-when-unavailable` | verified by pulling network in dev instance | observed behaviour matches | #82, #72 | H |
 | #104 | Silver: `config-entry-unloading` | reload from UI works | verified | #71 | AI+H |
-| #105 | Silver: `diagnostics` | `diagnostics.py` downloadable, redacted | dump inspected manually | #66 | AI |
+| ✅ #105 | Gold: `diagnostics` | `diagnostics.py` downloadable, redacted: masked delivery points, a hashed customer id, token booleans only, and a final pass that drops any credential-named value | dump inspected manually, `tests/test_diagnostics.py` | #66 | AI |
 | ✅ #106 | Silver: docs parameters | installation + options parameters documented | matches config flow | #94 | AI |
 | #107 | Fresh-instance smoke test | Second HA instance (or clean docker volume): HACS custom repo install → setup → dashboard | works end to end | all above | H |
 | #108 | Marketplace submission | PR to `hacs/default` (integration list), expect months of review | PR opened | #107 | H |

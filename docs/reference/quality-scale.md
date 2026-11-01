@@ -18,12 +18,12 @@ today, `exempt` means the rule cannot apply and the reason is written down, `tod
 | --- | --- | --- | --- | --- |
 | Bronze | 20 | 17 | 3 | 0 |
 | Silver | 10 | 10 | 0 | 0 |
-| Gold | 21 | 18 | 2 | 1 |
-| **Total** | **51** | **45** | **5** | **1** |
+| Gold | 21 | 19 | 2 | 0 |
+| **Total** | **51** | **46** | **5** | **0** |
 
 A tier counts as reached only when every rule of that tier **and every lower tier** is `done` or
-`exempt`. Bronze and Silver are complete, so `manifest.json` claims `"quality_scale": "silver"`.
-Gold still has one open rule (`diagnostics`), with its closing issue.
+`exempt`. Bronze, Silver and Gold all are, so `manifest.json` claims `"quality_scale": "gold"`; the
+five `exempt` rules state why they cannot apply.
 
 ## Bronze
 
@@ -70,7 +70,7 @@ Gold still has one open rule (`diagnostics`), with its closing issue.
 | Rule | Status | Evidence |
 | --- | --- | --- |
 | `devices` | done | One device per delivery point, grouped under the entry's service device: `CkwDeviceInfo` with `via_device=(DOMAIN, entry_id)` ([entity.py:78-93](../../custom_components/ckw/entity.py)) and the service device created in [`__init__.py:233`](../../custom_components/ckw/__init__.py); [ADR-0003](../explanation/decisions/0003-meter-device-mapping.md), #80. |
-| `diagnostics` | todo | No `diagnostics.py`; the redacted config-entry dump does not exist. #105 owns it, and [conventions](conventions.md) already fixes the redaction set. |
+| `diagnostics` | done | [`diagnostics.py`](../../custom_components/ckw/diagnostics.py) builds the redacted config-entry dump: version, title and options, the customer id as a six-character `sha256`, one row per delivery point (masked through `api.mask_deliverypoint`, with model, type, fuel, newest interval, publication delay, interval and quality counts, presence and `stale_since`), the coordinator's health (success, the exception *type* only, the rate-limit headers), the statistics state and two token booleans with the expiry time. `_redact_secrets` then drops every remaining value under a token/secret/password/authorization key, keeping booleans; [test_diagnostics.py](../../tests/test_diagnostics.py) asserts the serialized dump holds no token-shaped string, no complete Zählpunkt, no e-mail address and the customer number only as its hash — #105. |
 | `discovery` | exempt | Cloud service over HTTPS (`"iot_class": "cloud_polling"`); nothing on the LAN to discover, the account identity comes from the OAuth login. No `async_step_dhcp`/`zeroconf`/`ssdp`/`usb` exists. |
 | `discovery-update-info` | exempt | No discovery source can supply device info: the meter metadata is read from `GET /smartmeter/customer` on every poll ([coordinator.py](../../custom_components/ckw/coordinator.py), `_async_fetch_customer`) and is fresher than any discovery payload. |
 | `docs-data-update` | done | [data model](../explanation/data-model.md) → "Update cadence": poll interval, the self-healing 7-day window, the 1–3 day lag, the 730-day backfill; [ADR-0004](../explanation/decisions/0004-poll-interval-and-data-lag.md). |
@@ -139,11 +139,10 @@ PLAN.md has been corrected to match this page.
 
 ## Known gaps
 
-Every `todo` above, with the issue that closes it.
+Every open rule, with the issue that closes it.
 
-| Rule | What is missing | Closing issue |
-| --- | --- | --- |
-| `diagnostics` | No `diagnostics.py`, so there is no redacted config-entry download for a bug report. | #105 |
+None: every rule above is `done` or `exempt`. The section stays as the place an open rule is listed
+again if one is reopened or a new Home Assistant rule is added.
 
 ## Related
 
