@@ -1,9 +1,11 @@
 """The CKW Smart Meter integration.
 
-The config flow creates one entry per CKW customer, this module builds the
-per-entry API client on the entry's OAuth2 session, and the coordinator and the
-sensor platform land in their own tasks. Nothing here performs network I/O while
-an entry is set up; the first refresh belongs to the coordinator (#71).
+The config flow creates one entry per CKW customer (ADR-0008). This module builds
+the per-entry API client on the entry's OAuth2 session and the coordinator that
+owns it, then hands both to the platforms through ``entry.runtime_data`` (#67).
+The first refresh happens here, before the platform setup, so a broken login
+leaves the entry ``SETUP_RETRY`` with a ``ConfigEntryNotReady`` instead of a
+half-loaded entry without data (#71).
 """
 
 from __future__ import annotations
@@ -13,11 +15,23 @@ import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from homeassistant.core import callback
 from homeassistant.helpers import config_entry_oauth2_flow
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.device_registry import DeviceEntryType
 
 from .api import CkwClient
-from .const import API_BASE_URL, DOMAIN, ENV_API_BASE_URL, PLATFORMS
+from .const import (
+    API_BASE_URL,
+    DOMAIN,
+    ENV_API_BASE_URL,
+    MANUFACTURER,
+    PLATFORMS,
+    SERVICE_MODEL,
+    VERSION,
+)
+from .coordinator import CkwCoordinator
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -30,13 +44,13 @@ _LOGGER = logging.getLogger(__name__)
 class CkwRuntimeData:
     """Per-entry state shared with the platforms.
 
-    Deliberately minimal: the coordinator (#71) is added by its own task, so no
-    field here is invented ahead of it. The client already reads the token
-    through Home Assistant's OAuth2 session, which refreshes it when needed.
+    The client and the coordinator are built once per entry and live as long as
+    it does; the coordinator's ``data`` carries the per-meter totals. A platform
+    reads them, it never opens a session or calls the API itself.
     """
 
-    entry_id: str
     api: CkwClient
+    coordinator: CkwCoordinator
 
 
 type CkwConfigEntry = ConfigEntry[CkwRuntimeData]
@@ -50,7 +64,12 @@ def api_base_url() -> str:
 async def async_get_access_token(
     session: config_entry_oauth2_flow.OAuth2Session,
 ) -> str:
-    """Return a valid access token, refreshing it through OAuth2 if needed."""
+    """Return a valid access token, refreshing it through OAuth2 if needed.
+
+    ``async_ensure_token_valid`` runs under the session's own lock and stores a
+    refreshed pair in the config entry before it is returned, which is the
+    single-flight refresh ADR-0007 asks for.
+    """
     await session.async_ensure_token_valid()
     return str(session.token["access_token"])
 
@@ -62,22 +81,47 @@ async def async_setup_entry(hass: HomeAssistant, entry: CkwConfigEntry) -> bool:
         hass, entry
     )
     session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
-    entry.runtime_data = CkwRuntimeData(
-        entry_id=entry.entry_id,
-        api=CkwClient(
-            async_get_clientsession(hass),
-            lambda: async_get_access_token(session),
-            base_url=api_base_url(),
-        ),
+    client = CkwClient(
+        async_get_clientsession(hass),
+        lambda: async_get_access_token(session),
+        base_url=api_base_url(),
     )
+    coordinator = CkwCoordinator(hass, entry, client)
+    # Before any platform is forwarded: a dead login or an unreachable API
+    # raises ConfigEntryNotReady here, and nothing is left half-built.
+    await coordinator.async_config_entry_first_refresh()
+
+    entry.runtime_data = CkwRuntimeData(api=client, coordinator=coordinator)
+    _async_register_service_device(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: CkwConfigEntry) -> bool:
-    """Unload one CKW account and everything it loaded."""
+    """Unload one CKW account and everything it loaded.
+
+    The coordinator registered its shutdown as an entry unload callback when it
+    was built, so the refresh timer is cancelled with the entry; this function
+    only unloads the platforms and drops the state it holds.
+    """
     _LOGGER.debug("Unloading %s entry %s", DOMAIN, entry.entry_id)
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unloaded and hasattr(entry, "runtime_data"):
+    if not unloaded:
+        return False
+    if hasattr(entry, "runtime_data"):
         del entry.runtime_data
-    return unloaded
+    return True
+
+
+@callback
+def _async_register_service_device(hass: HomeAssistant, entry: CkwConfigEntry) -> None:
+    """Create the service device every per-meter device hangs under (ADR-0003)."""
+    dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, entry.entry_id)},
+        manufacturer=MANUFACTURER,
+        model=SERVICE_MODEL,
+        name=entry.title,
+        entry_type=DeviceEntryType.SERVICE,
+        sw_version=VERSION,
+    )

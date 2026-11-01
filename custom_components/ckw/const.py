@@ -17,6 +17,10 @@ DOMAIN: Final = "ckw"
 NAME: Final = "CKW Smart Meter"
 VERSION: Final = "0.1.0"
 
+# The service device every per-meter device hangs under (ADR-0003).
+MANUFACTURER: Final = "CKW"
+SERVICE_MODEL: Final = "OpenEnergy API"
+
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 # All date arithmetic happens in Europe/Zurich, never by the UTC date
@@ -59,9 +63,30 @@ MAX_POLL_HOURS: Final[int] = 12
 # The options flow offers exactly these intervals (ADR-0004, #53).
 POLL_INTERVAL_HOURS: Final[tuple[int, ...]] = (1, 2, 4, 6, 12)
 BACKFILL_DAYS: Final[int] = 730
+
+# ---------------------------------------------------------------------------
+# The coordinator's rolling window and its log thresholds (#68, #69, #149)
+# ---------------------------------------------------------------------------
+
+#: Days requested on every poll, ending yesterday (ADR-0004).
 ROLLING_WINDOW_DAYS: Final[int] = 7
+#: A window always ends yesterday: today's aggregate does not exist yet.
+WINDOW_END_DAYS_BACK: Final[int] = 1
+#: The window after a "response too big" 400 is halved once, never below this.
+MIN_WINDOW_DAYS: Final[int] = 1
+#: ``days`` is the only aggregation this integration requests (PLAN #65).
+DAYS_AGGREGATION: Final = "days"
+
+#: Sleep before a request once fewer than this many requests are left.
+RATE_LIMIT_MIN_REMAINING: Final[int] = 1
+
+SECONDS_PER_HOUR: Final[int] = 3600
+#: Warn above this lag: the observed spread is 1-3 days (#149, ADR-0004).
+PUBLICATION_LAG_WARNING_HOURS: Final[int] = 96
+#: Warn when the newest interval has not moved for this many days (#149).
+PUBLICATION_STALL_DAYS: Final[int] = 4
+
 REFRESH_SKEW_SECONDS: Final[int] = 60
-PUBLICATION_LAG_WARNING_HOURS: Final[int] = 48
 
 # ---------------------------------------------------------------------------
 # Config keys: the endpoint override (#39) that switches mock and production
