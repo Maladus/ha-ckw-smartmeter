@@ -11,7 +11,7 @@ from enum import StrEnum
 from typing import Final
 from zoneinfo import ZoneInfo
 
-from homeassistant.const import Platform
+from homeassistant.const import Platform, UnitOfEnergy
 
 DOMAIN: Final = "ckw"
 NAME: Final = "CKW Smart Meter"
@@ -63,6 +63,43 @@ MAX_POLL_HOURS: Final[int] = 12
 # The options flow offers exactly these intervals (ADR-0004, #53).
 POLL_INTERVAL_HOURS: Final[tuple[int, ...]] = (1, 2, 4, 6, 12)
 BACKFILL_DAYS: Final[int] = 730
+
+# ---------------------------------------------------------------------------
+# Long-term statistics (ADR-0002, ADR-0009, #84-#89)
+# ---------------------------------------------------------------------------
+
+#: Days one backfill request covers. A window this wide is far below the server's
+#: "response too big" cap, so a 730-day job never trips it (#147).
+BACKFILL_CHUNK_DAYS: Final[int] = 30
+#: Seconds paused between two backfill chunks. Conservative on purpose: the
+#: observed quota is about four requests per second (#147).
+BACKFILL_PAUSE_SECONDS: Final[float] = 1.0
+#: Upper bound the ``ckw.backfill`` service accepts, so a typo cannot ask for a decade.
+MAX_BACKFILL_DAYS: Final[int] = BACKFILL_DAYS * 5
+
+#: Sensor key whose entity id becomes the statistic id (ADR-0002, #84).
+STATISTIC_ENTITY_KEY: Final = "consumption_total"
+#: The recorder only accepts hourly rows whose unit is a valid energy unit
+#: (docs/explanation/quarter-hour-history.md).
+STATISTIC_UNIT: Final = UnitOfEnergy.KILO_WATT_HOUR
+#: Required from Home Assistant 2026.11 on; omitting it logs a deprecation.
+STATISTIC_UNIT_CLASS: Final = "energy"
+#: ``source`` of an entity statistic: routed to the entity, so the Energy
+#: dashboard's picker lists it (ADR-0002, ADR-0009).
+STATISTIC_SOURCE: Final = "recorder"
+
+#: Storage key prefix and schema version of the per-entry statistics state.
+STORAGE_KEY_STATISTICS: Final = f"{DOMAIN}.statistics"
+STORAGE_VERSION_STATISTICS: Final[int] = 1
+
+# ---------------------------------------------------------------------------
+# The `ckw.backfill` service (#123)
+# ---------------------------------------------------------------------------
+
+SERVICE_BACKFILL: Final = "backfill"
+ATTR_DAYS: Final = "days"
+ATTR_FORCE: Final = "force"
+ATTR_ENTRY_ID: Final = "entry_id"
 
 # ---------------------------------------------------------------------------
 # The coordinator's rolling window and its log thresholds (#68, #69, #149)

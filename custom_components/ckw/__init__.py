@@ -6,6 +6,11 @@ owns it, then hands both to the platforms through ``entry.runtime_data`` (#67).
 The first refresh happens here, before the platform setup, so a broken login
 leaves the entry ``SETUP_RETRY`` with a ``ConfigEntryNotReady`` instead of a
 half-loaded entry without data (#71).
+
+Once the platforms exist, the statistics import starts: the initial 730-day
+backfill runs once per entry in a background task, so setup is never blocked by
+it, and every later poll re-imports the rolling window through the listener
+``statistics.py`` registers (#86).
 """
 
 from __future__ import annotations
@@ -32,6 +37,14 @@ from .const import (
     VERSION,
 )
 from .coordinator import CkwCoordinator
+from .statistics import (
+    StatisticsState,
+    async_backfill,
+    async_import_polled_statistics,
+    async_prepare_statistics,
+    async_register_backfill_service,
+    async_register_statistics,
+)
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -47,10 +60,13 @@ class CkwRuntimeData:
     The client and the coordinator are built once per entry and live as long as
     it does; the coordinator's ``data`` carries the per-meter totals. A platform
     reads them, it never opens a session or calls the API itself.
+    ``statistics_state`` is the backfill's progress (done/pending and the chunk
+    offset), so a diagnostic or a service call can read it without the store.
     """
 
     api: CkwClient
     coordinator: CkwCoordinator
+    statistics_state: StatisticsState
 
 
 type CkwConfigEntry = ConfigEntry[CkwRuntimeData]
@@ -91,10 +107,56 @@ async def async_setup_entry(hass: HomeAssistant, entry: CkwConfigEntry) -> bool:
     # raises ConfigEntryNotReady here, and nothing is left half-built.
     await coordinator.async_config_entry_first_refresh()
 
-    entry.runtime_data = CkwRuntimeData(api=client, coordinator=coordinator)
+    entry.runtime_data = CkwRuntimeData(
+        api=client,
+        coordinator=coordinator,
+        statistics_state=StatisticsState(),
+    )
     _async_register_service_device(hass, entry)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # The statistics need the entity ids, so this runs after the platform setup.
+    # The backfill is a background task on purpose: two years of history must
+    # not delay the entry's setup, and `hass.async_create_task` would, because
+    # Home Assistant waits for pending tasks before it finishes starting.
+    state = await async_prepare_statistics(hass, entry)
+    async_register_statistics(hass, entry)
+    async_register_backfill_service(hass)
+    if state.done:
+        entry.async_create_background_task(
+            hass,
+            async_import_polled_statistics(hass, entry),
+            name="ckw statistics import",
+        )
+    else:
+        _LOGGER.info(
+            "statistics: starting the %d-day backfill for %s at %s",
+            state.days,
+            entry.title,
+            "the first day" if state.next_start is None else state.next_start.isoformat(),
+        )
+        entry.async_create_background_task(
+            hass,
+            _async_run_backfill(hass, entry),
+            name="ckw statistics backfill",
+        )
     return True
+
+
+async def _async_run_backfill(hass: HomeAssistant, entry: CkwConfigEntry) -> None:
+    """Run the entry's backfill and log how it ended (never blocks setup)."""
+    state = entry.runtime_data.statistics_state
+    try:
+        # ``state.days`` is the job that was pending, so a restart of a resumed
+        # job keeps its window instead of replacing it with the default one.
+        await async_backfill(hass, entry, entry.runtime_data.coordinator, state.days)
+    except Exception:  # noqa: BLE001 - a background task must not log a traceback
+        _LOGGER.exception(
+            "statistics: the backfill for %s failed, it resumes at the next setup",
+            entry.title,
+        )
+    else:
+        _LOGGER.info("statistics: the backfill for %s is done", entry.title)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: CkwConfigEntry) -> bool:

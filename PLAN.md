@@ -487,12 +487,12 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 
 | ID | Task | Details | Done when | Deps | Size | Owner |
 |---|---|---|---|---|---|---|
-| #84 | `statistics.py` core | `StatisticMetaData(has_mean=False, has_sum=True, source="recorder", statistic_id=<entity_id>, unit)` + `async_import_statistics` | imports without recorder errors | #76 | M | AI |
-| #85 | Idempotent import | Recompute cumulative `sum` for the imported window; overwrite instead of append | 3× restart test → identical last sum | #84 | M | AI |
-| #86 | Initial backfill | 730 days via `#64` chunking at first setup; progress logging; abort-safe | Energy dashboard shows 2 years | #85, #64 | L | AI+H |
-| #87 | Cost statistics | Same for CHF sensor | dashboard cost graph populated | #85 | S | AI |
-| #88 | DST correctness | Interval start = local midnight; 23/25 h days produce one statistic bucket per local day | unit tests | #73 | M | AI |
-| #89 | Change detection | Skip import if window checksum unchanged (avoids recorder churn) | log shows skip on unchanged poll | #85 | S | AI |
+| ✅ #84 | `statistics.py` core | `StatisticMetaData(has_mean=False, has_sum=True, source="recorder", statistic_id=<entity_id>, unit)` + `async_import_statistics` | imports without recorder errors | #76 | M | AI |
+| ✅ #85 | Idempotent import | Recompute cumulative `sum` for the imported window; overwrite instead of append | 3× restart test → identical last sum | #84 | M | AI |
+| ✅ #86 | Initial backfill | 730 days via `#64` chunking at first setup; progress logging; abort-safe | Energy dashboard shows 2 years | #85, #64 | L | AI+H |
+| ❌ #87 | Cost statistics | Dropped by decision A2: kWh only, no cost entities or cost statistics | — | — | — | — |
+| ✅ #88 | DST correctness | Interval start = local midnight; 23/25 h days produce one statistic bucket per local day | unit tests | #73 | M | AI |
+| ✅ #89 | Change detection | Skip import if window checksum unchanged (avoids recorder churn) | log shows skip on unchanged poll | #85 | S | AI |
 | #90 | Validation against portal | Compare 3 random days against my.ckw.ch chart (manual cross-check) | numbers match ±0.1 kWh | #86, #5 | — | H |
 
 ## Phase 7 — Documentation

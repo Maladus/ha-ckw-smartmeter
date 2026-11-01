@@ -88,6 +88,32 @@
     },
     "unknown": {
       "message": "An unexpected error occurred while talking to CKW."
+    },
+    "unknown_entry": {
+      "message": "No CKW account has the id {entry_id}."
+    },
+    "no_loaded_entry": {
+      "message": "No loaded CKW account to backfill; set up the integration first."
+    }
+  },
+  "services": {
+    "backfill": {
+      "name": "Backfill statistics",
+      "description": "Import the last days of CKW daily aggregates as long-term statistics again. Use it after a meter swap or a recorder wipe; the imported sums overwrite each other instead of adding up.",
+      "fields": {
+        "entry_id": {
+          "name": "Config entry",
+          "description": "The CKW account to repair. Leave empty to repair every configured account."
+        },
+        "days": {
+          "name": "Days",
+          "description": "How many days of history to import, ending yesterday."
+        },
+        "force": {
+          "name": "Force",
+          "description": "Recompute the cumulative sum from the first imported day instead of continuing the stored sum, and ignore the stored checksum."
+        }
+      }
     }
   }
 }

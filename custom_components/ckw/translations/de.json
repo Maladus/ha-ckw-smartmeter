@@ -88,6 +88,32 @@
     },
     "unknown": {
       "message": "Beim Zugriff auf CKW ist ein unerwarteter Fehler aufgetreten."
+    },
+    "unknown_entry": {
+      "message": "Kein CKW-Konto hat die Kennung {entry_id}."
+    },
+    "no_loaded_entry": {
+      "message": "Kein geladenes CKW-Konto zum Nachladen; richten Sie die Integration zuerst ein."
+    }
+  },
+  "services": {
+    "backfill": {
+      "name": "Statistik nachladen",
+      "description": "Die letzten Tage der CKW-Tageswerte erneut als Langzeitstatistik importieren. Nach einem Zählertausch oder einem gelöschten Recorder sinnvoll; die importierten Summen überschreiben sich, statt sich zu addieren.",
+      "fields": {
+        "entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Das zu reparierende CKW-Konto. Leer lassen, um alle Konten zu reparieren."
+        },
+        "days": {
+          "name": "Tage",
+          "description": "Wie viele Tage Verlauf bis gestern importiert werden."
+        },
+        "force": {
+          "name": "Erzwingen",
+          "description": "Die kumulierte Summe ab dem ersten importierten Tag neu berechnen, statt der gespeicherten Summe zu folgen, und die gespeicherte Prüfsumme ignorieren."
+        }
+      }
     }
   }
 }

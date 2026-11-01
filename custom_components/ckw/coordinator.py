@@ -193,6 +193,25 @@ class CkwCoordinator(DataUpdateCoordinator[CkwData]):
         """Intervals added by the most recent poll, per delivery point."""
         return self._new_intervals
 
+    def intervals(self, deliverypoint: str) -> tuple[CkwMeasurement, ...]:
+        """Return every daily interval merged for one delivery point, oldest first.
+
+        The statistics import reads the same values the sensors total, so a day
+        the poll already knows is imported once and not fetched a second time.
+        """
+        return tuple(
+            measurement
+            for _end, measurement in sorted(self._intervals.get(deliverypoint, {}).items())
+        )
+
+    async def async_pace(self) -> None:
+        """Wait for the next rate-limit window when the quota is exhausted.
+
+        Public because the statistics backfill sends its own requests through
+        the same client and must pace them like a poll does (#147).
+        """
+        await self._async_pace()
+
     async def _async_update_data(self) -> CkwData:
         """Fetch, merge and log one poll, mapping failures as documented."""
         try:

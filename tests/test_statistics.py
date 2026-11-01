@@ -1,0 +1,711 @@
+"""Tests for the long-term statistics import and the resumable backfill (#84-#89).
+
+The recorder is real (``recorder_mock`` provides an in-memory instance), so the
+rows are read back through the recorder's own query path: that is the only place
+where the hour rule of ``async_import_statistics`` is enforced, and where an
+append instead of an overwrite would show up as a doubled sum.
+
+No socket is opened: the backfill's client is a fake that returns the daily
+intervals of the requested window, and ``asyncio.sleep`` is patched so the
+rate-limit pauses are asserted instead of waited for.
+"""
+
+from __future__ import annotations
+
+import math
+from collections.abc import Sequence
+from datetime import UTC, date, datetime, time, timedelta
+from types import SimpleNamespace
+from typing import Any, Final
+from unittest.mock import AsyncMock, Mock
+
+import pytest
+import voluptuous as vol
+from freezegun import freeze_time
+from homeassistant.components.recorder import get_instance
+from homeassistant.components.recorder.statistics import statistics_during_period
+from homeassistant.config_entries import ConfigEntryState
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_entry_oauth2_flow
+from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.components.recorder.common import (
+    async_wait_recording_done,
+)
+
+from custom_components.ckw import statistics as statistics_module
+from custom_components.ckw.api import (
+    CkwAuthError,
+    CkwClient,
+    CkwCustomer,
+    CkwMeasurement,
+    CkwMeterMeasurements,
+)
+from custom_components.ckw.const import (
+    ATTR_DAYS,
+    ATTR_ENTRY_ID,
+    ATTR_FORCE,
+    BACKFILL_CHUNK_DAYS,
+    BACKFILL_DAYS,
+    BACKFILL_PAUSE_SECONDS,
+    CONF_CITY,
+    CONF_CUSTOMER_ID,
+    CONF_METER,
+    DAYS_AGGREGATION,
+    DOMAIN,
+    ROLLING_WINDOW_DAYS,
+    SERVICE_BACKFILL,
+    STATISTIC_ENTITY_KEY,
+    TIME_ZONE,
+    WINDOW_END_DAYS_BACK,
+)
+from custom_components.ckw.statistics import (
+    BackfillProgress,
+    StatisticsState,
+    async_backfill,
+    async_import_meter_statistics,
+    async_register_backfill_service,
+)
+
+pytestmark = pytest.mark.usefixtures("recorder_mock", "enable_custom_integrations")
+
+METER: Final = "CH0000000000000000000000000000001"
+STATISTIC_ID: Final = "sensor.ckw_test_consumption_total"
+#: Frozen "now" for the backfill: winter (CET), so the local day is unambiguous.
+FROZEN_NOW: Final = datetime(2025, 6, 15, 12, 0, tzinfo=TIME_ZONE)
+
+
+# ---------------------------------------------------------------------------
+# Intervals as CKW returns them
+# ---------------------------------------------------------------------------
+
+
+def _midnight(day: date) -> datetime:
+    """Return local midnight of ``day`` in ``Europe/Zurich``."""
+    return datetime.combine(day, time.min, tzinfo=TIME_ZONE)
+
+
+def _daily(
+    day: date,
+    *,
+    kwh_ht: float | None = 2.0,
+    kwh_nt: float | None = 1.0,
+    lines_p: int | None = 1,
+) -> CkwMeasurement:
+    """Build one daily interval, local midnight to local midnight."""
+    return CkwMeasurement(
+        start_utc=_midnight(day).astimezone(UTC),
+        end_utc=_midnight(day + timedelta(days=1)).astimezone(UTC),
+        kwh_ht=kwh_ht,
+        kwh_nt=kwh_nt,
+        chf_ht=None,
+        chf_nt=None,
+        lines_p=lines_p,
+        lines_fw=1,
+        lines_fb=1,
+    )
+
+
+def _days(start: date, count: int) -> list[date]:
+    """Return ``count`` consecutive days from ``start``."""
+    return [start + timedelta(days=offset) for offset in range(count)]
+
+
+# ---------------------------------------------------------------------------
+# Fixtures: an entry, its runtime data and a reading helper
+# ---------------------------------------------------------------------------
+
+
+class FakeClient:
+    """Stands in for ``CkwClient.async_get_measurements``; no socket is opened."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[date, date, str]] = []
+        self.error: Exception | None = None
+
+    async def async_get_measurements(
+        self,
+        start: date,
+        end: date,
+        aggregation: str = DAYS_AGGREGATION,
+    ) -> list[CkwMeterMeasurements]:
+        self.calls.append((start, end, aggregation))
+        if self.error is not None:
+            raise self.error
+        measurements = tuple(_daily(day) for day in _days(start, (end - start).days + 1))
+        return [CkwMeterMeasurements(deliverypointnumber=METER, measurements=measurements)]
+
+
+class FakeCoordinator:
+    """The two coordinator members the backfill uses."""
+
+    def __init__(self) -> None:
+        self.client = FakeClient()
+        self.data = SimpleNamespace(meters={}, meter_info={})
+        self.paced = 0
+
+    async def async_pace(self) -> None:
+        """Count the pacing calls instead of waiting for a quota window."""
+        self.paced += 1
+
+
+@pytest.fixture
+def entry(hass: HomeAssistant) -> MockConfigEntry:
+    """Add a config entry whose runtime data carries the statistics state."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={},
+        options={},
+        title="CKW test",
+        unique_id="statistics-test",
+    )
+    entry.add_to_hass(hass)
+    entry.runtime_data = SimpleNamespace(
+        api=None,
+        coordinator=FakeCoordinator(),
+        statistics_state=StatisticsState(),
+    )
+    return entry
+
+
+@pytest.fixture
+def statistic_id(hass: HomeAssistant, entry: MockConfigEntry) -> str:
+    """Register the total sensor entity the statistic id is derived from."""
+    entity = er.async_get(hass).async_get_or_create(
+        Platform.SENSOR,
+        DOMAIN,
+        f"{entry.entry_id}_{METER}_{STATISTIC_ENTITY_KEY}",
+        suggested_object_id="ckw_test_consumption_total",
+    )
+    assert entity.entity_id == STATISTIC_ID
+    return entity.entity_id
+
+
+async def read_rows(
+    hass: HomeAssistant,
+    statistic_id: str = STATISTIC_ID,
+) -> list[Any]:
+    """Read the stored hourly rows back through the recorder's query path."""
+    await async_wait_recording_done(hass)
+    rows = await get_instance(hass).async_add_executor_job(
+        statistics_during_period,
+        hass,
+        datetime(2020, 1, 1, tzinfo=UTC),
+        datetime(2030, 1, 1, tzinfo=UTC),
+        {statistic_id},
+        "hour",
+        None,
+        {"state", "sum"},
+    )
+    return rows.get(statistic_id, [])
+
+
+def row_start(row: Any) -> datetime:
+    """Return a stored row's start as an aware UTC datetime."""
+    return dt_util.utc_from_timestamp(row["start"])
+
+
+def local_start(row: Any) -> datetime:
+    """Return a stored row's start in ``Europe/Zurich``."""
+    return row_start(row).astimezone(TIME_ZONE)
+
+
+# ---------------------------------------------------------------------------
+# The import
+# ---------------------------------------------------------------------------
+
+
+async def test_import_writes_hourly_cumulative_rows(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """Rows start at local midnight, carry the daily kWh and a growing sum."""
+    intervals = [_daily(day) for day in _days(date(2025, 5, 1), 3)]
+
+    result = await async_import_meter_statistics(hass, entry, METER, STATISTIC_ID, intervals)
+
+    assert result.written is True
+    assert result.rows == 3
+    assert result.skipped == 0
+    assert result.statistic_id == STATISTIC_ID
+
+    rows = await read_rows(hass)
+    assert len(rows) == 3
+    for row in rows:
+        start = local_start(row)
+        assert (start.hour, start.minute, start.second) == (0, 0, 0)
+    assert [row["state"] for row in rows] == [3.0, 3.0, 3.0]
+    assert [row["sum"] for row in rows] == [3.0, 6.0, 9.0]
+    assert result.last_sum == 9.0
+
+
+async def test_the_statistic_is_an_entity_statistic(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """The import is bound to the entity, so the Energy dashboard can pick it."""
+    from homeassistant.components.recorder.models import StatisticMetaData
+
+    metadata: StatisticMetaData = statistics_module._metadata(STATISTIC_ID)
+
+    assert metadata["statistic_id"] == STATISTIC_ID
+    assert metadata["source"] == "recorder"
+    assert metadata["has_sum"] is True
+    assert metadata["unit_of_measurement"] == "kWh"
+    assert metadata["unit_class"] == "energy"
+
+
+async def test_importing_the_same_window_twice_is_idempotent(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """The second import skips on the checksum and leaves rows and sum alone."""
+    intervals = [_daily(day) for day in _days(date(2025, 5, 1), 4)]
+
+    first = await async_import_meter_statistics(hass, entry, METER, STATISTIC_ID, intervals)
+    rows_before = await read_rows(hass)
+
+    second = await async_import_meter_statistics(hass, entry, METER, STATISTIC_ID, intervals)
+    rows_after = await read_rows(hass)
+
+    assert first.written is True
+    assert second.written is False
+    assert len(rows_after) == len(rows_before) == 4
+    assert rows_after[-1]["sum"] == pytest.approx(rows_before[-1]["sum"])
+    assert [row["sum"] for row in rows_after] == [row["sum"] for row in rows_before]
+
+
+async def test_a_forced_import_overwrites_instead_of_appending(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """``force`` writes the same rows again; the sum is not added twice."""
+    intervals = [_daily(day) for day in _days(date(2025, 5, 1), 3)]
+
+    await async_import_meter_statistics(hass, entry, METER, STATISTIC_ID, intervals)
+    rows_before = await read_rows(hass)
+
+    forced = await async_import_meter_statistics(
+        hass, entry, METER, STATISTIC_ID, intervals, force=True
+    )
+    rows_after = await read_rows(hass)
+
+    assert forced.written is True
+    assert len(rows_after) == len(rows_before) == 3
+    assert [row["sum"] for row in rows_after] == [row["sum"] for row in rows_before]
+    assert rows_after[-1]["sum"] == pytest.approx(9.0)
+
+
+async def test_an_overlapping_window_keeps_the_same_sums(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """Re-importing a shifted window recomputes the overlapping rows identically."""
+    week = [_daily(day) for day in _days(date(2025, 5, 1), 7)]
+    await async_import_meter_statistics(hass, entry, METER, STATISTIC_ID, week)
+    rows_before = await read_rows(hass)
+
+    # The rolling window of the next poll: the last five days only.
+    result = await async_import_meter_statistics(hass, entry, METER, STATISTIC_ID, week[-5:])
+    rows_after = await read_rows(hass)
+
+    assert result.written is True
+    assert len(rows_after) == 7
+    assert [row["sum"] for row in rows_after] == [row["sum"] for row in rows_before]
+    assert rows_after[-1]["sum"] == pytest.approx(21.0)
+
+
+async def test_a_dst_day_yields_exactly_one_bucket(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """23 h and 25 h local days each produce one row, 24/23/25 h apart in UTC."""
+    spring = _days(date(2025, 3, 29), 3)
+    autumn = _days(date(2025, 10, 25), 3)
+    intervals = [_daily(day) for day in [*spring, *autumn]]
+
+    result = await async_import_meter_statistics(hass, entry, METER, STATISTIC_ID, intervals)
+
+    assert result.rows == 6
+    rows = await read_rows(hass)
+    assert len(rows) == 6
+    # One bucket per local day, even though 2025-03-30 is 23 h and 2025-10-26 is 25 h.
+    assert {local_start(row).date() for row in rows} == {*spring, *autumn}
+    starts = [row_start(row) for row in rows]
+    assert starts[1] - starts[0] == timedelta(hours=24)
+    assert starts[2] - starts[1] == timedelta(hours=23)
+    assert starts[4] - starts[3] == timedelta(hours=24)
+    assert starts[5] - starts[4] == timedelta(hours=25)
+
+
+async def test_an_interval_without_a_quantity_is_skipped(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """Unknown and flagged intervals are left out; later sums still add up."""
+    first, missing, flagged, last = _days(date(2025, 5, 1), 4)
+    intervals: Sequence[CkwMeasurement] = [
+        _daily(first),
+        _daily(missing, kwh_nt=None),
+        _daily(flagged, lines_p=2),
+        _daily(last),
+    ]
+
+    result = await async_import_meter_statistics(hass, entry, METER, STATISTIC_ID, intervals)
+
+    assert result.skipped == 2
+    assert result.rows == 2
+    rows = await read_rows(hass)
+    assert len(rows) == 2
+    assert [local_start(row).date() for row in rows] == [first, last]
+    assert [row["sum"] for row in rows] == [3.0, 6.0]
+
+
+async def test_an_import_without_any_usable_day_writes_nothing(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """All intervals unknown means no row, not a row of zero."""
+    result = await async_import_meter_statistics(
+        hass,
+        entry,
+        METER,
+        STATISTIC_ID,
+        [_daily(date(2025, 5, 1), kwh_ht=None, kwh_nt=None)],
+    )
+
+    assert result.written is False
+    assert result.rows == 0
+    assert result.skipped == 1
+    assert await read_rows(hass) == []
+
+
+# ---------------------------------------------------------------------------
+# The backfill
+# ---------------------------------------------------------------------------
+
+
+async def test_backfill_walks_the_chunks_and_pauses(
+    hass: HomeAssistant,
+    entry: MockConfigEntry,
+    statistic_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The backfill requests 30-day chunks, pauses between them and finishes."""
+    coordinator = entry.runtime_data.coordinator
+    pauses: list[float] = []
+
+    async def fake_sleep(delay: float, *args: Any, **kwargs: Any) -> None:
+        pauses.append(delay)
+
+    monkeypatch.setattr(statistics_module.asyncio, "sleep", fake_sleep)
+
+    today = FROZEN_NOW.date()
+    with freeze_time(FROZEN_NOW):
+        await async_backfill(hass, entry, coordinator, days=BACKFILL_CHUNK_DAYS * 3)
+
+    end = today - timedelta(days=WINDOW_END_DAYS_BACK)
+    start = end - timedelta(days=BACKFILL_CHUNK_DAYS * 3 - 1)
+    assert coordinator.client.calls == [
+        (start, start + timedelta(days=BACKFILL_CHUNK_DAYS - 1), DAYS_AGGREGATION),
+        (
+            start + timedelta(days=BACKFILL_CHUNK_DAYS),
+            start + timedelta(days=BACKFILL_CHUNK_DAYS * 2 - 1),
+            DAYS_AGGREGATION,
+        ),
+        (
+            start + timedelta(days=BACKFILL_CHUNK_DAYS * 2),
+            end,
+            DAYS_AGGREGATION,
+        ),
+    ]
+    # One pause between three chunks: the loop does not sleep after the last one.
+    assert pauses == [BACKFILL_PAUSE_SECONDS, BACKFILL_PAUSE_SECONDS]
+    assert coordinator.paced == 3
+
+    state = entry.runtime_data.statistics_state
+    assert state.done is True
+    assert state.running is False
+    assert state.chunks_done == state.chunks_total == 3
+    assert state.next_start is None
+
+    rows = await read_rows(hass, statistic_id)
+    assert len(rows) == BACKFILL_CHUNK_DAYS * 3
+    assert rows[-1]["sum"] == pytest.approx(3.0 * BACKFILL_CHUNK_DAYS * 3)
+
+
+async def test_backfill_resumes_from_the_stored_offset(
+    hass: HomeAssistant,
+    entry: MockConfigEntry,
+    statistic_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A stored chunk offset is resumed, not restarted from the window start."""
+    coordinator = entry.runtime_data.coordinator
+    monkeypatch.setattr(
+        statistics_module.asyncio, "sleep", AsyncMock(spec=statistics_module.asyncio.sleep)
+    )
+
+    today = FROZEN_NOW.date()
+    end = today - timedelta(days=WINDOW_END_DAYS_BACK)
+    start = end - timedelta(days=BACKFILL_CHUNK_DAYS * 3 - 1)
+    resumed_at = start + timedelta(days=BACKFILL_CHUNK_DAYS)
+
+    store = statistics_module._statistics_store(hass, entry)
+    await store.async_load()
+    store.set_backfill(
+        BackfillProgress(
+            days=BACKFILL_CHUNK_DAYS * 3,
+            window_start=start,
+            next_start=resumed_at,
+            chunks_done=1,
+            done=False,
+        )
+    )
+    await store.async_save()
+
+    with freeze_time(FROZEN_NOW):
+        await statistics_module.async_prepare_statistics(hass, entry)
+        state = entry.runtime_data.statistics_state
+        assert state.done is False
+        assert state.next_start == resumed_at
+
+        await async_backfill(hass, entry, coordinator, days=BACKFILL_CHUNK_DAYS * 3)
+
+    assert coordinator.client.calls[0][0] == resumed_at
+    assert len(coordinator.client.calls) == 2
+    assert state.done is True
+    assert state.chunks_done == 3
+    assert store.backfill is not None
+    assert store.backfill.done is True
+
+
+async def test_backfill_stops_on_a_revoked_sign_in(
+    hass: HomeAssistant,
+    entry: MockConfigEntry,
+    statistic_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A ``CkwAuthError`` stops the job, keeps the offset and starts reauth."""
+    coordinator = entry.runtime_data.coordinator
+    coordinator.client.error = CkwAuthError("token expired")
+    reauth = Mock()
+    monkeypatch.setattr("homeassistant.config_entries.ConfigEntry.async_start_reauth", reauth)
+
+    try:
+        with freeze_time(FROZEN_NOW):
+            await async_backfill(hass, entry, coordinator, days=BACKFILL_CHUNK_DAYS * 2)
+    finally:
+        coordinator.client.error = None
+
+    assert reauth.call_count == 1
+    assert len(coordinator.client.calls) == 1
+    state = entry.runtime_data.statistics_state
+    assert state.done is False
+    assert state.running is False
+    store = statistics_module._statistics_store(hass, entry)
+    assert store.backfill is None
+
+
+# ---------------------------------------------------------------------------
+# The `ckw.backfill` service
+# ---------------------------------------------------------------------------
+
+
+async def _loaded_entry(hass: HomeAssistant) -> MockConfigEntry:
+    """Return the entry marked as loaded, as a running setup leaves it."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={},
+        options={},
+        title="CKW service test",
+        unique_id="statistics-service",
+    )
+    entry.add_to_hass(hass)
+    entry.runtime_data = SimpleNamespace(
+        api=None,
+        coordinator=FakeCoordinator(),
+        statistics_state=StatisticsState(),
+    )
+    entry.mock_state(hass, ConfigEntryState.LOADED)
+    return entry
+
+
+async def test_backfill_service_calls_the_backfill_with_the_requested_days(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The service re-runs the backfill for the entry it is given."""
+    entry = await _loaded_entry(hass)
+    backfill = AsyncMock()
+    monkeypatch.setattr(statistics_module, "async_backfill", backfill)
+    async_register_backfill_service(hass)
+
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_BACKFILL,
+        {ATTR_ENTRY_ID: entry.entry_id, ATTR_DAYS: 45, ATTR_FORCE: True},
+        blocking=True,
+    )
+
+    backfill.assert_awaited_once()
+    args, kwargs = backfill.await_args
+    assert args[1] is entry
+    assert args[2] is entry.runtime_data.coordinator
+    assert args[3] == 45
+    assert kwargs == {"force": True}
+
+
+async def test_backfill_service_validates_its_fields(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An out-of-range day count and an unknown entry id are refused."""
+    entry = await _loaded_entry(hass)
+    backfill = AsyncMock()
+    monkeypatch.setattr(statistics_module, "async_backfill", backfill)
+    async_register_backfill_service(hass)
+
+    with pytest.raises(vol.Invalid):
+        await hass.services.async_call(DOMAIN, SERVICE_BACKFILL, {ATTR_DAYS: 0}, blocking=True)
+
+    with pytest.raises(Exception) as error:
+        await hass.services.async_call(
+            DOMAIN, SERVICE_BACKFILL, {ATTR_ENTRY_ID: "nope"}, blocking=True
+        )
+    assert error.value.translation_key == "unknown_entry"  # type: ignore[attr-defined]
+    backfill.assert_not_awaited()
+    assert entry.entry_id
+
+
+# ---------------------------------------------------------------------------
+# The setup path: the backfill runs once per entry, not once per restart
+# ---------------------------------------------------------------------------
+
+CUSTOMER_ID: Final = "0000000099"
+
+
+class FakeApi:
+    """Replay daily intervals for any window; no socket is opened."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[date, date, str]] = []
+
+    async def async_get_measurements(
+        self,
+        start: date,
+        end: date,
+        aggregation: str = DAYS_AGGREGATION,
+    ) -> list[CkwMeterMeasurements]:
+        self.calls.append((start, end, aggregation))
+        return [
+            CkwMeterMeasurements(
+                deliverypointnumber=METER,
+                measurements=tuple(_daily(day) for day in _days(start, (end - start).days + 1)),
+            )
+        ]
+
+    async def async_get_customer(self) -> CkwCustomer:
+        return CkwCustomer(id=CUSTOMER_ID, locations=())
+
+
+class FakeOAuth2Implementation(config_entry_oauth2_flow.AbstractOAuth2Implementation):
+    """Local OAuth2 implementation that hands out one fixed token pair."""
+
+    def __init__(self, hass: HomeAssistant) -> None:
+        self.hass = hass
+
+    @property
+    def name(self) -> str:
+        return "CKW test IdP"
+
+    @property
+    def domain(self) -> str:
+        return DOMAIN
+
+    async def async_generate_authorize_url(self, flow_id: str) -> str:
+        return "https://id.example.invalid/authorize"
+
+    async def async_resolve_external_data(self, external_data: Any) -> dict[str, Any]:
+        return {
+            "access_token": "test-access-token",
+            "refresh_token": "test-refresh-token",
+            "expires_in": 3600,
+            "token_type": "Bearer",
+        }
+
+    async def _async_refresh_token(self, token: dict[str, Any]) -> dict[str, Any]:
+        return {
+            **token,
+            "access_token": "refreshed-access-token",
+            "refresh_token": "refreshed-refresh-token",
+            "expires_in": 3600,
+        }
+
+
+async def test_setup_runs_the_backfill_once(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The first setup imports the whole history; a restart does not repeat it."""
+    config_entry_oauth2_flow.async_register_implementation(
+        hass, DOMAIN, FakeOAuth2Implementation(hass)
+    )
+    api = FakeApi()
+    monkeypatch.setattr(CkwClient, "async_get_measurements", api.async_get_measurements)
+    monkeypatch.setattr(CkwClient, "async_get_customer", api.async_get_customer)
+    monkeypatch.setattr(
+        statistics_module.asyncio, "sleep", AsyncMock(spec=statistics_module.asyncio.sleep)
+    )
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_CUSTOMER_ID: CUSTOMER_ID,
+            CONF_CITY: "Luzern",
+            CONF_METER: METER,
+            "auth_implementation": DOMAIN,
+            "token": {
+                "access_token": "test-access-token",
+                "refresh_token": "test-refresh-token",
+                "expires_in": 3600,
+                "expires_at": datetime.now(UTC).timestamp() + 3600,
+                "token_type": "Bearer",
+            },
+        },
+        options={},
+        unique_id=CUSTOMER_ID,
+        title=f"{CUSTOMER_ID} - Luzern",
+    )
+    entry.add_to_hass(hass)
+    today = FROZEN_NOW.date()
+
+    with freeze_time(FROZEN_NOW):
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+        state = entry.runtime_data.statistics_state
+        assert state.done is True
+        chunks = math.ceil(BACKFILL_DAYS / BACKFILL_CHUNK_DAYS)
+        # The backfill's chunks, then the poll's rolling window. The poll also
+        # asks for today's quarter hours, which no statistic is made from.
+        day_calls = [call for call in api.calls if call[2] == DAYS_AGGREGATION]
+        assert len(day_calls) == chunks + 1
+        # The first day call is the poll: the rolling window, ending yesterday.
+        assert day_calls[0] == (
+            today - timedelta(days=ROLLING_WINDOW_DAYS),
+            today - timedelta(days=WINDOW_END_DAYS_BACK),
+            DAYS_AGGREGATION,
+        )
+        assert hass.services.has_service(DOMAIN, SERVICE_BACKFILL)
+
+        # The statistic id is the entity id of the total sensor (ADR-0002).
+        statistic = er.async_get(hass).async_get_entity_id(
+            Platform.SENSOR, DOMAIN, f"{entry.entry_id}_{METER}_{STATISTIC_ENTITY_KEY}"
+        )
+        assert statistic is not None
+        rows = await read_rows(hass, statistic)
+        assert len(rows) == BACKFILL_DAYS
+        assert rows[-1]["sum"] == pytest.approx(3.0 * BACKFILL_DAYS)
+
+        # A restart finds the stored state and imports nothing again.
+        assert await hass.config_entries.async_unload(entry.entry_id)
+        await hass.async_block_till_done()
+        calls_before = len(day_calls)
+        assert await hass.config_entries.async_setup(entry.entry_id)
+        await hass.async_block_till_done(wait_background_tasks=True)
+
+    assert entry.runtime_data.statistics_state.done is True
+    day_calls = [call for call in api.calls if call[2] == DAYS_AGGREGATION]
+    assert len(day_calls) == calls_before + 1  # the poll only, no chunk again
