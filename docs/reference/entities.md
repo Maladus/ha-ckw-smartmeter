@@ -88,8 +88,14 @@ Only two sensors carry extra attributes; every other sensor has none.
 
 | Entity | Attributes |
 | --- | --- |
-| Consumption total | `publication_delay_h` — hours between the newest published interval and the poll; `last_published_interval` — the same timestamp the diagnostic sensor shows; `quality_intervals` — how many intervals were flagged by `anzahl_linien_* > 1` and therefore kept out of the totals |
+| Consumption total | `publication_delay_h` — hours between the newest published interval and the poll; `last_published_interval` — the same timestamp the diagnostic sensor shows; `quality_intervals` — how many intervals were flagged by `anzahl_linien_* > 1` and therefore kept out of the totals; `stale_since` — see below |
 | Quarter-hour consumption | `interval_start`, `interval_end` — UTC bounds of the reported 15-minute interval; `publication_delay_h` — hours between `interval_end` and the poll |
+
+`stale_since` appears on **Consumption total** once its meter is stale. It is the timestamp of the first
+poll that no longer returned the delivery point, and it disappears as soon as CKW reports the meter again.
+Home Assistant drops the attributes of an unavailable entity, so while the meter is stale a user sees the
+unavailable state and the one `INFO` line in the log. The attribute itself stays on the entity, which is
+where a diagnostic dump or a template on the entity object reads it.
 
 `publication_delay_h` above 96 h logs a warning and the newest interval standing still for more than
 4 days logs a stall warning, both once per failure class.
@@ -123,7 +129,10 @@ and a sum. Which of them to add:
 | Normal poll | All sensors of the meter update together; the coordinator owns the only network call. |
 | Poll interval | 2 h by default, selectable 1, 2, 4, 6 or 12 h in the integration's options. The entities follow the coordinator, they do not poll themselves. |
 | Failed poll | The sensors of the affected meter become unavailable until a poll succeeds; they are never removed. |
-| Meter missing from the poll's data | The meter's sensors become unavailable, and its entities and history stay registered. |
+| Delivery point added in the CKW portal | Its seven sensors and its device appear on the poll that first returns the meter, without a reload. The unique ids and the entity ids follow the same scheme as for every other meter. |
+| Meter missing from the poll's data | The meter's sensors become unavailable immediately, and its entities, its history and its device stay registered. A meter CKW lists but never publishes data for behaves the same way. |
+| Meter missing for more than 7 days (`STALE_AFTER_DAYS`) | The meter is **stale**. One `INFO` line in the log, `stale_since` on Consumption total, and no repair issue, because CKW can list the meter again. When it does, one `INFO` line, the sensors are available again and `stale_since` is gone. The clock runs from the first poll that did not return the meter, so a meter the portal still lists without data is covered too. |
+| Stale device deleted by the user | Allowed while the meter is absent, and the decision sticks: the device is not registered again on later polls, and its statistics rows stay in the recorder under the entity ids (the series continues if the same meter comes back). |
 | Meter exchange | A changed `supply_start_date` means a new physical meter. The cumulative series cannot continue across two meters: the integration raises a repair issue (#133) naming the change, and the new meter is imported under a new statistic id while the old series stays untouched as history. Re-import goes through [backfill history](../how-to/backfill-history.md). |
 
 ## Related

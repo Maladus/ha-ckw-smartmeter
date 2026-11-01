@@ -6,6 +6,12 @@ published interval) and three opt-in details (HT, NT and the newest quarter
 hour). The numbers come from ``coordinator.data`` only; the entities never call
 CKW themselves (``docs/reference/conventions.md``).
 
+The platform also follows the coordinator after setup. A delivery point CKW
+starts to return gets its entities from that listener, without a config-entry
+reload (#134), and a delivery point that vanishes keeps them. Devices are only
+registered while their meter is present, so deleting a stale device by hand is
+not undone by the next poll.
+
 ``consumption_yesterday`` is a ``TOTAL`` sensor with a ``last_reset`` at the
 local start of the day it reports, because CKW publishes 1-3 days late and the
 newest complete day is what the API actually knows (ADR-0004, ADR-0009).
@@ -24,15 +30,16 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import EntityCategory, UnitOfEnergy
-from homeassistant.core import HomeAssistant
+from homeassistant.const import EntityCategory, Platform, UnitOfEnergy
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
 
 from .api import CkwMeter
-from .const import TIME_ZONE, Fuel
+from .const import DOMAIN, TIME_ZONE, Fuel
 from .coordinator import CkwCoordinator, CkwData, MeterTotals
-from .entity import CkwEntity
+from .entity import CkwEntity, meter_device_was_removed, meter_entity_unique_id
 
 if TYPE_CHECKING:
     from . import CkwConfigEntry
@@ -179,27 +186,73 @@ async def async_setup_entry(
     entry: CkwConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Create one set of sensors per delivery point the coordinator reports."""
+    """Create one set of sensors per delivery point and follow the coordinator.
+
+    The first set covers every meter the entry knows, present or not, because
+    restoring an unavailable meter's entities is what keeps its history and its
+    statistics attached. After that the platform only *adds*. A delivery point
+    the poll starts to return gets its entities from the coordinator listener,
+    without a reload (#134), and a meter that vanished keeps the entities it has.
+
+    A device is registered only while its meter is present. A stale device the
+    user deleted therefore stays deleted, because the tombstone of a removed
+    device is the only memory of that decision which survives a reload. Its
+    entities are re-created only once CKW reports the meter again.
+    """
     coordinator = entry.runtime_data.coordinator
     data = coordinator.data
     if data is None:
         return
 
-    entities: list[CkwSensor] = []
+    entities = [
+        CkwSensor(coordinator, deliverypoint, meter, description)
+        for deliverypoint, meter in _electric_meters(data).items()
+        if deliverypoint in data.meters_present
+        or not meter_device_was_removed(hass, entry.entry_id, deliverypoint)
+        for description in SENSOR_DESCRIPTIONS
+    ]
+    if entities:
+        async_add_entities(entities)
+
+    @callback
+    def _async_add_new_meters() -> None:
+        """Give a delivery point that appears later the same entities (#134)."""
+        current = coordinator.data
+        if current is None:
+            return
+        registry = er.async_get(hass)
+        new = [
+            CkwSensor(coordinator, deliverypoint, meter, description)
+            for deliverypoint, meter in _electric_meters(current).items()
+            if deliverypoint in current.meters_present
+            for description in SENSOR_DESCRIPTIONS
+            if registry.async_get_entity_id(
+                Platform.SENSOR,
+                DOMAIN,
+                meter_entity_unique_id(entry.entry_id, deliverypoint, description.key),
+            )
+            is None
+        ]
+        if new:
+            async_add_entities(new)
+
+    entry.async_on_unload(coordinator.async_add_listener(_async_add_new_meters))
+
+
+def _electric_meters(data: CkwData) -> dict[str, CkwMeter | None]:
+    """Every delivery point this entry knows, with its metadata.
+
+    ``meters`` carries the accumulated totals and ``meter_info`` the metadata of
+    the customer payload, so their union is the known meter set. Gas meters are
+    dropped here, because they share the payload but are outside this product.
+    """
+    meters: dict[str, CkwMeter | None] = {}
     for deliverypoint in sorted(set(data.meter_info) | set(data.meters)):
         meter = data.meter_info.get(deliverypoint)
         if meter is not None and meter.fuel not in (None, Fuel.ELEC):
             continue
-        entities.extend(
-            CkwSensor(coordinator, deliverypoint, meter, description)
-            for description in SENSOR_DESCRIPTIONS
-        )
-
-    # TODO(#134): a delivery point discovered after this platform setup gets its
-    # entities on the next platform setup only. The coordinator already refreshes
-    # ``meter_info`` on every poll; listening for a new meter and adding only
-    # that meter's entities is the dynamic-device follow-up, not this slice.
-    async_add_entities(entities)
+        meters[deliverypoint] = meter
+    return meters
 
 
 class CkwSensor(CkwEntity, SensorEntity):
@@ -259,11 +312,17 @@ class CkwSensor(CkwEntity, SensorEntity):
             totals = _totals(data, self.deliverypoint)
             if totals is None:
                 return None
-            return {
+            attributes: dict[str, Any] = {
                 "publication_delay_h": totals.publication_delay_h,
                 "last_published_interval": totals.last_interval_end,
                 "quality_intervals": totals.quality_intervals,
             }
+            stale_since = self.stale_since
+            if stale_since is not None:
+                # Only set while the meter is stale, so a meter that comes back
+                # loses the attribute again (#134).
+                attributes["stale_since"] = stale_since
+            return attributes
 
         if self.entity_description.key == "quarter_hour":
             reading = data.quarter_hour.get(self.deliverypoint)

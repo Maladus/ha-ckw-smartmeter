@@ -149,6 +149,16 @@ ISSUE_QUARTER_HOUR_RETENTION: Final = "quarter_hour_retention"
 #: data-quality issue (``anzahl_linien_* > 1`` on two days is still noise).
 DATA_QUALITY_FLAG_INTERVALS: Final[int] = 3
 
+# ---------------------------------------------------------------------------
+# Dynamic and stale delivery points (#134)
+# ---------------------------------------------------------------------------
+
+#: A delivery point that the API has not returned for longer than this is marked
+#: stale: it keeps its entities and its history, becomes unavailable, and carries
+#: ``stale_since``. Stale is a marking, never a repair issue, because a meter
+#: that vanished from the portal can legitimately come back.
+STALE_AFTER_DAYS: Final[int] = 7
+
 #: The quarter-hour sensor key, whose history lives in recorder states only.
 QUARTER_HOUR_ENTITY_KEY: Final = "quarter_hour"
 #: Recorder retention below this many days deletes quarter-hour history early.

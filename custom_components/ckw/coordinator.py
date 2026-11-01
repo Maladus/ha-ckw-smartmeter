@@ -20,6 +20,12 @@ What a poll does:
 4. Recompute the cumulative totals per delivery point and log what moved
    (#149). The publication ``INFO`` line is written for the delivery point of
    this config entry only, so one entry sees exactly one line per published day.
+5. Track which delivery points this poll actually returned (#134). The totals
+   accumulate, so the poll has to say separately what is *currently* there. A
+   meter that stops being returned keeps its totals and history, is marked stale
+   after ``STALE_AFTER_DAYS``, and is logged once when it goes stale and once
+   when it comes back. Neither is a repair issue, because CKW can list a meter
+   again.
 
 The exceptions of ``api.py`` become Home Assistant exceptions here: an expired
 sign-in becomes ``ConfigEntryAuthFailed`` (reauth, no retry), a rate limit and
@@ -81,8 +87,10 @@ from .const import (
     REAUTH_STATUSES,
     ROLLING_WINDOW_DAYS,
     SECONDS_PER_HOUR,
+    STALE_AFTER_DAYS,
     TIME_ZONE,
     WINDOW_END_DAYS_BACK,
+    Fuel,
 )
 from .exceptions import format_reset_seconds
 from .repairs import async_check_repairs
@@ -147,6 +155,17 @@ class CkwData:
     quarter_hour: dict[str, QuarterHourReading] = field(default_factory=dict)
     #: When this successful poll happened, for the diagnostic timestamp sensor.
     polled_at: datetime | None = None
+    #: The delivery points this poll returned measurements for (#134). ``meters``
+    #: accumulates every interval ever seen, so this set is what separates
+    #: "known but currently absent" from "never seen": entities read it for
+    #: their availability and the sensor platform for dynamic discovery.
+    meters_present: frozenset[str] = frozenset()
+    #: Delivery points missing for longer than ``STALE_AFTER_DAYS``, mapped to the
+    #: poll that first missed them (#134). A stale meter keeps its entities and
+    #: its history, is unavailable through ``meters_present``, exposes
+    #: ``stale_since``, raises no repair issue, and disappears for good only when
+    #: the user deletes its device.
+    stale_since: dict[str, datetime] = field(default_factory=dict)
 
 
 class CkwCoordinator(DataUpdateCoordinator[CkwData]):
@@ -177,6 +196,13 @@ class CkwCoordinator(DataUpdateCoordinator[CkwData]):
         # The customer's meters, refreshed on every poll so a new delivery point
         # can be discovered without editing ids (#134).
         self._meter_info: dict[str, CkwMeter] = {}
+        # Which delivery points are gone, and since when (#134). ``_absent_since``
+        # remembers the first poll that missed a meter - it survives a single
+        # failed poll, because only a successful poll touches it - and
+        # ``_stale_since`` holds the subset that has been missing long enough to
+        # be reported as stale.
+        self._absent_since: dict[str, datetime] = {}
+        self._stale_since: dict[str, datetime] = {}
         # The rate-limit headers of the latest response and when they arrived,
         # so a reset that already elapsed does not turn into a stale sleep.
         self._rate_limit_info: RateLimitInfo | None = None
@@ -273,6 +299,8 @@ class CkwCoordinator(DataUpdateCoordinator[CkwData]):
 
         new_counts, corrected, newest = self._merge(series)
         self._new_intervals = new_counts
+        meters_present = frozenset(new_counts)
+        stale_since = self._track_presence(meters_present, now)
 
         totals = {
             deliverypoint: _totals_for(intervals, now)
@@ -309,7 +337,57 @@ class CkwCoordinator(DataUpdateCoordinator[CkwData]):
             meter_info=meter_info,
             quarter_hour=quarter_hour,
             polled_at=now,
+            meters_present=meters_present,
+            stale_since=stale_since,
         )
+
+    def _track_presence(self, meters_present: frozenset[str], now: datetime) -> dict[str, datetime]:
+        """Follow the meters that vanish and return, and log each once (#134).
+
+        A delivery point is *present* when the poll returned a measurement series
+        for it, which is stricter than the customer payload: a meter that CKW
+        lists but never publishes data for has nothing to show and stays
+        unavailable. Followed are the electric meters this entry knows at all, the
+        ones it already merged data for and the ones the customer payload lists,
+        so the clock also runs after a restart, where no interval memory survives.
+        A gas meter is ignored because it has no entities to mark.
+
+        Stale is a marking, not a repair. CKW can list a vanished meter again, and
+        then its entities become available with their history intact.
+        """
+        threshold = timedelta(days=STALE_AFTER_DAYS)
+        followed = set(self._intervals) | {
+            deliverypoint
+            for deliverypoint, meter in self._meter_info.items()
+            if meter.fuel in (None, Fuel.ELEC)
+        }
+        for deliverypoint in sorted(meters_present):
+            absent_since = self._absent_since.pop(deliverypoint, None)
+            if absent_since is None:
+                continue
+            stale_since = self._stale_since.pop(deliverypoint, None)
+            if stale_since is not None:
+                _LOGGER.info(
+                    "delivery point %s is back after %d day(s), its sensors are available again",
+                    mask_deliverypoint(deliverypoint),
+                    (now - absent_since).days,
+                )
+
+        for deliverypoint in sorted(followed):
+            if deliverypoint in meters_present:
+                continue
+            absent_since = self._absent_since.setdefault(deliverypoint, now)
+            if deliverypoint in self._stale_since:
+                continue
+            if now - absent_since > threshold:
+                self._stale_since[deliverypoint] = absent_since
+                _LOGGER.info(
+                    "delivery point %s has been missing from the CKW data for %d day(s); "
+                    "its sensors are stale, and they come back if the meter does",
+                    mask_deliverypoint(deliverypoint),
+                    (now - absent_since).days,
+                )
+        return dict(self._stale_since)
 
     async def _async_fetch(self, start: date, end: date) -> list[CkwMeterMeasurements]:
         """Pace, request one window and translate ``api.py`` exceptions."""

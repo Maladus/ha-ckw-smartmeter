@@ -38,6 +38,7 @@ from .const import (
     VERSION,
 )
 from .coordinator import CkwCoordinator
+from .entity import meter_device_identifier
 from .statistics import (
     StatisticsState,
     async_backfill,
@@ -166,6 +167,37 @@ async def _async_run_backfill(hass: HomeAssistant, entry: CkwConfigEntry) -> Non
         )
     else:
         _LOGGER.info("statistics: the backfill for %s is done", entry.title)
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant,
+    entry: CkwConfigEntry,
+    device_entry: dr.DeviceEntry,
+) -> bool:
+    """Allow deleting one vanished meter's device by hand (#134).
+
+    Home Assistant asks this before it removes a device that belongs to a config
+    entry, and hides the action when the integration does not implement it. A
+    stale meter is not a repair issue, because CKW may list it again, so deleting
+    the device is the user's call. The history that hangs off its statistics is
+    theirs to keep or drop.
+
+    The service device belongs to the entry itself and is never removable here.
+    A per-meter device is removable only once its meter is gone from the current
+    poll: a meter CKW still reports must keep its device, or the next poll would
+    only register it again.
+    """
+    identifier = next((item for item in device_entry.identifiers if item[0] == DOMAIN), None)
+    if identifier is None or identifier[1] == entry.entry_id:
+        return False
+    data = entry.runtime_data.coordinator.data
+    if data is None:
+        return False
+    return any(
+        meter_device_identifier(entry.entry_id, deliverypoint) == identifier
+        and deliverypoint not in data.meters_present
+        for deliverypoint in set(data.meter_info) | set(data.meters)
+    )
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: CkwConfigEntry) -> bool:
