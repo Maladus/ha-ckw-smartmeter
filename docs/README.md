@@ -43,6 +43,7 @@ Lookup only: exact names, values and limits, with no steps.
 | Document | What it covers | Audience |
 | --- | --- | --- |
 | [ckw-openenergy-api.md](reference/ckw-openenergy-api.md) | The endpoints, fields, rate limits and error codes of the CKW OpenEnergy API as CKW publishes them. | Contributors |
+| [ckw-openenergy-api-verification.md](reference/ckw-openenergy-api-verification.md) | What the live endpoints and the deployed API model actually return, and where that contradicts the transcription. | Contributors |
 | [glossary.md](reference/glossary.md) | One definition per CKW and Home Assistant term used anywhere in this repository. | Everyone |
 | `reference/entities.md` (planned, #124) | Every entity and statistic with its unit, device class and update behaviour. | Users, contributors |
 | `reference/configuration.md` (planned, #106) | The parameters a user sets at setup and later in the options flow. | Users |
