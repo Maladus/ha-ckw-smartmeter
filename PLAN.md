@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: <https://github.com/Maladus/ha-ckw-smartmeter> (`custom_components/ckw`) — private until #110
-Issues: #1–#157, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
+Issues: #1–#158, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -338,6 +338,7 @@ them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritte
 | ✅ #18 | CI workflows | `.github/workflows/tests.yaml`: jobs `pre-commit`, `pytest`, `hassfest` (`home-assistant/actions/hassfest`), `hacs` (`hacs/action` category integration) | all jobs green on GitHub | #13–#17 | S | AI |
 | #19 | Dev instance plan | Dev HA is specified in **Phase 1b** (Podman); this task only reserves the directory `scripts/dev/` | `scripts/dev/` exists or is created by #36 | #14 | S | AI |
 | #20 | `AGENTS.md` + `CONTRIBUTING.md` | agent contract (commands, gates, hard rules) and human PR checklist | both written, gates referenced by exact command | #17 | S | AI |
+| #158 | Agents and timer notify the coordinator | `workmux send <handle> "done <handle>: <summary + commit>"` on completion, `blocked <handle>: <reason>` when stuck (silence = still working); `mise run next --notify` prefers `workmux send`, falls back to `notify-send`, then stdout; timer and crontab use the same command | a timer tick with a startable task reaches the coordinator, convention documented in AGENTS.md (#20) | #20 | S | AI |
 | #21 | Issue/PR templates | `.github/ISSUE_TEMPLATE/{bug,feature}.yml`, `PULL_REQUEST_TEMPLATE.md` with quality-scale checklist | templates visible on GitHub | #9 | S | AI |
 | ✅ #22 | `LICENSE` | Full MIT text, copyright "Martin Wigger" + year, LICENSE section in README. Rationale: HACS-typical, and permissive enough to be relicensed into Apache-2.0 for a later core submission | GitHub detects MIT, badge shown | #9 | S | AI |
 | ✅ #23 | `GOAL.md` | Goal, in/out of scope, success criteria — the "Project goal" block of this plan, maintained separately so it survives plan rewrites | file matches this plan, linked from README | #9 | S | AI |
@@ -620,7 +621,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | Phase | Tasks | Done |
 |---|---|---|
 | 0 External | 8 | 0 |
-| 1 Setup & governance | 30 | 8 |
+| 1 Setup & governance | 31 | 8 |
 | 1b Podman dev instance | 12 | 2 |
 | 2 Auth | 14 | 1 |
 | 3 API | 10 | 0 |
@@ -630,7 +631,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 7 Docs | 24 | 13 |
 | 8 Quality/Release | 18 | 0 |
 | 9 Optional | 8 | 0 |
-| **Total** | **151** | **25** |
+| **Total** | **152** | **33** |
 
 ## Critical path
 
