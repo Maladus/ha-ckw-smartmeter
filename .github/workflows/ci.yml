@@ -119,6 +119,8 @@ jobs:
         uses: home-assistant/actions/hassfest@master
 
   hacs:
+    # HACS can only validate public repositories; skip until #110 flips visibility
+    if: ${{ !github.event.repository.private }}
     name: HACS validation
     runs-on: ubuntu-latest
     timeout-minutes: 10
