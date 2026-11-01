@@ -10,3 +10,6 @@ aiohttp>=3.9
 # purpose: the next release must be allowed to install.
 pytest-homeassistant-custom-component>=0.13
 mypy>=1.11
+# aiodns 4 needs pycares>=5, while the HA test harness pins an older pycares;
+# the mismatch surfaces as "module 'pycares' has no attribute 'ares_query_a_result'".
+aiodns<4
