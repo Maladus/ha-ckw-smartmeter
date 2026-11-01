@@ -104,6 +104,16 @@ description = "Start the local mock CKW API and fake Keycloak on port 8787, in t
 dir = "{{config_root}}"
 run = ".venv/bin/python scripts/dev/mock/app.py --port 8787"
 
+[tasks.dev-env-mock]
+description = "Point the dev instance at the mock CKW endpoints and restart it"
+dir = "{{config_root}}"
+run = "bash scripts/dev/switch-env.sh mock --restart"
+
+[tasks.dev-env-prod]
+description = "Point the dev instance at the production CKW endpoints and restart it"
+dir = "{{config_root}}"
+run = "bash scripts/dev/switch-env.sh prod --restart"
+
 # --- plan and tracker -----------------------------------------------------
 
 [tasks.next]

@@ -47,9 +47,11 @@ directory and in one container called `ha-dev`, nothing outside the repository i
 | `mise run dev-reset -- --full` | the same, and also wipe `config/.storage` and `.dev/token` (onboarding survives unless you ask for this) |
 | `mise run dev-down` | stop and remove the container, keep `config/` |
 | `mise run dev-mock` | the mock CKW API and fake Keycloak on port 8787, in the foreground |
+| `mise run dev-env-mock` | point the instance at the mock and restart it |
+| `mise run dev-env-prod` | point the instance at production CKW and restart it |
 
 Every task is idempotent: `dev-up` twice is a restart (`--replace`), `dev-down` twice says there is
-nothing to do, `dev-onboard` twice exits immediately.
+nothing to do, `dev-onboard` twice exits immediately, and `dev-env-mock` twice changes nothing.
 
 ## First run
 
@@ -95,23 +97,47 @@ podman run -d --name ha-dev --replace \
 - `config/` is owned by your user because rootless Podman maps the container's root to your UID. Files
   the container creates there are yours to delete, which is what `dev-reset` relies on.
 
-## Mock or production
+## Switching between mock and production
 
-The integration reads the `CKW_*` environment variables from `scripts/dev/.env` (copy
-`.env.example`); `dev-up` passes any that are set into the container. Without them the production
-endpoints from `custom_components/ckw/const.py` are used.
+The integration reads the `CKW_*` environment variables from `scripts/dev/.env` (gitignored, created
+from `.env.example` on `mise run setup`); `dev-up` passes any that are set into the container. Without
+them the production endpoints from `custom_components/ckw/const.py` are used.
 
-| Setting | Mock (`mise run dev-mock`) | Production |
+```bash
+mise run dev-env-mock   # the local mock, then dev-down + dev-up
+mise run dev-env-prod   # production CKW, then dev-down + dev-up
+```
+
+Both are one command and idempotent, and neither touches anything in `.env` except the three
+`CKW_*` overrides - `HA_VERSION` and your own entries stay exactly as they are:
+
+- `dev-env-mock` writes the three overrides into a marked block in `scripts/dev/.env`. No CKW account
+  is needed at all: start `mise run dev-mock` in another shell, then add the integration with any
+  client id and secret, because the mock accepts anything and its tokens are unsigned fakes.
+- `dev-env-prod` removes that block, so the production endpoints apply again. This is the real CKW
+  single sign-on, which needs the client id `oe-wigger` entered in **Settings -> Devices & services ->
+  Application credentials** and the redirect URI of this instance registered at CKW (#1); the dev
+  instance has no HTTPS callback yet, so a browser login here is expected to fail until #41.
+
+Print the endpoints that would be used without writing or restarting anything:
+
+```bash
+bash scripts/dev/switch-env.sh --check
+```
+
+| Setting | Mock (`mise run dev-env-mock`) | Production (`mise run dev-env-prod`) |
 |---|---|---|
 | API base URL | `http://host.containers.internal:8787/api/v1` | `https://e-customer-smartmeter.de-c1.eu1.cloudhub.io/api/v1` |
 | Authorization URL | `http://host.containers.internal:8787/realms/CKW-prod/protocol/openid-connect/auth` | `https://id.ckw.ch/realms/CKW-prod/protocol/openid-connect/auth` |
 | Token URL | `http://host.containers.internal:8787/realms/CKW-prod/protocol/openid-connect/token` | `https://id.ckw.ch/realms/CKW-prod/protocol/openid-connect/token` |
-| Client id / secret | anything, the mock never checks them | the client id CKW issued to you (#1) |
+| Client id / secret | anything, the mock never checks them | the client id `oe-wigger` (#1) |
+| CKW account | not needed | needed, with SMS second factor |
 
-The same values are in `scripts/dev/.env.example`. Copy it to `scripts/dev/.env` (gitignored) to pin
-`HA_VERSION`; `dev-up` passes the `CKW_*` entries there into the container. The mock's tokens are
-JWT-shaped but unsigned and nothing verifies them - never point a real client at the mock and call it
-authenticated.
+The same values are in `scripts/dev/.env.example`, whose block is already in mock mode. Restarting is
+the default because the container reads these variables once, at startup;
+`bash scripts/dev/switch-env.sh mock --no-restart` writes the block and refuses while `ha-dev` is up.
+The mock's tokens are JWT-shaped but unsigned and nothing verifies them - never point a real client
+at the mock and call it authenticated.
 
 ## Tests that need a clean database
 

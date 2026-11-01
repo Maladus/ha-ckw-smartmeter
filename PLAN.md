@@ -251,6 +251,8 @@ CI or AGENTS.md. Tracked as #117.
 | `mise run dev-smoke` | manifest check, traceback scan, forced entity refresh | gate G-6 (#42) |
 | `mise run dev-onboard` | wait for the onboarding API, create the owner user, write `.dev/token` | usable instance in under 3 minutes (#40) |
 | `mise run dev-mock` | the mock OpenEnergy API + fake Keycloak on `:8787` | offline development (#141, #144) |
+| `mise run dev-env-mock` | `scripts/dev/switch-env.sh mock --restart` | one command to the mock endpoints, no CKW account |
+| `mise run dev-env-prod` | `scripts/dev/switch-env.sh prod --restart` | one command back to production |
 | `mise run lint` / `mise run fmt` | `ruff check` / `ruff format` | gate G-1 |
 | `mise run test` | `pytest -q` | gate G-2 |
 | `mise run types` | `mypy --strict custom_components/ckw` | #138, run in CI |
