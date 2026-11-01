@@ -562,7 +562,7 @@ registering `ckw.backfill` in `async_setup` — and `docs-actions` applies too, 
 | #107 | Fresh-instance smoke test | Second HA instance (or clean docker volume): HACS custom repo install → setup → dashboard | works end to end | all above | H |
 | #108 | Marketplace submission | PR to `hacs/default` (integration list), expect months of review | PR opened | #107 | H |
 | #109 | Release | `git tag v0.1.0`, notes generated, `hacs.json` version alignment | HACS shows the release | #107 | H |
-| #110 | Publish the repo | Flip `gh repo edit --visibility public --accept-visibility-change-consequences` **only when**: README complete, no secrets in history (`git log -p \| grep -i token`), fixtures redacted, CI green, LICENSE detected. Then re-check topics + description, run `#107` as a stranger would | repo public, HACS custom-repo install works from a clean instance | #101, #94 | S | H |
+| ✅ #110 | Publish the repo | Flip `gh repo edit --visibility public --accept-visibility-change-consequences` **only when**: README complete, no secrets in history (`git log -p \| grep -i token`), fixtures redacted, CI green, LICENSE detected. Then re-check topics + description, run `#107` as a stranger would | repo public, HACS custom-repo install works from a clean instance | #101, #94 | S | H |
 | ✅ #130 | Exception translations (Gold) | Every user-facing error from `strings.json` `exceptions:`, raised as `HomeAssistantError` with `translation_domain`/`translation_key`: invalid auth, rate limit (with reset time), no meters, unsupported meter, API unavailable; nothing raw reaches the UI | every failure path translated de/en, tests assert keys not strings | #63, #15 | S | AI |
 | ✅ #131 | Icon translations (Gold) | `icons.json` keyed by `translation_key`; no `_attr_icon` in Python | hassfest icons check green, zero icons in code | #76 | S | AI |
 | ✅ #132 | Entity disabled by default (Gold) | Rare entities registered with `entity_registry_enabled_default=False`: HT/NT detail, quality flags, raw timestamps — instead of an options toggle | fresh setup enables exactly the 4 core entities per meter | #80 | S | AI |
@@ -640,7 +640,7 @@ rejects a red push (#142). Locally that includes G-6 whenever the dev container 
 | 5 Entities | 14 | 13 |
 | 6 Statistics | 7 | 5 |
 | 7 Docs | 24 | 23 |
-| 8 Quality/Release | 18 | 12 |
+| 8 Quality/Release | 18 | 13 |
 | 9 Optional | 8 | 1 |
 | **Total** | **152** | **84** |
 
