@@ -16,6 +16,11 @@ user-visible behaviour in a minor release; every such change is listed.
   `HA_VERSION`) alone, restarts the container so the new endpoints take effect, and prints which mode is
   active; `--check` prints the resolved endpoints without writing anything. `prod` needs the client id
   `oe-wigger` and the redirect URI registered at CKW, `mock` needs no CKW account at all.
+- [Reference: redirect URIs](docs/reference/oauth-redirects.md): the three values CKW can have registered
+  (My Home Assistant, own FQDN, localhost), what each one depends on, the exact-match rule with the German
+  `Ungültiger Parameter: redirect_uri` error, what the My Home Assistant page asks on first use, and the
+  troubleshooting for a mismatch. The My Home Assistant URL was previously described as a Cloud feature; it
+  works for any installation and needs no Nabu Casa subscription (#41).
 - [Reference: fresh-install verification](docs/reference/fresh-install-check.md), the recorded acceptance run on
   a clean Home Assistant instance: the public repository cloned into an empty `config/`, onboarding over the API,
   the mock login with application credentials, the meter picker, the created entry, its entities, the 79 imported

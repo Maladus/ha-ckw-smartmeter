@@ -16,39 +16,39 @@ Expect days, not minutes: the form and the mail go to a human at CKW.
 - [ ] A CKW Single Sign-On account at [id.ckw.ch](https://id.ckw.ch). This is the account you sign in
       with later; it is not the same thing as the client id.
 - [ ] Your delivery point (Zählpunkt) — the 33-character number on your CKW bill.
-- [ ] The redirect URI your Home Assistant answers on, from the table below.
+- [ ] The redirect URIs your Home Assistant answers on, from the list below.
 - [ ] **Settings → System → Network** open, so you can copy the exact URL Home Assistant reports.
 
-## Pick the redirect URI
+## Pick the redirect URIs
 
-CKW registers a redirect URI per client, and the login only returns to an exact match. Pick the row
-that describes where your instance runs:
+CKW registers a redirect URI per client, and the login only returns to an exact match, so ask for
+both of these in one mail:
 
-| Where Home Assistant runs | Redirect URI to register |
-| --- | --- |
-| Home Assistant Cloud (Nabu Casa) | `https://my.home-assistant.io/redirect/oauth` |
-| Your own instance, reachable from the internet | `https://<your-fqdn>/auth/external/callback` |
-| The local dev instance (`mise run dev-up`) | `http://localhost:8123/auth/external/callback` |
+- `https://my.home-assistant.io/redirect/oauth` — the value Home Assistant sends when the `my`
+  integration is loaded, which it is in almost every installation, Cloud or not. It works for any
+  installation reachable from the browser and needs no Nabu Casa subscription.
+- `https://<your-fqdn>/auth/external/callback` — the direct value, with `<your-fqdn>` exactly as
+  **Settings → System → Network** reports it, without a trailing slash.
 
-The path `/auth/external/callback` is fixed — Home Assistant's OAuth2 helper always completes there —
-and `<your-fqdn>` is exactly the URL under **Settings → System → Network**, without a trailing slash.
-A URL that differs in a subdomain, a port or a trailing slash is not the same redirect URI to CKW.
+Ask for both even if you only need one today: adding a value later is another mail and another wait.
+The three kinds (including `http://localhost:8123/auth/external/callback` for a dev instance), what
+each one depends on and what breaks it are in
+[reference: redirect URIs](../reference/oauth-redirects.md).
 
-The third row is for testing the browser login against CKW from the development container. CKW
-expects an HTTPS redirect URI and the dev instance serves plain HTTP, so register it only if CKW
-confirms it; for day-to-day development the mock below is the faster route
+CKW expects an HTTPS redirect URI and the dev instance serves plain HTTP, so register the localhost
+value only if CKW confirms it; for day-to-day development the mock is the faster route
 ([dev instance runbook](../../scripts/dev/README.md#known-limit-no-https)).
 
 ## Send the request
 
 1. Open <https://www.ckw.ch/openenergy> and fill in the access form. It asks for your contact details,
    the delivery point and what you intend to do with the data; write "private use in my own Home
-   Assistant installation" and repeat the redirect URI from above.
+   Assistant installation" and repeat the redirect URIs from above.
 2. Send the form. It ends in a request at CKW, not in an automatic grant.
-3. Send the mail below to **<openenergy@ckw.ch>**, with the same redirect URI. The form alone leaves
+3. Send the mail below to **<openenergy@ckw.ch>**, with the same redirect URIs. The form alone leaves
    the technical half unsaid, and the mail is what the answer is written against.
 
-The mail has to carry four things, or CKW answers with a question instead of a client id:
+The mail has to carry the four things below, or CKW answers with a question instead of a client id:
 
 - the request for an OpenEnergy **client id** for a Home Assistant installation,
 - every **redirect URI** you want registered, spelled out in full,
@@ -76,6 +76,8 @@ Bitte richten Sie mir dafür einen OpenEnergy-Client ein:
 - Redirect-URIs:
   - https://<fqdn>/auth/external/callback
   - https://my.home-assistant.io/redirect/oauth
+    (Weiterleitung auf meine Instanz; funktioniert für jede Installation,
+    ohne Nabu-Casa-Cloud-Abo)
 - Client-Scopes: openid und offline_access (offline_access ist für den
   Token-Refresh zwischen zwei Abfragen nötig)
 
@@ -112,6 +114,8 @@ create an OpenEnergy client for it:
 - Redirect URIs:
   - https://<fqdn>/auth/external/callback
   - https://my.home-assistant.io/redirect/oauth
+    (forwards to my instance; works for any installation, no Nabu Casa
+    Cloud subscription required)
 - Client scopes: openid and offline_access (offline_access is what keeps the
   login alive between two polls)
 
@@ -132,8 +136,9 @@ Kind regards
 <Phone>
 ```
 
-Replace every `<…>` placeholder before sending, and delete the lines that do not apply — for
-example the `my.home-assistant.io` redirect if you run your own instance.
+Replace every `<…>` placeholder before sending, and delete the lines that do not apply — for example
+the `<fqdn>` URI if you will only ever use the My Home Assistant one. Keeping both is the cheaper
+choice: a later change is a second mail to CKW.
 
 ## What the reply contains
 
@@ -189,6 +194,8 @@ the client, and on its own it grants nothing without your CKW sign-in.
 
 ## Related
 
+- [Redirect URIs](../reference/oauth-redirects.md) — the three kinds, the exact-match rule and the
+  `redirect_uri` symptoms, as lookup rather than as steps.
 - [API reference, "Support"](../reference/ckw-openenergy-api.md#support) — the contact address, the
   access form and the legal basis, stated once.
 - [Configuration](../reference/configuration.md) — the application credential, the redirect URI and

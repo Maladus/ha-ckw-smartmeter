@@ -52,6 +52,7 @@ Lookup only: exact names, values and limits, with no steps.
 | [glossary.md](reference/glossary.md) | One definition per CKW and Home Assistant term used anywhere in this repository. | Everyone |
 | [entities.md](reference/entities.md) | Every entity and statistic with its unit, device class, unique id, statistic id, cadence and Energy-dashboard eligibility. | Users, contributors |
 | [configuration.md](reference/configuration.md) | Every setup and options field with its type, allowed values, default and effect, plus the `ckw.backfill` action and the development-only endpoint overrides. | Users |
+| [oauth-redirects.md](reference/oauth-redirects.md) | The three redirect URI kinds (My Home Assistant, own FQDN, localhost) with what each depends on, the exact-match rule, the `redirect_uri` error text, the My Home Assistant page on first use, and the troubleshooting for a mismatch. | Users, contributors |
 | [quality-scale.md](reference/quality-scale.md) | The 51 Bronze, Silver and Gold quality-scale rules, their status, the file or test that proves each, and the open gaps. | Contributors |
 | [conventions.md](reference/conventions.md) | The crosscutting rules: error mapping, redaction, Europe/Zurich, unique ids, logging, gates. | Contributors |
 | [examples.md](reference/examples.md) | Copy-paste automations, a dashboard card and a load-shifting sketch, each with the entity ids and units it assumes. | Users |

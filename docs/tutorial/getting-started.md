@@ -49,6 +49,11 @@ Confirm the dialog. Home Assistant sends you to the CKW Single Sign-On page; sig
 CKW account, and approve the access request if CKW shows one. CKW then sends you back to Home
 Assistant.
 
+On the way back the browser passes the My Home Assistant page, which asks once for your instance URL
+(`https://<fqdn>`, with the port if it is not 443) and stores it in that browser. Enter it, choose
+**Link account**, and the login continues at your instance. The page, its buttons and the variants
+are described in [reference: redirect URIs](../reference/oauth-redirects.md).
+
 You should now see the "success" page in Home Assistant; the dialog then finishes the setup and,
 with a single meter on the account, the new entry appears in Settings → Devices & services with an
 electricity meter under it.
@@ -111,6 +116,8 @@ while the import runs, and the newest day appears within two hours of CKW publis
   removal.
 - [Request the CKW client](../how-to/request-ckw-client.md) — the client id and redirect URI this
   tutorial assumes are already issued.
+- [Redirect URIs](../reference/oauth-redirects.md) — the My Home Assistant page in step 4, the direct
+  callback URL and what to do when CKW rejects the value.
 - [Entities](../reference/entities.md) — the seven sensors, their ids and their cadences.
 - [Data model](../explanation/data-model.md) — why the newest value is 1–3 days old and what HT/NT
   mean.

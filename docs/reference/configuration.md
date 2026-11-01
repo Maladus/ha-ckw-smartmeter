@@ -27,7 +27,7 @@ Three more parameters exist but are not fields, because they never change per us
 
 | Parameter | Default | Where it comes from |
 | --- | --- | --- |
-| Redirect URI | `https://<your Home Assistant URL>/auth/external/callback` | Home Assistant's OAuth2 helper; it must be registered with CKW ([how-to: request the CKW client](../how-to/request-ckw-client.md)) |
+| Redirect URI | `https://my.home-assistant.io/redirect/oauth` when the `my` integration is loaded, else `https://<your Home Assistant URL>/auth/external/callback` | Home Assistant's OAuth2 helper (`config_entry_oauth2_flow.async_get_redirect_uri`); whichever value it sends must be registered with CKW ([redirect URIs](oauth-redirects.md), [how-to: request the CKW client](../how-to/request-ckw-client.md)) |
 | Authorize and token URL | `https://id.ckw.ch/realms/CKW-prod/protocol/openid-connect/{auth,token}` | `AUTHORIZE_URL`/`TOKEN_URL` in `const.py:37-38`, readable through `application_credentials.py:44-54` |
 | Scopes | `openid offline_access` | `SCOPES` in `const.py:40`; `offline_access` is what keeps the login alive between polls (ADR-0007) |
 
@@ -106,6 +106,8 @@ and nothing reads them, so the environment variables above are the only override
 ## Related
 
 - [Entities](entities.md) — what the entry creates once it is configured: sensors, unique ids, statistics.
+- [Redirect URIs](oauth-redirects.md) — the redirect URI row above, in full: the three kinds, why
+  exactly one match is accepted, and the symptoms of a mismatch.
 - [Quality scale](quality-scale.md) — `docs-installation-parameters` and `docs-configuration-parameters`
   rest on this page.
 - [Tutorial: getting started](../tutorial/getting-started.md) — the same fields, in the order the setup asks for them.

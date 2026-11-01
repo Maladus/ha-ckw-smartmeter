@@ -277,6 +277,8 @@ Never attach an access token, a refresh token, a client secret or the full Zähl
 
 - [Reauthenticate](reauthenticate.md) — the symptom of a rejected login from the user's side: what
   survives, and the three actions not to take.
+- [Redirect URIs](../reference/oauth-redirects.md) — the other login failure this page does not list:
+  CKW's `Ungültiger Parameter: redirect_uri` page, and the exact-match rule behind it.
 - [Quality scale](../reference/quality-scale.md) — the `docs-troubleshooting` rule this page closes.
 - [Data model](../explanation/data-model.md) — why 1–3 days is normal and what the quality flags mean.
 - [Session lifetime](../explanation/session-lifetime.md) — why a refresh token dies and why a browser

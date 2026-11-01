@@ -33,7 +33,10 @@ meter once per day. The newest value is 1–3 days old (CKW publishes late), nev
 - [ ] Home Assistant 2025.8 or newer
 
 The client id is the part that takes time. CKW issues it per customer and needs the redirect URI
-before you can log in.
+before you can log in. That URI is `https://my.home-assistant.io/redirect/oauth` on nearly every
+installation — Cloud or not, no Nabu Casa subscription required — plus your own
+`https://<your-fqdn>/auth/external/callback`; [reference: redirect URIs](docs/reference/oauth-redirects.md)
+lists what to register and what a mismatch looks like.
 
 ## Quickstart
 
@@ -65,7 +68,7 @@ below are still being written before v0.1.0.
 | learn the integration from scratch | [tutorial: getting started](docs/tutorial/getting-started.md) |
 | install or remove it | [how-to: install](docs/how-to/install.md) |
 | fix a login that CKW stopped accepting | [how-to: reauthenticate](docs/how-to/reauthenticate.md) |
-| look up entities, options or API details | [reference: entities](docs/reference/entities.md), [reference: configuration](docs/reference/configuration.md) |
+| look up entities, options or API details | [reference: entities](docs/reference/entities.md), [reference: configuration](docs/reference/configuration.md), [reference: redirect URIs](docs/reference/oauth-redirects.md) |
 | understand why it works this way | [explanation: architecture](docs/explanation/architecture.md), [explanation: data model](docs/explanation/data-model.md) |
 
 ## Troubleshooting

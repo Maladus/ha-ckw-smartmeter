@@ -160,10 +160,11 @@ behaviour, not a mock artefact.
 
 The fake Keycloak has no login form: it consents immediately and answers `302` to
 `https://my.home-assistant.io/redirect/oauth?code=…&state=…`. That is where the headless run stops.
-The redirector is a JavaScript page — title "Link account to Home Assistant?", buttons **Decline** and
-**Link account** — and a human must click **Link account** (and, on first use, pick the instance,
-because a local instance has no My-Home-Assistant cloud link). It then appends `code` and `state` to
-`<instance>/auth/external/callback`.
+The redirector is a JavaScript page — browser title "Link to OAuth2 Authorize Callback", heading
+"Link account to Home Assistant?", buttons **Decline** and **Link account** — and a human must click
+**Link account** (and, on first use, enter the instance URL, which that browser has not stored yet;
+the page needs no Cloud subscription, see [redirect URIs](oauth-redirects.md)). It then appends
+`code` and `state` to `<instance>/auth/external/callback`.
 
 The verification replaced that one click with the request the redirector makes, which is the whole
 difference between the two runs:
