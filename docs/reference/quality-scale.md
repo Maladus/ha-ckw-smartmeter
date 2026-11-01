@@ -18,13 +18,12 @@ today, `exempt` means the rule cannot apply and the reason is written down, `tod
 | --- | --- | --- | --- | --- |
 | Bronze | 20 | 17 | 3 | 0 |
 | Silver | 10 | 10 | 0 | 0 |
-| Gold | 21 | 16 | 2 | 3 |
-| **Total** | **51** | **43** | **5** | **3** |
+| Gold | 21 | 18 | 2 | 1 |
+| **Total** | **51** | **45** | **5** | **1** |
 
 A tier counts as reached only when every rule of that tier **and every lower tier** is `done` or
 `exempt`. Bronze and Silver are complete, so `manifest.json` claims `"quality_scale": "silver"`.
-Gold still has three open rules (`diagnostics`, `docs-examples`, `docs-troubleshooting`), each with its
-closing issue.
+Gold still has one open rule (`diagnostics`), with its closing issue.
 
 ## Bronze
 
@@ -75,11 +74,11 @@ closing issue.
 | `discovery` | exempt | Cloud service over HTTPS (`"iot_class": "cloud_polling"`); nothing on the LAN to discover, the account identity comes from the OAuth login. No `async_step_dhcp`/`zeroconf`/`ssdp`/`usb` exists. |
 | `discovery-update-info` | exempt | No discovery source can supply device info: the meter metadata is read from `GET /smartmeter/customer` on every poll ([coordinator.py](../../custom_components/ckw/coordinator.py), `_async_fetch_customer`) and is fresher than any discovery payload. |
 | `docs-data-update` | done | [data model](../explanation/data-model.md) → "Update cadence": poll interval, the self-healing 7-day window, the 1–3 day lag, the 730-day backfill; [ADR-0004](../explanation/decisions/0004-poll-interval-and-data-lag.md). |
-| `docs-examples` | todo | No examples page; `docs/reference/examples.md` is planned in #128. See [Known gaps](#known-gaps). |
+| `docs-examples` | done | [examples](examples.md): five copy-paste examples (a consumption-threshold notification, a data-arrival notification with the lag, a dashboard card, a 72 h lag warning and an HT/NT load-shifting sketch), each naming the entity ids, units and opt-in sensors it assumes — #128. |
 | `docs-known-limitations` | done | [data model](../explanation/data-model.md) → "Known limitations", one row per limitation a user will notice. |
 | `docs-supported-devices` | done | [data model](../explanation/data-model.md) → "Supported devices" and [entities](entities.md) → "Not supported": CKW smart meters, electricity, several delivery points; gas meters, legacy meters and other grid operators are out. |
 | `docs-supported-functions` | done | [entities](entities.md): every sensor with unit, device class, state class, `last_reset`, unique id, statistic id, cadence and Energy-dashboard eligibility. |
-| `docs-troubleshooting` | todo | No symptom → cause → resolution section. `docs/how-to/debug-connection.md` (#99) and `docs/how-to/reauthenticate.md` (#122) are planned; the README points at this page instead. See [Known gaps](#known-gaps). |
+| `docs-troubleshooting` | done | [Debug a connection](../how-to/debug-connection.md): symptom → cause → fix for a stale value, a rejected login and `ConfigEntryAuthFailed`, `403`/client-id validation, `429`/quota and the backfill, an interrupted backfill, missing statistics, the log levels, what is redacted, the diagnostics path and the bug-report checklist — #99. A separate reauth how-to (#122) is still planned, but its symptom and fix are covered here and the rule is met. |
 | `docs-use-cases` | done | [tutorial: getting started](../tutorial/getting-started.md) walks install → Energy dashboard; [README.md](../../README.md) → "What you get"; the HT/NT and CHF use cases are in [data model](../explanation/data-model.md). |
 | `dynamic-devices` | done | The sensor platform adds a delivery point the poll starts to return, with its device, without a reload ([sensor.py:218,239](../../custom_components/ckw/sensor.py)); `test_a_new_delivery_point_gets_its_entities_without_a_reload` in [test_dynamic_devices.py](../../tests/test_dynamic_devices.py) — #134. |
 | `entity-category` | done | `EntityCategory.DIAGNOSTIC` on `last_update` and `last_published_interval` ([sensor.py:139,147](../../custom_components/ckw/sensor.py)); the measurements stay primary data. |
@@ -145,8 +144,6 @@ Every `todo` above, with the issue that closes it.
 | Rule | What is missing | Closing issue |
 | --- | --- | --- |
 | `diagnostics` | No `diagnostics.py`, so there is no redacted config-entry download for a bug report. | #105 |
-| `docs-examples` | No `docs/reference/examples.md` with automations, dashboard cards or template sensors. | #128 |
-| `docs-troubleshooting` | No troubleshooting section: `docs/how-to/debug-connection.md` and `docs/how-to/reauthenticate.md` are not written, so a user with a failing poll has nowhere to look. | #99, #122 |
 
 ## Related
 

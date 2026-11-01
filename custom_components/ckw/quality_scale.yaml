@@ -11,8 +11,8 @@
 #
 # Status: this is an audit, not a claim. All 20 Bronze and all 10 Silver rules
 # are `done` or `exempt` with a written reason, so manifest.json may claim
-# `quality_scale: silver`. Gold still has three open rules (diagnostics,
-# docs-examples, docs-troubleshooting), each with its closing issue below.
+# `quality_scale: silver`. Gold still has one open rule (diagnostics), with its
+# closing issue below.
 
 rules:
   # --- Bronze (20 rules) ---
@@ -283,11 +283,15 @@ rules:
       self-healing window, the 1-3 day lag and the 730-day backfill. ADR-0004.
 
   docs-examples:
-    status: todo
+    status: done
     comment: >-
-      No examples page: docs/reference/examples.md is planned (#128) and
-      nothing in docs/ shows an automation, a dashboard card or a template
-      sensor built on the integration. #128 closes it.
+      docs/reference/examples.md has five copy-paste examples: a notification
+      when consumption_yesterday crosses a threshold, a data-arrival
+      notification driven by last_published_interval that also shows the lag,
+      a dashboard card using consumption_total and publication_delay_h, an
+      automation warning above 72 h, and a clearly labelled HT/NT
+      load-shifting sketch. Each names the exact entity ids, units and opt-in
+      sensors it assumes and what it cannot do. #128.
 
   docs-known-limitations:
     status: done
@@ -311,13 +315,18 @@ rules:
       eligibility.
 
   docs-troubleshooting:
-    status: todo
+    status: done
     comment: >-
-      No symptom -> cause -> resolution section anywhere. docs/how-to/
-      debug-connection.md (#99) and docs/how-to/reauthenticate.md (#122) are
-      planned; keep-quarter-hour-history.md covers one symptom only, and the
-      README currently points at docs/reference/quality-scale.md instead. #99
-      closes it.
+      docs/how-to/debug-connection.md maps symptoms to cause and fix: stale or
+      unavailable values with the coordinator's publication line and
+      publication_delay_h, the 96 h lag warning and the stale_publication
+      repair issue, a rejected login and ConfigEntryAuthFailed with the exact
+      reauth path, 403/client-id validation and the CKW support address, 429
+      and quota during a backfill, resuming from .storage/ckw.statistics, and
+      missing Energy-dashboard statistics. It also raises the log level,
+      explains the INFO/DEBUG lines and the redaction set, and lists what a bug
+      report needs. The reauth how-to (#122) is still planned, but its symptom
+      and fix are covered here; #99 closes the rule.
 
   docs-use-cases:
     status: done

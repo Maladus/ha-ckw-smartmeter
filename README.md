@@ -70,9 +70,11 @@ below are still being written before v0.1.0.
 
 ## Troubleshooting
 
-If something does not work, read [reference: quality scale](docs/reference/quality-scale.md): it lists what
-is verified today and every known gap with the issue that closes it, including the missing
-symptom-by-symptom page `docs/how-to/debug-connection.md` (#99).
+If something does not work, read [how-to: debug a connection](docs/how-to/debug-connection.md): it maps
+the symptom to its cause and the fix for a stale value, a rejected login, `403`, `429`, an unfinished
+backfill and missing Energy-dashboard statistics. For copy-paste automations and a dashboard card, see
+[reference: examples](docs/reference/examples.md). What is verified today, and the one remaining gap, is
+in [reference: quality scale](docs/reference/quality-scale.md).
 
 ## License
 

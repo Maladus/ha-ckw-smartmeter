@@ -12,7 +12,7 @@ exactly one quadrant; entries marked `planned` are not written yet and name the 
 - **I want to use it** — [getting-started](tutorial/getting-started.md) → [install](how-to/install.md).
 - **I want to change code** — [architecture](explanation/architecture.md) → [conventions](reference/conventions.md)
   → work-with-ai-agents (planned, #98).
-- **Something is broken** — debug-connection (planned, #99) → reauthenticate (planned, #122).
+- **Something is broken** — [debug a connection](how-to/debug-connection.md) → reauthenticate (planned, #122).
 
 ## Tutorial
 
@@ -34,7 +34,7 @@ One goal per page, steps only, no theory.
 | `how-to/backfill-history.md` (planned, #123) | Re-running the history import for a Zählpunkt that came back with gaps. | Users |
 | [live-and-archive.md](how-to/live-and-archive.md) | Pairing the CKW archive with a local live source on the meter, and why the two numbers differ. | Users |
 | [keep-quarter-hour-history.md](how-to/keep-quarter-hour-history.md) | Keeping the quarter-hour values longer than the recorder's default retention, or exporting them. | Users |
-| `how-to/debug-connection.md` (planned, #99) | Reading the log, the diagnostics export and the error codes when polling fails. | Users, contributors |
+| [debug-connection.md](how-to/debug-connection.md) | Symptom → cause → fix for a stale value, a rejected login, `403`, `429`, an unfinished backfill and missing statistics, plus the log levels and what to attach to a bug report. | Users, contributors |
 | `how-to/work-with-ai-agents.md` (planned, #98) | Driving this repository with an AI agent under the contract in `AGENTS.md`. | Contributors, agents |
 | [commits.md](how-to/commits.md) | Commit types, the agent co-author trailer and how to find commits by model. | Contributors |
 | [next-task.md](how-to/next-task.md) | Finding the task that can start now, and having a timer or crontab remind you. | Maintainers, contributors |
@@ -52,7 +52,7 @@ Lookup only: exact names, values and limits, with no steps.
 | [configuration.md](reference/configuration.md) | Every setup and options field with its type, allowed values, default and effect, plus the `ckw.backfill` action and the development-only endpoint overrides. | Users |
 | [quality-scale.md](reference/quality-scale.md) | The 51 Bronze, Silver and Gold quality-scale rules, their status, the file or test that proves each, and the open gaps. | Contributors |
 | [conventions.md](reference/conventions.md) | The crosscutting rules: error mapping, redaction, Europe/Zurich, unique ids, logging, gates. | Contributors |
-| `reference/examples.md` (planned, #128) | Copy-paste automations, dashboard cards and template sensors built on the integration. | Users |
+| [examples.md](reference/examples.md) | Copy-paste automations, a dashboard card and a load-shifting sketch, each with the entity ids and units it assumes. | Users |
 
 ## Explanation
 
