@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: https://github.com/Maladus/ha-ckw-smartmeter (`custom_components/ckw`) — private until #110
-Issues: #1–#127, one per task row below (✅ = closed / done)
+Issues: #1–#128, one per task row below (✅ = closed / done)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -74,6 +74,27 @@ one sentence per document, nothing else.
 | `CHANGELOG.md` | users | release history (Keep a Changelog) | released changes |
 | `LICENSE` | legal | MIT | licensing |
 | `scripts/dev/README.md` | devs, agents | Podman dev instance runbook (#44) | local test procedure |
+
+**Quality-scale documentation matrix** (source of truth: `quality_scale.yaml` #101, `mise run docs` #127)
+
+| Rule | Tier | Document |
+|---|---|---|
+| `docs-high-level-description` | Bronze | `README.md` (#94) |
+| `docs-installation-instructions` | Bronze | `docs/how-to/request-ckw-client.md` (#120), `docs/tutorial/getting-started.md` (#119), `docs/how-to/install.md` (#121) |
+| `docs-removal-instructions` | Bronze | `docs/how-to/install.md` (#121) |
+| `docs-actions`, `docs-triggers`, `docs-conditions` | Bronze | exempt — no services/triggers/conditions; reason recorded in `quality_scale.yaml` (#101) |
+| `brands` | Bronze | `custom_components/ckw/brand/` (#12); brands repo PR at #116 |
+| `docs-installation-parameters` | Silver | `docs/reference/configuration.md` (#106) |
+| `docs-configuration-parameters` | Silver | `docs/reference/configuration.md` (#106) |
+| `docs-supported-functions` | Gold | `docs/reference/entities.md` (#124) |
+| `docs-supported-devices`, `docs-data-update`, `docs-known-limitations` | Gold | `docs/explanation/data-model.md` (#125) |
+| `docs-troubleshooting` | Gold | `docs/how-to/debug-connection.md` (#99), `docs/how-to/reauthenticate.md` (#122) |
+| `docs-use-cases` | Gold | `docs/tutorial/getting-started.md` (#119) |
+| `docs-examples` | Gold | `docs/reference/examples.md` (#128) |
+
+Note: hassfest only validates `quality_scale.yaml` **inside core**. In a HACS repo `quality_scale: bronze`
+in `manifest.json` is a claim, not a checked fact — keep it only while #116 (core submission) is a goal,
+and treat `quality_scale.yaml` as our own audit checklist until then.
 
 **Documentation rules**
 
@@ -409,9 +430,10 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | #122 | `docs/how-to/reauthenticate.md` | Symptoms (entity unavailable, reauth notification, `ConfigEntryAuthFailed`) → exact fix path in the UI; what *not* to do (repeated logins, revoking the client); SMS/OTP variant once #53 exists | symptom→cause→fix table, no advice that triggers repeated SMS or lockout | #48 | AI |
 | #123 | `docs/how-to/backfill-history.md` | Re-import 730 days after a meter exchange or recorder wipe, delete statistics for a statistic id in Developer Tools, `mise run dev-reset` for the dev instance, what re-import overwrites (idempotent sums, #86) and what it cannot repair | history restorable without hand-editing the database; duplicate-sum pitfall called out | #87, #89 | AI |
 | #124 | `docs/reference/entities.md` | Per meter: entity name, `unique_id` shape, unit, `device_class`, `state_class`, `last_reset` behaviour, statistic id, update cadence, availability semantics; which entities are Energy-dashboard eligible; append-only id rule | every created entity appears with exact attributes, generated from the entity descriptions | #76, #78 | AI |
-| #125 | `docs/explanation/data-model.md` | Why data stops at yesterday (legal once-per-day read), HT/NT semantics, CHF amounts as base price without VAT/surcharges, meaning of `anzahl_linien_*` quality flags, why there is no live power sensor | reader understands the constraints without reading code or the CKW spec; every claim linked to its source | #91 | AI |
+| #125 | `docs/explanation/data-model.md` | Why data stops at yesterday (legal once-per-day read), HT/NT semantics, CHF amounts as base price without VAT/surcharges, meaning of `anzahl_linien_*` quality flags, why there is no live power sensor | reader understands the constraints without reading code or the CKW spec; every claim linked to its source. Owns the Gold doc rules `docs-supported-devices` (CKW smart meters yes, legacy/non-CKW meters no), `docs-data-update` (2 h poll, data until yesterday) and `docs-known-limitations` | #91 | AI |
 | #126 | `docs/reference/glossary.md` | arc42 §12 harvested: deliverypointnumber/Zählpunkt, HT/NT, aggregation (`day(s)`, `month(s)`, …), statistic id, billed vs physical quantity, blind current, `anzahl_linien_*`, base price vs VAT | every German/API term used in code or docs has one canonical English definition | #91 | S | AI |
 | #127 | markdownlint + `mise run docs` | `.markdownlint.yaml`, `markdownlint-cli2` pinned in `mise.toml`, `scripts/docs-check.sh`: every file under `docs/` sits in exactly one quadrant folder, is linked from `docs/README.md`, and has the "This page answers:" opening plus a `Related` block; relative links resolve | CI job fails on a misplaced doc, a broken relative link or a lint violation | #117, #27 | M | AI |
+| #128 | `docs/reference/examples.md` | Gold `docs-examples`: 3-5 copy-paste automations/blueprints — cost alert (`numerical_state` on month cost), daily consumption notification from statistics, Energy-dashboard card snippet, and an example of using HT/NT split for load shifting | every example renders and works as written; each states its entity ids | #124 | S | AI |
 
 ## Phase 8 — Quality scale, verification, release
 
@@ -490,10 +512,10 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | 4 Coordinator | 7 | 0 |
 | 5 Entities | 10 | 0 |
 | 6 Statistics | 7 | 0 |
-| 7 Docs | 19 | 0 |
+| 7 Docs | 20 | 0 |
 | 8 Quality/Release | 10 | 0 |
 | 9 Optional | 6 | 0 |
-| **Total** | **127** | **4** |
+| **Total** | **128** | **4** |
 
 ## Critical path
 
@@ -501,4 +523,4 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 
 Everything else can run in parallel; #9–#28 and #91–#93 are safe to do before CKW replies.
 
-Must-have path to v0.1.0: **121 tasks** (all phases except Phase 9).
+Must-have path to v0.1.0: **122 tasks** (all phases except Phase 9).
