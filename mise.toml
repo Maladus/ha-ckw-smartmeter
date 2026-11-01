@@ -1,71 +1,121 @@
+# The only entry point of this repository (PLAN.md, "Toolchain and tasks (mise)",
+# #117): `mise run <task>` for the toolchain, the gates and the dev instance.
+# No document, script or workflow calls python, pip, pytest, ruff, pre-commit,
+# podman or markdownlint directly; they call one of the tasks below.
+#
+# Every task runs from the repository root (`dir`), so a task started from a
+# subdirectory behaves exactly like one started at the top, and every task
+# carries the one line that says what it is for (`mise tasks`).
+
 [tools]
 gitleaks = "8.30.1"
 "npm:markdownlint-cli2" = "latest"
+# npm:markdownlint-cli2 needs a node to run its shebang; pinning it here keeps a
+# fresh clone self-contained instead of inheriting whatever node is on the host.
+node = "24"
 "pipx:pre-commit" = "4.7.0"
 python = "3.13"
 ruff = "0.17.3"
 uv = "latest"
 
+# --- bootstrap ------------------------------------------------------------
+
+[tasks.setup]
+description = "Bootstrap a fresh clone: pinned toolchain, .venv + requirements_test.txt, git hooks, config/ and scripts/dev/.env"
+dir = "{{config_root}}"
+run = "bash scripts/setup.sh"
+
+# --- gates ----------------------------------------------------------------
+
 [tasks.lint]
-description = "Lint and format check the Python code (gate G-1)"
+description = "Check the Python code with ruff, no writes (gate G-1)"
+dir = "{{config_root}}"
 run = "ruff check . && ruff format --check ."
 
 [tasks.fmt]
-description = "Fix lint findings and format the Python code (gate G-1, writing)"
+description = "Fix and format the Python code with ruff, writes in place (gate G-1, writing half)"
+dir = "{{config_root}}"
 run = "ruff check --fix . && ruff format ."
 
 [tasks.test]
-description = "Run pytest with the coverage threshold from pyproject.toml (gate G-2)"
-run = "python -m pytest -q --cov=custom_components/ckw --cov-report=term-missing"
+description = "Run pytest in the .venv from `mise run setup` with the coverage floor from pyproject.toml (gate G-2)"
+dir = "{{config_root}}"
+run = ".venv/bin/python -m pytest -q --cov=custom_components/ckw --cov-report=term-missing"
+
+[tasks.types]
+description = "Type-check the integration with mypy --strict (#138)"
+dir = "{{config_root}}"
+run = ".venv/bin/python -m mypy custom_components/ckw"
 
 [tasks.hooks]
-description = "Run the pre-commit hooks on every file, secret scan included (gate G-3)"
+description = "Run every pre-commit hook on every file, secret scan included (gate G-3)"
+dir = "{{config_root}}"
 run = "pre-commit run --all-files"
 
+[tasks.docs]
+description = "Lint Markdown, validate the Diataxis layout and relative links, summarise the quality-scale audit"
+dir = "{{config_root}}"
+run = "markdownlint-cli2 \"**/*.md\" \"#node_modules\" && bash scripts/docs-check.sh"
+
 [tasks.check]
-description = "Full local gate: lint, docs, test and hooks; re-checks the quality-scale audit"
-depends = ["lint", "docs", "test", "hooks"]
+description = "Full local gate in order: lint, docs, test, hooks, then dev-smoke when the dev container is running (what the pre-push hook runs)"
+dir = "{{config_root}}"
+run = "bash scripts/check.sh"
+
+# --- dev instance (Phase 1b) ----------------------------------------------
 
 [tasks.dev-up]
 description = "Start (or restart) the Home Assistant dev instance in rootless Podman"
+dir = "{{config_root}}"
 run = "bash scripts/dev/up.sh"
 
 [tasks.dev-down]
-description = "Stop and remove the dev container (config/ is kept)"
+description = "Stop and remove the dev container, keep config/"
+dir = "{{config_root}}"
 run = "bash scripts/dev/down.sh"
 
 [tasks.dev-logs]
-description = "Follow the dev container's log (Ctrl-C stops the follow, not the instance)"
+description = "Follow the dev container's log; Ctrl-C stops the follow, not the instance"
+dir = "{{config_root}}"
 run = "bash scripts/dev/logs.sh"
 
 [tasks.dev-shell]
 description = "Open a bash shell inside the dev container"
+dir = "{{config_root}}"
 run = "bash scripts/dev/shell.sh"
 
 [tasks.dev-reset]
-description = "Restart the dev instance on a clean recorder DB (--full also wipes .storage)"
+description = "Restart the dev instance on a clean recorder DB; -- --full also wipes .storage and .dev/token"
+dir = "{{config_root}}"
 run = "bash scripts/dev/reset.sh"
 
 [tasks.dev-smoke]
-description = "Assert the dev instance is healthy (gate G-6)"
+description = "Assert the dev instance is healthy: manifest, mounted component, no traceback (gate G-6)"
+dir = "{{config_root}}"
 run = "bash scripts/dev/smoke.sh"
 
 [tasks.dev-onboard]
 description = "Complete Home Assistant onboarding through the API and store .dev/token"
+dir = "{{config_root}}"
 run = "bash scripts/dev/onboard.sh"
 
 [tasks.dev-mock]
-description = "Start the local mock CKW API + fake Keycloak"
-run = "uv run python scripts/dev/mock/app.py --port 8787"
+description = "Start the local mock CKW API and fake Keycloak on port 8787, in the foreground"
+dir = "{{config_root}}"
+run = ".venv/bin/python scripts/dev/mock/app.py --port 8787"
 
-[tasks.docs]
-description = "Lint Markdown, validate the Diataxis layout and summarise the quality-scale audit"
-run = "markdownlint-cli2 \"**/*.md\" \"#node_modules\" && bash scripts/docs-check.sh"
+# --- plan and tracker -----------------------------------------------------
 
 [tasks.next]
-description = "Show which planned tasks can start now (STARTABLE/BLOCKED/DRIFT)"
+description = "Show which planned tasks can start now (STARTABLE/BLOCKED/DRIFT); --notify pings the coordinator"
+dir = "{{config_root}}"
 run = "python scripts/next_tasks.py"
 
-[tasks.next-check]
-description = "Fail when PLAN.md and the issue tracker drift apart (CI gate)"
+[tasks.issues]
+description = "Fail when PLAN.md and the issue tracker drift apart (plan-drift gate #32)"
+dir = "{{config_root}}"
 run = "python scripts/next_tasks.py --check"
+
+[tasks.next-check]
+description = "Alias of `mise run issues`, kept for the existing workflow and docs"
+alias = "issues"

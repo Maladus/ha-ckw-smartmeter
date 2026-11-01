@@ -33,14 +33,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      # The script is stdlib-only; the runner image ships the gh CLI, and the
-      # step fails loudly if that ever changes.
+      # Same task as on a laptop (#117): the check is stdlib-only and the runner
+      # image ships the gh CLI, but the entry point stays `mise run issues`.
+      - uses: jdx/mise-action@v5
       - name: Check gh CLI
         run: gh --version
       - name: Check for plan drift
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python scripts/next_tasks.py --check
+        run: mise run issues

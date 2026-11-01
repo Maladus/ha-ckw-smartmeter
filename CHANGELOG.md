@@ -10,6 +10,13 @@ user-visible behaviour in a minor release; every such change is listed.
 
 ### Added
 
+- `mise run setup` bootstraps a fresh clone in one step: the pinned toolchain, the `.venv` the gates use,
+  the `pre-commit`, `commit-msg` and `pre-push` git hooks, and the gitignored `config/` and
+  `scripts/dev/.env`. Every workflow is a documented mise task that runs from the repository root, and CI
+  calls only those tasks, so no document, script or workflow calls a raw interpreter any more (#117).
+- A `pre-push` hook that runs `mise run check` and refuses a red push, with `MISE_SKIP_GATE=1` as the
+  documented escape hatch: the local stand-in for branch protection, which GitHub does not offer on a
+  private repository without a paid plan (#142).
 - A redacted diagnostics download on the entry's page, for a bug report: version, options, one row per
   delivery point with only its last four characters, the coordinator's health (last poll, exception
   type, rate limit), the statistics progress and two token booleans. No token, no customer number (only

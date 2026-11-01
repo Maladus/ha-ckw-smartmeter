@@ -237,23 +237,27 @@ CI or AGENTS.md. Tracked as #117.
 | `gitleaks` | 8.30.1 | secret scan (gates G-3, #118) |
 | `pipx:pre-commit` | 4.7.0 | hook manager (gate G-3, #17) |
 | `npm:markdownlint-cli2` | latest | Markdown lint for every doc (#127) |
+| `node` | 24 LTS | runtime for the `npm:markdownlint-cli2` shebang; pinned so a fresh clone needs nothing from the host |
 | `podman` | system, >= 4.9, rootless | dev HA instance; **not** mise-pinned — rootless setup is host-level (subuid/subgid, `net.ipv4.ip_unprivileged_port_start`), documented in #44 |
 
 | Task | Runs | Purpose |
 |---|---|---|
-| `mise run setup` | `mise install`, `uv sync`, `pre-commit install --install-hooks`, bootstrap `config/` + `.env` | once after clone/pull |
+| `mise run setup` | `mise install`, `.venv` + `requirements_test.txt` via `uv`, `pre-commit install --install-hooks`, bootstrap `config/` + `scripts/dev/.env` | once after clone/pull, idempotent |
 | `mise run dev-up` | `podman run` of the HA dev container (config + component mounted, `:Z`) | start the dev instance (#36) |
 | `mise run dev-down` | stop + remove the container | stop |
 | `mise run dev-logs` | `podman logs -f ha-dev` | debugging |
 | `mise run dev-shell` | `podman exec -it ha-dev bash` | inspect inside |
 | `mise run dev-reset` | stop, delete recorder DB, start | statistics/backfill tests (#43) |
 | `mise run dev-smoke` | manifest check, traceback scan, forced entity refresh | gate G-6 (#42) |
+| `mise run dev-onboard` | wait for the onboarding API, create the owner user, write `.dev/token` | usable instance in under 3 minutes (#40) |
+| `mise run dev-mock` | the mock OpenEnergy API + fake Keycloak on `:8787` | offline development (#141, #144) |
 | `mise run lint` / `mise run fmt` | `ruff check` / `ruff format` | gate G-1 |
 | `mise run test` | `pytest -q` | gate G-2 |
+| `mise run types` | `mypy --strict custom_components/ckw` | #138, run in CI |
 | `mise run hooks` | `pre-commit run --all-files` | gate G-3 |
-| `mise run check` | lint + docs + test + hooks + dev-smoke | full local gate |
+| `mise run check` | lint, docs, test, hooks, then dev-smoke when the dev container is running (printed skip otherwise); the pre-push hook runs exactly this | full local gate |
 | `mise run docs` | `markdownlint-cli2` + `scripts/docs-check.sh` | doc lint, quadrant placement, link check (#127) |
-| `mise run issues` | `scripts/sync-issues.sh` | plan/issue drift gate (#32) |
+| `mise run issues` | `python scripts/next_tasks.py --check` | plan/issue drift gate (#32) |
 
 ## Decisions (recorded)
 
@@ -333,8 +337,8 @@ them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritte
 | ✅ #16 | Test bootstrap | `pyproject.toml` (ruff, pytest config, `pytest-homeassistant-custom-component` optional extra), `tests/conftest.py` | `pytest -q` runs (0 tests ok) | #9 | S | AI |
 | ✅ #17 | pre-commit (locked) | Hooks: `check-added-large-files`, `check-yaml`, `check-json`, `check-merge-conflict`, `check-case-conflict`, `detect-private-key`, `end-of-file-fixer`, `trailing-whitespace`, `mixed-line-ending`, `gitleaks --staged`, `ruff-check`, `ruff-format`, artifact block (`.dev/`, `*.token`, `config/.storage/`, `*.db`); tools pinned in `mise.toml`; installed for `pre-commit` + `pre-push` | `pre-commit run --all-files` green, a staged fake token is rejected | #9 | S | AI |
 | #118 | Secret scanning in CI + push protection | `.github/workflows/secrets.yml` (`gitleaks detect --redact` on push/PR, works on a private repo with free minutes), enable GitHub secret scanning + push protection at publish (#110, free only when public), document policy in `SECURITY.md` (#25) | workflow fails on a seeded leak, policy documented | #18, #25 | S | AI |
-| #117 | mise toolchain & task runner | Pin `python`, `uv`, `ruff`, `gitleaks`, `pipx:pre-commit` in `mise.toml`; expose every workflow as a mise task (`setup`, `dev-up/-down/-logs/-shell/-reset/-smoke`, `lint`, `fmt`, `test`, `hooks`, `check`, `issues`); CI and docs call the tasks only, never raw interpreters. Podman stays host-level (rootless prerequisites in #44) | fresh clone: `mise install && mise run setup && mise run check` succeeds; no doc, CI job or AGENTS.md line invokes `python`, `pip` or `podman` directly | #9 | M | AI |
-| #142 | Pre-push gate: full check before any merge | Extend the `pre-push` hook to run `mise run check` (lint, docs, test, hooks) and abort on failure; worktree agents may only `/merge` when it is green; `MISE_SKIP_GATE=1` escape hatch documented for the release manager. Needed because GitHub branch protection is unavailable on a private repo without Pro, and merges happen locally | a failing test or lint error rejects the push in under 90 s | #117, #127 | S | AI |
+| ✅ #117 | mise toolchain & task runner | Pin `python`, `uv`, `ruff`, `gitleaks`, `pipx:pre-commit`, `npm:markdownlint-cli2` and its `node` in `mise.toml`; expose every workflow as a mise task (`setup`, `dev-up/-down/-logs/-shell/-reset/-smoke/-onboard/-mock`, `lint`, `fmt`, `test`, `types`, `hooks`, `docs`, `check`, `next`, `issues`), each with a one-line description and running from the repo root; CI calls the tasks only, never raw interpreters. Podman stays host-level (rootless prerequisites in #44) | fresh clone: `mise install && mise run setup && mise run check` succeeds; no doc, CI job or AGENTS.md line invokes `python`, `pip` or `podman` directly | #9 | M | AI |
+| ✅ #142 | Pre-push gate: full check before any merge | `pre-push` stage hook `scripts/hooks/pre_push_gate.sh` (`language: system`, `always_run`) runs `mise run check` and aborts on failure; the full-history gitleaks hook stays in the same stage; `MISE_SKIP_GATE=1` is the documented escape hatch with a loud warning; worktree agents may only `/merge` when it is green. Needed because GitHub branch protection is unavailable on a private repo without Pro, and merges happen locally | a failing test or lint error rejects the push, measured 20 s wall time (budget 90 s) | #117, #127 | S | AI |
 | ✅ #18 | CI workflows | `.github/workflows/tests.yaml`: jobs `pre-commit`, `pytest`, `hassfest` (`home-assistant/actions/hassfest`), `hacs` (`hacs/action` category integration) | all jobs green on GitHub | #13–#17 | S | AI |
 | #19 | Dev instance plan | Dev HA is specified in **Phase 1b** (Podman); this task only reserves the directory `scripts/dev/` | `scripts/dev/` exists or is created by #36 | #14 | S | AI |
 | ✅ #20 | `AGENTS.md` + `CONTRIBUTING.md` | agent contract (commands, gates, hard rules) and human PR checklist | both written, gates referenced by exact command | #17 | S | AI |
@@ -507,7 +511,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | #96 | Translation review | Native German pass over `translations/de.json` + `strings.json` | no machine-German left | #15 | H |
 | ✅ #97 | `CHANGELOG.md` + releases | Keep-a-changelog format, `v0.1.0` release notes, optional release-drafter workflow | release published | milestones | AI |
 | #98 | `docs/how-to/work-with-ai-agents.md` | AI playbook: context files to read first (arc42 chapter index), gate tasks (`mise run check`), hard rules, task prompt templates, review checklist, secret hygiene; links to `reference/conventions.md` for the crosscutting rules | agent can complete a small issue using it alone | #20, #129 | AI |
-| #99 | `docs/how-to/debug-connection.md` | Symptoms → cause → fix for 401/403/429/network, raising the log level, dumping diagnostics, what is redacted, where the data ends up. No theory (link to explanation) | the three most likely failures each have a concrete fix path | #66 | AI |
+| ✅ #99 | `docs/how-to/debug-connection.md` | Symptoms → cause → fix for 401/403/429/network, raising the log level, dumping diagnostics, what is redacted, where the data ends up. No theory (link to explanation) | the three most likely failures each have a concrete fix path | #66 | AI |
 | ✅ #100 | Documentation-maintenance rule | PR-template checkbox + CONTRIBUTING line: behaviour change ⇒ affected quadrant doc + CHANGELOG updated; `docs/README.md` index kept current; quadrant placement + links checked by `mise run docs` (#127); stale doc = bug | checkbox present, `mise run docs` enforced in CI, checked during #102 audit | #27 | AI |
 | ✅ #119 | `docs/tutorial/getting-started.md` | One linear 15-minute path: request the CKW client → install → log in → populated Energy dashboard. Prerequisites as a checklist, every step with its expected visible result, no alternatives (they live in how-to) | a first-time HACS user reaches a populated dashboard without asking | #120, #121 | AI |
 | #120 | `docs/how-to/request-ckw-client.md` | The CKW OpenEnergy access form, what to enter, the mail with the redirect URIs (`https://my.home-assistant.io/redirect/oauth`, `https://<fqdn>/auth/external/callback`), the `offline_access` request, expected reply contents, what is *not* needed (public client, no secret) | request can be sent without questions; answer can be used directly | #1 | AI |
@@ -519,7 +523,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | ✅ #126 | `docs/reference/glossary.md` | arc42 §12 harvested: deliverypointnumber/Zählpunkt, HT/NT, aggregation (`day(s)`, `month(s)`, …), statistic id, billed vs physical quantity, blind current, `anzahl_linien_*`, base price vs VAT | every German/API term used in code or docs has one canonical English definition | #91 | S | AI |
 | ✅ #127 | markdownlint + `mise run docs` | `.markdownlint.yaml`, `markdownlint-cli2` pinned in `mise.toml`, `scripts/docs-check.sh`: every file under `docs/` sits in exactly one quadrant folder, is linked from `docs/README.md`, and has the "This page answers:" opening plus a `Related` block; relative links resolve | CI job fails on a misplaced doc, a broken relative link or a lint violation | #117, #27 | M | AI |
 | ✅ #143 | Co-author trailers | `scripts/hooks/co_author.py` as a `commit-msg` hook: appends `Co-Authored-By: pi (<model>) <noreply@pi.local>` (model only, never the provider) when `PI_PROVIDER`/`PI_MODEL` are set, never for a plain shell, never twice; how-to in `docs/how-to/commits.md` | agent commit carries one trailer, human commit none | #17, #129 | S | AI |
-| #128 | `docs/reference/examples.md` | Gold `docs-examples`: 3-5 copy-paste automations/blueprints — cost alert (`numerical_state` on month cost), daily consumption notification from statistics, Energy-dashboard card snippet, and an example of using HT/NT split for load shifting | every example renders and works as written; each states its entity ids | #124 | S | AI |
+| ✅ #128 | `docs/reference/examples.md` | Gold `docs-examples`: 3-5 copy-paste automations/blueprints — cost alert (`numerical_state` on month cost), daily consumption notification from statistics, Energy-dashboard card snippet, and an example of using HT/NT split for load shifting | every example renders and works as written; each states its entity ids | #124 | S | AI |
 | ✅ #145 | Correct reference + data model against the measurements | Fix `docs/reference/ckw-openenergy-api.md` and `docs/explanation/data-model.md`: nested `User`, enums, redaction of `email`/`phone`, `anzahl_linien_*` semantics, error table with bodies, range cap, quarter-hour `minute(s)`, 4-request rate limit, dynamic-price parameters, day boundary stated as an inference | neither document contradicts the verification page; open questions stay open | #143 | M | AI |
 | ✅ #146 | ADR-0006: measured auth constraints | Only browser authorization-code remains (password grant refused, `response_mode=fragment` breaks HA's callback); mark 0001 partially superseded in its Status field; drop #53, note #50 as the fallback | ADR merged, index updated, #53 closed as not planned | #93, #143 | S | AI |
 | ✅ #129 | `docs/reference/conventions.md` | arc42 §8 as reference: exception mapping (`CkwAuthError` → `ConfigEntryAuthFailed`, 429 → `UpdateFailed`), redaction rules, Europe/Zurich discipline, append-only unique-id scheme, logging levels per failure class, naming (domain `ckw`, module layout) | every crosscutting rule stated once, testable, and cited from `architecture.md` and `AGENTS.md` | #92, #63 | S | AI |
@@ -593,6 +597,9 @@ registering `ckw.backfill` in `async_setup` — and `docs-actions` applies too, 
 | G-6 | `mise run dev-smoke` (fixture mode), no tracebacks in `mise run dev-logs` |
 | G-7 | PR ≤ ~400 changed lines; behaviour change ⇒ test added |
 
+G-1 to G-3 and the docs check also run before every push: the `pre-push` hook runs `mise run check` and
+rejects a red push (#142). Locally that includes G-6 whenever the dev container is running.
+
 ## Hard rules (humans and agents)
 
 1. No API field in code without a fixture or a citation in `docs/ckw-openenergy-api.md`.
@@ -625,17 +632,17 @@ registering `ckw.backfill` in `async_setup` — and `docs-actions` applies too, 
 | Phase | Tasks | Done |
 |---|---|---|
 | 0 External | 8 | 0 |
-| 1 Setup & governance | 31 | 20 |
+| 1 Setup & governance | 31 | 22 |
 | 1b Podman dev instance | 12 | 6 |
 | 2 Auth | 14 | 10 |
 | 3 API | 10 | 9 |
 | 4 Coordinator | 8 | 8 |
 | 5 Entities | 14 | 13 |
 | 6 Statistics | 7 | 5 |
-| 7 Docs | 24 | 21 |
+| 7 Docs | 24 | 23 |
 | 8 Quality/Release | 18 | 12 |
 | 9 Optional | 8 | 1 |
-| **Total** | **152** | **80** |
+| **Total** | **152** | **84** |
 
 ## Critical path
 

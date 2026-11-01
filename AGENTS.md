@@ -30,24 +30,34 @@ or `markdownlint` directly — not in a shell, a script, a workflow or a documen
 
 | Task | Use for |
 | --- | --- |
-| `mise run setup` | once after clone or pull: pinned toolchain, dependencies, git hooks, `scripts/dev/.env` |
+| `mise run setup` | once after clone or pull: pinned toolchain, `.venv` + test dependencies, git hooks, `config/` and `scripts/dev/.env` |
 | `mise run lint` | gate G-1, `ruff check` + `ruff format --check` |
 | `mise run fmt` | the writing half of G-1 |
 | `mise run test` | gate G-2, `pytest` with the coverage floor from `pyproject.toml` |
+| `mise run types` | `mypy --strict` over the integration; a CI step, not part of `check` |
 | `mise run hooks` | gate G-3, `pre-commit run --all-files`, secret scan included |
 | `mise run docs` | Markdown lint, Diátaxis layout, relative links, quality-scale summary |
-| `mise run check` | G-1 + G-2 + G-3 + docs in one run; what CI mirrors |
+| `mise run check` | G-1 + docs + G-2 + G-3, then G-6 when the dev container runs; what CI mirrors and what `git push` runs |
 | `mise run dev-up` | start the local Home Assistant instance |
-| `mise run dev-smoke` | gate G-6, the instance loads this component without tracebacks |
+| `mise run dev-down` | stop and remove it, keep `config/` |
+| `mise run dev-logs` | follow the instance's log |
+| `mise run dev-shell` | a shell inside the container |
+| `mise run dev-onboard` | owner user and `.dev/token` on a fresh instance |
 | `mise run dev-reset` | clean recorder database before statistics and backfill work |
+| `mise run dev-smoke` | gate G-6, the instance loads this component without tracebacks |
+| `mise run dev-mock` | the mock CKW API and fake Keycloak on port 8787 |
 | `mise run next` | which planned task can start now, and where plan and tracker drift |
+| `mise run issues` | plan-drift gate: non-zero when `PLAN.md` and the tracker disagree |
 
-`mise run setup` is the bootstrap named in [PLAN.md](PLAN.md); while it is still owed by the toolchain
-task, the same effect is `mise install` followed by
-`mise exec -- pre-commit install --install-hooks --hook-type pre-push --hook-type commit-msg`.
-`mise run check` does not include G-6, so run `mise run dev-smoke` whenever the component changed.
-The dev instance runbook is [scripts/dev/README.md](scripts/dev/README.md); do not invent Podman
+Every task runs from the repository root, so a task started in a subdirectory does the same thing as
+one started at the top. `mise tasks` prints this table with each task's one-line description.
+
+`mise run setup` is the bootstrap named in [PLAN.md](PLAN.md). `mise run check` skips G-6 with a printed
+reason when no dev container is running, so run `mise run dev-smoke` deliberately whenever the component
+changed. The dev instance runbook is [scripts/dev/README.md](scripts/dev/README.md); do not invent Podman
 commands, the scripts under `scripts/dev/` are the only place that calls `podman`.
+
+The `pre-push` hook runs exactly `mise run check` and refuses the push when it is red (#142).
 
 ## Branch, commit, pull request
 
@@ -91,10 +101,14 @@ per file. `mise run next --notify` uses the same channel for the scheduled task 
    decision, a new ADR. ADRs are append-only; supersede with a new number.
 8. Never merge outside the gates, never force-push a shared branch, never edit `PLAN.md` scope to make
    a change fit.
+9. A red gate is a stop. The `pre-push` hook runs `mise run check` and rejects the push when it is red
+   (#142); never merge with a red gate, never `MISE_SKIP_GATE=1`, never `git push --no-verify` — the
+   last one also skips the secret scan.
 
 ## Definition of done
 
-- `mise run check` green, and `mise run dev-smoke` green when the component changed.
+- `mise run check` green (and `mise run types` green), and `mise run dev-smoke` green when the component
+  changed.
 - A test for every behaviour change; coverage stays at or above the threshold in `pyproject.toml`.
 - The affected page updated, `CHANGELOG.md` updated, the ADR written and its index row added.
 - The `PLAN.md` row marked ✅, the issue closed with `Closes #N`.

@@ -8,3 +8,5 @@ config: .markdownlint.yaml
 # `mise run docs` red for files the repository does not contain.
 ignores:
   - .workmux/
+  # `mise run setup` creates it; its Markdown belongs to third-party packages.
+  - .venv/

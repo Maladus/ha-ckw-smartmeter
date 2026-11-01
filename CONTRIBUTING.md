@@ -10,18 +10,19 @@ out of scope there needs a plan change first, not a pull request.
 ## Set up the toolchain
 
 ```bash
-mise install
-mise run setup                 # bootstrap: toolchain, dependencies, git hooks, scripts/dev/.env
+mise run setup
 ```
+
+`mise run setup` is the only bootstrap step: it installs the pinned toolchain (`mise install`), creates
+`.venv` and installs `requirements_test.txt` into it, installs the `pre-commit`, `commit-msg` and
+`pre-push` git hooks, and seeds the gitignored `config/` directory and `scripts/dev/.env` from their
+tracked templates. It is idempotent — run it again after a pull or a toolchain bump — and it never starts
+the dev container; that stays `mise run dev-up`.
 
 Everything is pinned in `mise.toml` and run through mise. Do not call `python`, `pip`, `pytest`,
 `ruff`, `pre-commit`, `podman` or `markdownlint` directly — the pins are what keep CI and your machine
 on the same versions. The task list with what each command is for:
 [AGENTS.md](AGENTS.md) → "Commands".
-
-`mise run setup` is the bootstrap named in [PLAN.md](PLAN.md); while the toolchain task still owes the
-task itself, run the same steps as `mise install` and
-`mise exec -- pre-commit install --install-hooks --hook-type pre-push --hook-type commit-msg`.
 
 ## Run Home Assistant with the integration
 
@@ -65,6 +66,7 @@ A pull request is only reviewable when all of this is green, locally and in CI. 
 - [ ] G-1 `mise run lint` — ruff check and format
 - [ ] G-2 `mise run test` — pytest, coverage at or above the floor in `pyproject.toml`
 - [ ] G-3 `mise run hooks` — `pre-commit run --all-files`, gitleaks included
+- [ ] `mise run types` — `mypy --strict` over the integration; a separate CI step, not part of G-1…G-3
 - [ ] G-4 hassfest — green in CI; run it in the same pull request that touches `manifest.json`,
       `strings.json`, `icons.json` or `quality_scale.yaml`
 - [ ] G-5 HACS action — green in CI once the repository is public
@@ -74,7 +76,24 @@ A pull request is only reviewable when all of this is green, locally and in CI. 
 - [ ] the affected page under `docs/` is updated, `CHANGELOG.md` has an entry
 - [ ] the `PLAN.md` row is marked ✅ and the pull request body says `Closes #N`
 
-`mise run check` runs G-1, G-2, G-3 and the docs check in one go; G-6 and G-4 are separate.
+`mise run check` runs G-1, the docs check, G-2 and G-3 in one go, then G-6 when the dev container is
+running — and prints the reason when it skips it; G-4 and G-5 are separate.
+
+## The pre-push gate
+
+GitHub will not protect a branch on a private repository without a paid plan, so the equivalent gate
+runs locally. `.pre-commit-config.yaml` adds a `pre-push` hook that runs `mise run check` and aborts the
+push when anything is red, before a commit leaves your machine; the same stage scans the full history
+with gitleaks.
+
+- A red gate is not negotiated with. Fix the finding.
+- `MISE_SKIP_GATE=1 git push` is the escape hatch and prints a loud warning. It exists for the release
+  manager in an emergency, never to land a red branch; run `mise run check` before the merge that
+  matters.
+- `git push --no-verify` skips the gate *and* the secret scan. Do not use it.
+- The gate checks the working tree, so commit or stash first when you want the pushed commit verified.
+- Budget: the hook must stay under ~90 s. It takes about 20 s today (`mise run test` is the slowest
+  part), so run `mise run check` once before you start a long review round rather than on every push.
 
 ## Branches, commits, issues
 

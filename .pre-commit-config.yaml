@@ -1,10 +1,12 @@
-# Local gates, run by `git commit`. Installed with:
-#   pre-commit install --install-hooks
-#   pre-commit install --hook-type pre-push
+# Local gates: `git commit` runs the pre-commit and commit-msg hooks, `git push`
+# runs the pre-push hooks. Installed by `mise run setup`, which calls
+# `pre-commit install --install-hooks` for the hook types named in
+# `default_install_hook_types` below.
 #
-# Hooks use the tools already provided by mise (gitleaks) or installed locally
-# (ruff); no network access is needed at commit time. The authoritative gate is
-# CI (.github/workflows/tests.yaml) - local hooks can be bypassed with
+# Hooks use the tools already provided by mise (gitleaks, pre-commit) or by the
+# project (.venv, ruff); only the hook repositories come from the network, and
+# `--install-hooks` fetches those once. The authoritative gate is CI
+# (.github/workflows/ci.yml) - a local hook can be bypassed with
 # `git commit --no-verify`, CI cannot.
 
 default_install_hook_types: [pre-commit, commit-msg, pre-push]
@@ -42,6 +44,24 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-push]
+
+      # Local branch protection (#142). GitHub will not protect a branch on a
+      # private repository without a paid plan, so every push runs the same gate
+      # as CI before it leaves the working copy. `always_run` because the gate
+      # checks the tree, not the files of this push, and because an empty push
+      # must not slip past it. The escape hatch, MISE_SKIP_GATE=1, is handled in
+      # the script and documented in CONTRIBUTING.md, "The pre-push gate".
+      - id: pre-push-gate
+        name: mise run check (full local gate; MISE_SKIP_GATE=1 to skip)
+        entry: scripts/hooks/pre_push_gate.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+        # pre-commit swallows a successful hook's output, which would hide both
+        # the gate's progress and the MISE_SKIP_GATE=1 warning. verbose keeps
+        # them on the terminal: the escape hatch has to be impossible to miss.
+        verbose: true
 
       - id: no-dev-artifacts
         name: block local HA artifacts
