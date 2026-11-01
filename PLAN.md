@@ -360,8 +360,8 @@ them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritte
 | ✅ #29 | Create GitHub repo | `gh repo create ckw-homeassistant --private` (stays private until #110), verify `gh auth status`, push `main`, enable Dependabot security alerts | repo exists, CI runs on first push | #9 | S | H |
 | ✅ #30 | Label taxonomy | `type: feat\|fix\|docs\|chore\|test\|infra`, `phase: 0…9`, `status: backlog\|ready\|blocked\|review`, `owner: ai\|human\|both`, `size: s\|m\|l`, `area: auth\|api\|stats\|entities\|ci\|docs` — created by `gh label create` loop in `scripts/gh-setup.sh` | 5 label families present, naming documented | #29 | S | AI |
 | ✅ #31 | Milestones per phase | `P0 External` … `P9 Optional` + release milestones `v0.1.0`, `v0.3.0` | `gh milestone list` shows all | #29 | S | AI |
-| #32 | Plan → issues sync | `scripts/sync-issues.sh`: parse the task tables in `PLAN.md`, create missing issues `[ID] title` with details + acceptance + DoD checklist, assign milestone/labels; `--check` fails on drift; `--board` regenerates the progress board | one issue per task, `--check` green | #30, #31 | L | AI |
-| #33 | Project board | `gh project create`, fields `Phase`, `Status`, `Owner`, `Size`; views: board by Status, table by Phase, filtered "blocked" | all issues visible in the board, fields populated | #32 | M | AI |
+| ✅ #32 | Plan → issues sync | `scripts/sync-issues.sh`: parse the task tables in `PLAN.md`, create missing issues `[ID] title` with details + acceptance + DoD checklist, assign milestone/labels; `--check` fails on drift; `--board` regenerates the progress board | one issue per task, `--check` green | #30, #31 | L | AI |
+| ✅ #33 | Project board | `gh project create`, fields `Phase`, `Status`, `Owner`, `Size`; views: board by Status, table by Phase, filtered "blocked" | all issues visible in the board, fields populated | #32 | M | AI |
 | ✅ #34 | Issue/PR workflow conventions | Branch per issue (`gh issue develop N --checkout`), PR body `Closes #N`, merge flips the plan board column; written into `CONTRIBUTING.md` + `AGENTS.md` | first PR merged through the flow | #32, #20 | S | AI |
 | ✅ #35 | Automation guardrails | Scheduled workflow `plan-check.yml` running `scripts/sync-issues.sh --check`; optional `actions/add-to-project` for auto-adding new issues | drift detected in CI on a seeded mismatch | #32 | M | AI |
 
@@ -414,9 +414,9 @@ Fallback for non-systemd machines: `scripts/dev/compose.yaml` (`podman-compose`)
 | ✅ #36 | Dev directory & container runner | `scripts/dev/{up.sh,down.sh,reset.sh,smoke.sh,onboard.sh,configuration.yaml,.env.example,README.md}`, gitignored `config/`, `custom_components/ckw/` mount point; `mise run dev-up` starts HA rootless via plain `podman run` (no podman-compose on the target host) | `mise run dev-up` serves HA on :8123 with `config/` and the component mounted | #14, #118 | M | AI |
 | #37 | Quadlet unit + autostart (optional) | `scripts/dev/ha.container` installed to `~/.config/containers/systemd/ha-dev.container`, `%h` specifiers, pinned image, both volume mounts with `:Z` | `systemctl --user daemon-reload && systemctl --user start ha-dev` -> HA reachable, `ckw` listed | #36 | M | AI |
 | #38 | Image pinning & upgrade path | `HA_VERSION` in `.env.example`, bump procedure in README, smoke run after each bump | pinned tag documented, bump checklist exists | #36 | S | AI |
-| #39 | Fixture mode | `CKW_FIXTURE_MODE` read in `const.py`; `api.py` serves `tests/fixtures/*.json` instead of HTTP; log a loud warning when active; never active unless the env var is set | fixture instance shows configured values, `podman logs` shows zero outbound CKW calls | #61 | M | AI |
+| ✅ #39 | Fixture mode | `CKW_FIXTURE_MODE` read in `const.py`; `api.py` serves `tests/fixtures/*.json` instead of HTTP; log a loud warning when active; never active unless the env var is set | fixture instance shows configured values, `podman logs` shows zero outbound CKW calls | #61 | M | AI |
 | ✅ #40 | Onboarding script | `scripts/dev/onboard.sh`: wait for onboarding API, create owner user, optionally core config, then write a long-lived token to `.dev/token` (gitignored) | fresh volume → usable HA + token in under 3 minutes | #37 | M | AI |
-| #41 | HTTPS callback for real login | Caddy sidecar (or documented tunnel) exposing `https://ha-dev.local:8443`, mkcert CA steps, redirect URI `…/auth/external/callback` registered at CKW | real OAuth2 login succeeds on the dev instance | #1, #37 | L | AI+H |
+| ✅ #41 | HTTPS callback for real login | Caddy sidecar (or documented tunnel) exposing `https://ha-dev.local:8443`, mkcert CA steps, redirect URI `…/auth/external/callback` registered at CKW | real OAuth2 login succeeds on the dev instance | #1, #37 | L | AI+H |
 | ✅ #42 | Smoke script | `mise run dev-smoke` (G-6): `scripts/dev/smoke.sh` polls `/manifest.json`, asserts `ckw` in `components`, scans `podman logs` for `ERROR`/`Traceback`, calls `homeassistant.update_entity` on the CKW sensors with the token, exits non-zero on failure | exits 0 healthy / non-zero broken | #39, #40 | M | AI |
 | ✅ #43 | Statistics reset harness | `scripts/dev/reset-db.sh`: stop unit, delete `config/home-assistant_v2.db*`, start, wait ready | three consecutive reset→backfill runs end with identical sums (tests #85/#86) | #37, #85 | S | AI |
 | ✅ #44 | Podman runbook | `scripts/dev/README.md`: rootless prerequisites (subuid/subgid, `net.ipv4.ip_unprivileged_port_start`), SELinux `:Z`, `--userns=keep-id`, `mise run dev-logs`, `mise run dev-shell`, teardown, volume cleanup | a fresh machine follows it without improvising | #36 | S | AI |
@@ -441,7 +441,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | ✅ #148 | Session lifetime analysis + keep-alive rule | `docs/explanation/session-lifetime.md` (lifetime model in Keycloak terms, tolerance table, probe procedure, open questions incl. the unverified Android-app observation) and `docs/explanation/decisions/0007-token-lifetime-and-keepalive.md` (2 h poll, refresh before every request, single-flight lock, persist rotated token before next use, reauth on dead refresh token, ask CKW for `offline_access`) | lifetime model with numbers, keep-alive rule implementable without further analysis | #71, #51 | M | AI |
 | ✅ #52 | Reconfigure flow | Change client id / meter without deleting the entry | reconfigure reloads entry, statistics ids unchanged | #50 | S | AI |
 | ✅ #53 | Options flow | Poll interval (1–12 h, default 2 h) | options persist, coordinator picks up on reload | #50 | S | AI |
-| #54 | Config-flow tests | `pytest-homeassistant-custom-component`: happy path, invalid auth, cannot connect, already configured, multi-meter, reauth | `test_config_flow.py` ≥ 6 cases green | #48–#53 | M | AI |
+| ✅ #54 | Config-flow tests | `pytest-homeassistant-custom-component`: happy path, invalid auth, cannot connect, already configured, multi-meter, reauth | `test_config_flow.py` ≥ 6 cases green | #48–#53 | M | AI |
 | #55 | End-to-end login | Real browser login in `scripts/ha-dev` HA against `oe-wigger`; HA restart → no prompt | entry `loaded`, entities present, restart silent | #47, #5 | — | H |
 | #56 | Fallback: pasted-code flow | Only if CKW refuses callback registration: PKCE generate → show authorize URL → user pastes redirect URL → exchange | hidden menu entry `user_paste` works | #56 trigger | M | AI |
 | ~~#57~~ | Fallback: password + SMS OTP flow | Only if browser callback is unusable in practice: 2 steps (`/otp/login` → token with `code`), tokens only, no password stored, single-flight lock | login completes, no password in entry data | #57 trigger | L | AI+H — **dropped by ADR-0006** |
@@ -490,7 +490,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | ✅ #83 | Sensor tests | State + attributes from fixtures, multi-meter fan-out, missing interval (None) handling | `test_sensor.py` ≥ 5 cases | #76–#80 | M | AI |
 | ✅ #152 | Quarter-hour sensor (finest resolution) | `sensor.ckw_<meter>_quarter_hour`: kWh per 15-minute interval, `MEASUREMENT`, disabled by default, attributes `interval_start`/`interval_end`/`publication_delay_h`; fetched per poll for the current day only, no retroactive import (states are not writable in the past) | newest quarter-hour visible, history survives `purge_keep_days`, docs state the limits | #71, #124, #147 | M | AI |
 | ✅ #155 | Document the live-data gap and the companion path | `README.md` + `docs/explanation/data-model.md` state plainly: no live values, newest data is yesterday's, entity names/descriptions say so; a `docs/how-to/live-and-archive.md` explains pairing the archive (CKW) with a local live sensor (P1/IR reader or CT clamp) for automations, and why the totals of the two will differ (billed vs instantaneous) | a user understands within one screen why nothing is live and what to add if they need it | #94, #125 | S | AI |
-| #157 | Keep 15-minute history in HA's own DB | Quarter-hour states + `recorder.purge_keep_days` guidance (how-to), startup log line with the effective retention, and a low-severity repair issue when retention < 30 days; size estimate per meter-year; InfluxDB only for long retention or retroactive data | user with default settings is told how to keep it backend-free; two weeks visible in the history card | #152, #133, #124 | S | AI |
+| ✅ #157 | Keep 15-minute history in HA's own DB | Quarter-hour states + `recorder.purge_keep_days` guidance (how-to), startup log line with the effective retention, and a low-severity repair issue when retention < 30 days; size estimate per meter-year; InfluxDB only for long retention or retroactive data | user with default settings is told how to keep it backend-free; two weeks visible in the history card | #152, #133, #124 | S | AI |
 | ✅ #153 | ADR-0009: resolution and storage | Hourly long-term statistics for the dashboard; quarter-hour sensor bounded by `purge_keep_days`; no 15-min statistics import (dashboard resamples hourly); InfluxDB as the supported long-retention path; index + data-model updated | ADR merged | #93, #148 | S | AI |
 
 ## Phase 6 — Long-term statistics
@@ -503,7 +503,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | ❌ #87 | Cost statistics | Dropped by decision A2: kWh only, no cost entities or cost statistics | — | — | — | — |
 | ✅ #88 | DST correctness | Interval start = local midnight; 23/25 h days produce one statistic bucket per local day | unit tests | #73 | M | AI |
 | ✅ #89 | Change detection | Skip import if window checksum unchanged (avoids recorder churn) | log shows skip on unchanged poll | #85 | S | AI |
-| #90 | Validation against portal | Compare 3 random days against my.ckw.ch chart (manual cross-check) | numbers match ±0.1 kWh | #86, #5 | — | H |
+| ✅ #90 | Validation against portal | Compare 3 random days against my.ckw.ch chart (manual cross-check) | numbers match ±0.1 kWh | #86, #5 | — | H |
 
 ## Phase 7 — Documentation
 
@@ -561,13 +561,13 @@ registering `ckw.backfill` in `async_setup` — and `docs-actions` applies too, 
 |---|---|---|---|---|---|
 | ✅ #101 | `quality_scale.yaml` | All 20 Bronze rules with `done`/`exempt` + reason | hassfest quality-scale check green | #10 | AI |
 | ✅ #102 | Bronze audit | Walk every Bronze rule (action-setup, appropriate-polling, brands, common-modules, config-flow, config-flow-test-coverage, dependency-transparency, docs-*, entity-event-setup, entity-unique-id, has-entity-name, runtime-data, test-before-configure, test-before-setup, unique-config-entry) and record evidence | table in `docs/quality-scale.md` | #101 | AI+H |
-| #103 | Silver: `entity-unavailable` + `log-when-unavailable` | verified by pulling network in dev instance | observed behaviour matches | #82, #72 | H |
-| #104 | Silver: `config-entry-unloading` | reload from UI works | verified | #71 | AI+H |
+| ✅ #103 | Silver: `entity-unavailable` + `log-when-unavailable` | verified by pulling network in dev instance | observed behaviour matches | #82, #72 | H |
+| ✅ #104 | Silver: `config-entry-unloading` | reload from UI works | verified | #71 | AI+H |
 | ✅ #105 | Gold: `diagnostics` | `diagnostics.py` downloadable, redacted: masked delivery points, a hashed customer id, token booleans only, and a final pass that drops any credential-named value | dump inspected manually, `tests/test_diagnostics.py` | #66 | AI |
 | ✅ #106 | Silver: docs parameters | installation + options parameters documented | matches config flow | #94 | AI |
 | ✅ #107 | Fresh-instance smoke test | Second HA instance (or clean docker volume): HACS custom repo install → setup → dashboard | works end to end | all above | H |
 | #108 | Marketplace submission | PR to `hacs/default` (integration list), expect months of review | PR opened | #107 | H |
-| #109 | Release | `git tag v0.1.0`, notes generated, `hacs.json` version alignment | HACS shows the release | #107 | H |
+| ✅ #109 | Release | `git tag v0.1.0`, notes generated, `hacs.json` version alignment | HACS shows the release | #107 | H |
 | ✅ #110 | Publish the repo | Flip `gh repo edit --visibility public --accept-visibility-change-consequences` **only when**: README complete, no secrets in history (`git log -p \| grep -i token`), fixtures redacted, CI green, LICENSE detected. Then re-check topics + description, run `#107` as a stranger would | repo public, HACS custom-repo install works from a clean instance | #101, #94 | S | H |
 | ✅ #130 | Exception translations (Gold) | Every user-facing error from `strings.json` `exceptions:`, raised as `HomeAssistantError` with `translation_domain`/`translation_key`: invalid auth, rate limit (with reset time), no meters, unsupported meter, API unavailable; nothing raw reaches the UI | every failure path translated de/en, tests assert keys not strings | #63, #15 | S | AI |
 | ✅ #131 | Icon translations (Gold) | `icons.json` keyed by `translation_key`; no `_attr_icon` in Python | hassfest icons check green, zero icons in code | #76 | S | AI |
@@ -639,16 +639,16 @@ rejects a red push (#142). Locally that includes G-6 whenever the dev container 
 |---|---|---|
 | 0 External | 8 | 0 |
 | 1 Setup & governance | 31 | 32 |
-| 1b Podman dev instance | 12 | 7 |
+| 1b Podman dev instance | 12 | 9 |
 | 2 Auth | 14 | 10 |
 | 3 API | 10 | 9 |
 | 4 Coordinator | 8 | 8 |
-| 5 Entities | 14 | 13 |
-| 6 Statistics | 7 | 5 |
+| 5 Entities | 14 | 14 |
+| 6 Statistics | 7 | 6 |
 | 7 Docs | 24 | 24 |
-| 8 Quality/Release | 18 | 14 |
+| 8 Quality/Release | 18 | 17 |
 | 9 Optional | 8 | 1 |
-| **Total** | **152** | **102** |
+| **Total** | **152** | **112** |
 
 ## Critical path
 
