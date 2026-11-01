@@ -300,6 +300,7 @@ them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritte
 | ✅ #17 | pre-commit (locked) | Hooks: `check-added-large-files`, `check-yaml`, `check-json`, `check-merge-conflict`, `check-case-conflict`, `detect-private-key`, `end-of-file-fixer`, `trailing-whitespace`, `mixed-line-ending`, `gitleaks --staged`, `ruff-check`, `ruff-format`, artifact block (`.dev/`, `*.token`, `config/.storage/`, `*.db`); tools pinned in `mise.toml`; installed for `pre-commit` + `pre-push` | `pre-commit run --all-files` green, a staged fake token is rejected | #9 | S | AI |
 | #118 | Secret scanning in CI + push protection | `.github/workflows/secrets.yml` (`gitleaks detect --redact` on push/PR, works on a private repo with free minutes), enable GitHub secret scanning + push protection at publish (#110, free only when public), document policy in `SECURITY.md` (#25) | workflow fails on a seeded leak, policy documented | #18, #25 | S | AI |
 | #117 | mise toolchain & task runner | Pin `python`, `uv`, `ruff`, `gitleaks`, `pipx:pre-commit` in `mise.toml`; expose every workflow as a mise task (`setup`, `dev-up/-down/-logs/-shell/-reset/-smoke`, `lint`, `fmt`, `test`, `hooks`, `check`, `issues`); CI and docs call the tasks only, never raw interpreters. Podman stays host-level (rootless prerequisites in #44) | fresh clone: `mise install && mise run setup && mise run check` succeeds; no doc, CI job or AGENTS.md line invokes `python`, `pip` or `podman` directly | #9 | M | AI |
+| #142 | Pre-push gate: full check before any merge | Extend the `pre-push` hook to run `mise run check` (lint, docs, test, hooks) and abort on failure; worktree agents may only `/merge` when it is green; `MISE_SKIP_GATE=1` escape hatch documented for the release manager. Needed because GitHub branch protection is unavailable on a private repo without Pro, and merges happen locally | a failing test or lint error rejects the push in under 90 s | #117, #127 | S | AI |
 | ✅ #18 | CI workflows | `.github/workflows/tests.yaml`: jobs `pre-commit`, `pytest`, `hassfest` (`home-assistant/actions/hassfest`), `hacs` (`hacs/action` category integration) | all jobs green on GitHub | #13–#17 | S | AI |
 | #19 | Dev instance plan | Dev HA is specified in **Phase 1b** (Podman); this task only reserves the directory `scripts/dev/` | `scripts/dev/` exists or is created by #36 | #14 | S | AI |
 | #20 | `AGENTS.md` + `CONTRIBUTING.md` | agent contract (commands, gates, hard rules) and human PR checklist | both written, gates referenced by exact command | #17 | S | AI |
@@ -577,7 +578,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | Phase | Tasks | Done |
 |---|---|---|
 | 0 External | 8 | 0 |
-| 1 Setup & governance | 29 | 8 |
+| 1 Setup & governance | 30 | 8 |
 | 1b Podman dev instance | 12 | 0 |
 | 2 Auth | 12 | 0 |
 | 3 API | 10 | 0 |
@@ -587,7 +588,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 7 Docs | 24 | 11 |
 | 8 Quality/Release | 18 | 0 |
 | 9 Optional | 7 | 0 |
-| **Total** | **143** | **18** |
+| **Total** | **144** | **18** |
 
 ## Critical path
 
