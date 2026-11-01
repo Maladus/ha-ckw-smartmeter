@@ -10,6 +10,12 @@ user-visible behaviour in a minor release; every such change is listed.
 
 ### Added
 
+- `mise run dev-env-mock` and `mise run dev-env-prod` switch the dev instance between the local mock and
+  the production CKW endpoints in one command. `scripts/dev/switch-env.sh` keeps the three `CKW_*`
+  overrides in a marked block in the gitignored `scripts/dev/.env`, leaves everything else (notably
+  `HA_VERSION`) alone, restarts the container so the new endpoints take effect, and prints which mode is
+  active; `--check` prints the resolved endpoints without writing anything. `prod` needs the client id
+  `oe-wigger` and the redirect URI registered at CKW, `mock` needs no CKW account at all.
 - [Reference: fresh-install verification](docs/reference/fresh-install-check.md), the recorded acceptance run on
   a clean Home Assistant instance: the public repository cloned into an empty `config/`, onboarding over the API,
   the mock login with application credentials, the meter picker, the created entry, its entities, the 79 imported
