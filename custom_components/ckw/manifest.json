@@ -1,6 +1,9 @@
 {
   "domain": "ckw",
   "name": "CKW Smart Meter",
+  "after_dependencies": [
+    "recorder"
+  ],
   "codeowners": [
     "@Maladus"
   ],
@@ -17,8 +20,5 @@
   ],
   "quality_scale": "bronze",
   "requirements": [],
-  "version": "0.1.0",
-  "after_dependencies": [
-    "recorder"
-  ]
+  "version": "0.1.0"
 }
