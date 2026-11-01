@@ -1,0 +1,25 @@
+# Home Assistant configuration of the local dev instance (#36).
+#
+# `mise run dev-up` copies this file to config/configuration.yaml once, and only
+# when config/configuration.yaml does not exist yet. Edit the copy in config/
+# for experiments; it survives a restart and is gitignored. Delete it (or run
+# `mise run dev-reset --full`) to get this seed back.
+#
+# The mock CKW API (`mise run dev-mock`, port 8787) runs on the host, not in the
+# container: from inside this instance it is reachable at
+# http://host.containers.internal:8787 (scripts/dev/mock/README.md).
+
+# The default integration set (frontend, http, recorder, history, energy, ...).
+default_config:
+
+# Debug logging for the integration under development only. Everything else
+# stays at Home Assistant's default level, so `mise run dev-logs` stays readable.
+logger:
+  default: warning
+  logs:
+    custom_components.ckw: debug
+
+# Statistics and backfill tests (#43, #85, #86) need history that outlives the
+# 10-day default; 30 days keeps the dev database small enough to reset quickly.
+recorder:
+  purge_keep_days: 30

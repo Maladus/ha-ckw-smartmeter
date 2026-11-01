@@ -6,6 +6,34 @@ python = "3.13"
 ruff = "0.17.3"
 uv = "latest"
 
+[tasks.dev-up]
+description = "Start (or restart) the Home Assistant dev instance in rootless Podman"
+run = "bash scripts/dev/up.sh"
+
+[tasks.dev-down]
+description = "Stop and remove the dev container (config/ is kept)"
+run = "bash scripts/dev/down.sh"
+
+[tasks.dev-logs]
+description = "Follow the dev container's log (Ctrl-C stops the follow, not the instance)"
+run = "bash scripts/dev/logs.sh"
+
+[tasks.dev-shell]
+description = "Open a bash shell inside the dev container"
+run = "bash scripts/dev/shell.sh"
+
+[tasks.dev-reset]
+description = "Restart the dev instance on a clean recorder DB (--full also wipes .storage)"
+run = "bash scripts/dev/reset.sh"
+
+[tasks.dev-smoke]
+description = "Assert the dev instance is healthy (gate G-6)"
+run = "bash scripts/dev/smoke.sh"
+
+[tasks.dev-onboard]
+description = "Complete Home Assistant onboarding through the API and store .dev/token"
+run = "bash scripts/dev/onboard.sh"
+
 [tasks.dev-mock]
 description = "Start the local mock CKW API + fake Keycloak"
 run = "uv run python scripts/dev/mock/app.py --port 8787"
