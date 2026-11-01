@@ -11,8 +11,8 @@ statistics (Energy dashboard).
 - Auth: CKW Single Sign-On (Keycloak) `https://id.ckw.ch/realms/CKW-prod`, public client `oe-wigger`
 - Data: daily, available until yesterday, per meter, HT/NT quantities in kWh + amounts in CHF
 - Target: HACS/Marketplace installable, HA quality scale **Gold** — Bronze at v0.1.0, Silver at v0.3.0,
-  Gold (all 21 rules, 54 rules total) at v1.0.0. Platinum is out of scope (it grades the Python library,
-  not the integration).
+  Gold (all 21 rules, 54 rules total) at v1.0.0. **Platinum is deferred**: it grades the Python library,
+  not the integration, and is only reconsidered once Gold is reached.
 
 ## Project goal
 
@@ -486,7 +486,7 @@ that tier **and all lower tiers** is `done` or `exempt` with a reason. Tracking:
 | **Bronze** | covered by #10–#35, #101, #102 | — |
 | **Silver** | #48 (reauth), #57 (unload), #63 (exceptions), #99 (logs), #106 (doc params) | #135 `parallel-updates`, #136 `test-coverage` |
 | **Gold** | #92/#124/#125/#126/#128 (docs), #105 (diagnostics), #52 (reconfigure), #80 (device class/category) | #130 `exception-translations`, #131 `icon-translations`, #132 `entity-disabled-by-default`, #133 `repair-issues`, #134 `dynamic-devices` + `stale-devices` |
-| **Platinum** | **out of scope** | needs a separately published client library (`async-dependency`, `inject-websession`) plus strict typing on top of all 54 Gold/Silver/Bronze rules. User-visible benefit: none; cost: a second repo, PyPI releases, version pinning. #139/#140 closed as not planned |
+| **Platinum** | **deferred — revisit only after Gold is verified at v1.0.0** | needs a separately published client library (`async-dependency`, `inject-websession`) plus strict typing on top of all 54 rules. No user-visible benefit; cost: second repo, PyPI releases, version pinning. #139/#140 closed as not planned; reopening them is a conscious post-Gold decision, not a work item |
 
 Expected `exempt` (with reason, checked by #137): `discovery`, `discovery-update-info` (cloud service,
 nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `docs-actions`,
