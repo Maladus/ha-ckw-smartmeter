@@ -18,6 +18,7 @@ not edit it.
 | [0006](0006-auth-measured-constraints.md) | Restrict authentication to the browser authorization-code flow | accepted | 2026-11-01 |
 | [0007](0007-token-lifetime-and-keepalive.md) | Keep the session alive with the poll, reauthenticate only on a dead refresh token | proposed | 2026-11-01 |
 | [0008](0008-multi-account.md) | Support multiple CKW accounts as separate config entries | accepted | 2026-11-01 |
+| [0009](0009-resolution-and-storage.md) | Keep statistics hourly and quarter-hour history in states | accepted | 2026-11-01 |
 
 ## Lifecycle
 

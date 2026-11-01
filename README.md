@@ -7,6 +7,10 @@ Home Assistant.
 
 Status: early development. The first installable release is v0.1.0.
 
+**Not real-time:** the newest value is 1–3 days old. Your meter is read once a day and CKW publishes
+late, so this integration is an archive of billed days, not a monitor. For live power, see
+[how-to: live values next to the archive](docs/how-to/live-and-archive.md).
+
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ## What you get

@@ -32,6 +32,7 @@ One goal per page, steps only, no theory.
 | `how-to/install.md` (planned, #121) | Installing, updating and removing the integration through HACS. | Users |
 | `how-to/reauthenticate.md` (planned, #122) | Repairing a login CKW no longer accepts, without losing the imported history. | Users |
 | `how-to/backfill-history.md` (planned, #123) | Re-running the history import for a Zählpunkt that came back with gaps. | Users |
+| [live-and-archive.md](how-to/live-and-archive.md) | Pairing the CKW archive with a local live source on the meter, and why the two numbers differ. | Users |
 | `how-to/debug-connection.md` (planned, #99) | Reading the log, the diagnostics export and the error codes when polling fails. | Users, contributors |
 | `how-to/work-with-ai-agents.md` (planned, #98) | Driving this repository with an AI agent under the contract in `AGENTS.md`. | Contributors, agents |
 | [commits.md](how-to/commits.md) | Commit types, the agent co-author trailer and how to find commits by model. | Contributors |
@@ -62,7 +63,7 @@ Why it is like this, and which alternatives lost.
 | [data-model.md](explanation/data-model.md) | Why values arrive 1 to 3 days late, what HT/NT, billed quantity and CHF amounts mean, and the known limitations. | Users, contributors |
 | [session-lifetime.md](explanation/session-lifetime.md) | How long a CKW login holds, what the 6 h refresh token can and cannot survive, the keep-alive rule the coordinator follows and the realistic target (parity with CKW's own app). | Contributors |
 | [quarter-hour-history.md](explanation/quarter-hour-history.md) | The measured answer to whether 15-minute history can be imported as statistics (it cannot), and what that means for the backfill. | Contributors |
-| [decisions/README.md](explanation/decisions/README.md) | The ADR index from ADR-0001 to ADR-0007, each recording one decision and the alternatives rejected. | Contributors |
+| [decisions/README.md](explanation/decisions/README.md) | The ADR index from ADR-0001 to ADR-0009, each recording one decision and the alternatives rejected. | Contributors |
 
 ## Conventions
 

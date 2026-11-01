@@ -175,6 +175,7 @@ Quality-scale rule `docs-known-limitations`.
 - [Architecture](architecture.md) — where the coordinator and the statistics import sit.
 - [ADR-0002](decisions/0002-statistics-strategy.md) — why history is imported as entity statistics.
 - [ADR-0004](decisions/0004-poll-interval-and-data-lag.md) — why 2 h, why 7 days, and the observed 1–3 day lag.
+- [ADR-0009](decisions/0009-resolution-and-storage.md) — hourly statistics, quarter-hour states, and why no sub-hourly history can be imported.
 - [Session lifetime](session-lifetime.md) — how long a login holds, and what forces a reauth.
 - [OpenEnergy API reference](../reference/ckw-openenergy-api.md) — every field named on this page.
 - [Glossary](../reference/glossary.md) — HT/NT, Zählpunkt, billed vs physical quantity.
