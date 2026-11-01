@@ -324,13 +324,13 @@ them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritte
 | ID | Task | Details | Done when | Deps | Size | Owner |
 |---|---|---|---|---|---|---|
 | ✅ #9 | Init repo | `git init`, `.gitignore` (`.storage/`, `secrets/`, `*.token`, `__pycache__`, `.venv`), `.editorconfig`, `.gitattributes` (LF) | repo public-ready | — | S | AI |
-| #10 | `manifest.json` | `domain: ckw`, `name`, `codeowners`, `config_flow: true`, `integration_type: service`, `iot_class: cloud_polling`, `quality_scale: bronze`, `dependencies: ["application_credentials"]`, `requirements: []`, `version: 0.0.1`, `documentation`, `issue_tracker` | hassfest passes | #9 | S | AI |
-| #11 | `hacs.json` | `name`, `country: "CH"`, `render_readme: true`, `homeassistant` min version, optional `zip_release` + `filename` | HACS action passes | #9 | S | AI |
-| #12 | Brand assets | `custom_components/ckw/brand/icon.png` (256²), `logo.png`; neutral CKW-ish colours (no trademark misuse) | files present, HACS action green | #9 | S | AI |
-| #13 | `const.py` skeleton | `DOMAIN`, `API_BASE_URL`, `AUTHORIZE_URL`, `TOKEN_URL`, `SCOPES`, `AGGREGATIONS`, `DEFAULT_POLL_HOURS=2`, `BACKFILL_DAYS=730`, `REFRESH_SKEW=60`, `PLATFORMS` | imports cleanly, ruff clean | #10 | S | AI |
-| #14 | `__init__.py` stub | `async_setup_entry`/`async_unload_entry` no-ops + `PLATFORMS = [Platform.SENSOR]` | HA dev instance loads entry without errors | #10 | S | AI |
-| #15 | `strings.json` + translations | `config`, `config.error`, `config.abort`, `entity.sensor.*`, `exceptions` keys; `translations/de.json`, `en.json` | hassfest translations check green | #10 | S | AI |
-| #16 | Test bootstrap | `pyproject.toml` (ruff, pytest config, `pytest-homeassistant-custom-component` optional extra), `tests/conftest.py` | `pytest -q` runs (0 tests ok) | #9 | S | AI |
+| ✅ #10 | `manifest.json` | `domain: ckw`, `name`, `codeowners`, `config_flow: true`, `integration_type: service`, `iot_class: cloud_polling`, `quality_scale: bronze`, `dependencies: ["application_credentials"]`, `requirements: []`, `version: 0.0.1`, `documentation`, `issue_tracker` | hassfest passes | #9 | S | AI |
+| ✅ #11 | `hacs.json` | `name`, `country: "CH"`, `render_readme: true`, `homeassistant` min version, optional `zip_release` + `filename` | HACS action passes | #9 | S | AI |
+| ✅ #12 | Brand assets | `custom_components/ckw/brand/icon.png` (256²), `logo.png`; neutral CKW-ish colours (no trademark misuse) | files present, HACS action green | #9 | S | AI |
+| ✅ #13 | `const.py` skeleton | `DOMAIN`, `API_BASE_URL`, `AUTHORIZE_URL`, `TOKEN_URL`, `SCOPES`, `AGGREGATIONS`, `DEFAULT_POLL_HOURS=2`, `BACKFILL_DAYS=730`, `REFRESH_SKEW=60`, `PLATFORMS` | imports cleanly, ruff clean | #10 | S | AI |
+| ✅ #14 | `__init__.py` stub | `async_setup_entry`/`async_unload_entry` no-ops + `PLATFORMS = [Platform.SENSOR]` | HA dev instance loads entry without errors | #10 | S | AI |
+| ✅ #15 | `strings.json` + translations | `config`, `config.error`, `config.abort`, `entity.sensor.*`, `exceptions` keys; `translations/de.json`, `en.json` | hassfest translations check green | #10 | S | AI |
+| ✅ #16 | Test bootstrap | `pyproject.toml` (ruff, pytest config, `pytest-homeassistant-custom-component` optional extra), `tests/conftest.py` | `pytest -q` runs (0 tests ok) | #9 | S | AI |
 | ✅ #17 | pre-commit (locked) | Hooks: `check-added-large-files`, `check-yaml`, `check-json`, `check-merge-conflict`, `check-case-conflict`, `detect-private-key`, `end-of-file-fixer`, `trailing-whitespace`, `mixed-line-ending`, `gitleaks --staged`, `ruff-check`, `ruff-format`, artifact block (`.dev/`, `*.token`, `config/.storage/`, `*.db`); tools pinned in `mise.toml`; installed for `pre-commit` + `pre-push` | `pre-commit run --all-files` green, a staged fake token is rejected | #9 | S | AI |
 | #118 | Secret scanning in CI + push protection | `.github/workflows/secrets.yml` (`gitleaks detect --redact` on push/PR, works on a private repo with free minutes), enable GitHub secret scanning + push protection at publish (#110, free only when public), document policy in `SECURITY.md` (#25) | workflow fails on a seeded leak, policy documented | #18, #25 | S | AI |
 | #117 | mise toolchain & task runner | Pin `python`, `uv`, `ruff`, `gitleaks`, `pipx:pre-commit` in `mise.toml`; expose every workflow as a mise task (`setup`, `dev-up/-down/-logs/-shell/-reset/-smoke`, `lint`, `fmt`, `test`, `hooks`, `check`, `issues`); CI and docs call the tasks only, never raw interpreters. Podman stays host-level (rootless prerequisites in #44) | fresh clone: `mise install && mise run setup && mise run check` succeeds; no doc, CI job or AGENTS.md line invokes `python`, `pip` or `podman` directly | #9 | M | AI |
@@ -401,16 +401,16 @@ Fallback for non-systemd machines: `scripts/dev/compose.yaml` (`podman-compose`)
 
 | ID | Task | Details | Done when | Deps | Size | Owner |
 |---|---|---|---|---|---|---|
-| #36 | Dev directory & container runner | `scripts/dev/{up.sh,down.sh,reset.sh,smoke.sh,onboard.sh,configuration.yaml,.env.example,README.md}`, gitignored `config/`, `custom_components/ckw/` mount point; `mise run dev-up` starts HA rootless via plain `podman run` (no podman-compose on the target host) | `mise run dev-up` serves HA on :8123 with `config/` and the component mounted | #14, #118 | M | AI |
+| ✅ #36 | Dev directory & container runner | `scripts/dev/{up.sh,down.sh,reset.sh,smoke.sh,onboard.sh,configuration.yaml,.env.example,README.md}`, gitignored `config/`, `custom_components/ckw/` mount point; `mise run dev-up` starts HA rootless via plain `podman run` (no podman-compose on the target host) | `mise run dev-up` serves HA on :8123 with `config/` and the component mounted | #14, #118 | M | AI |
 | #37 | Quadlet unit + autostart (optional) | `scripts/dev/ha.container` installed to `~/.config/containers/systemd/ha-dev.container`, `%h` specifiers, pinned image, both volume mounts with `:Z` | `systemctl --user daemon-reload && systemctl --user start ha-dev` -> HA reachable, `ckw` listed | #36 | M | AI |
 | #38 | Image pinning & upgrade path | `HA_VERSION` in `.env.example`, bump procedure in README, smoke run after each bump | pinned tag documented, bump checklist exists | #36 | S | AI |
 | #39 | Fixture mode | `CKW_FIXTURE_MODE` read in `const.py`; `api.py` serves `tests/fixtures/*.json` instead of HTTP; log a loud warning when active; never active unless the env var is set | fixture instance shows configured values, `podman logs` shows zero outbound CKW calls | #61 | M | AI |
-| #40 | Onboarding script | `scripts/dev/onboard.sh`: wait for onboarding API, create owner user, optionally core config, then write a long-lived token to `.dev/token` (gitignored) | fresh volume → usable HA + token in under 3 minutes | #37 | M | AI |
+| ✅ #40 | Onboarding script | `scripts/dev/onboard.sh`: wait for onboarding API, create owner user, optionally core config, then write a long-lived token to `.dev/token` (gitignored) | fresh volume → usable HA + token in under 3 minutes | #37 | M | AI |
 | #41 | HTTPS callback for real login | Caddy sidecar (or documented tunnel) exposing `https://ha-dev.local:8443`, mkcert CA steps, redirect URI `…/auth/external/callback` registered at CKW | real OAuth2 login succeeds on the dev instance | #1, #37 | L | AI+H |
-| #42 | Smoke script | `mise run dev-smoke` (G-6): `scripts/dev/smoke.sh` polls `/manifest.json`, asserts `ckw` in `components`, scans `podman logs` for `ERROR`/`Traceback`, calls `homeassistant.update_entity` on the CKW sensors with the token, exits non-zero on failure | exits 0 healthy / non-zero broken | #39, #40 | M | AI |
-| #43 | Statistics reset harness | `scripts/dev/reset-db.sh`: stop unit, delete `config/home-assistant_v2.db*`, start, wait ready | three consecutive reset→backfill runs end with identical sums (tests #85/#86) | #37, #85 | S | AI |
-| #44 | Podman runbook | `scripts/dev/README.md`: rootless prerequisites (subuid/subgid, `net.ipv4.ip_unprivileged_port_start`), SELinux `:Z`, `--userns=keep-id`, `mise run dev-logs`, `mise run dev-shell`, teardown, volume cleanup | a fresh machine follows it without improvising | #36 | S | AI |
-| #45 | Runbook wired into docs | "Test locally" section in `AGENTS.md` and `CONTRIBUTING.md` using only mise tasks (`mise run setup`, `dev-up`, `dev-smoke`, `dev-reset`); gate G-6 references `mise run dev-smoke` | commands copy-pasteable, linked from both files | #42, #20 | S | AI |
+| ✅ #42 | Smoke script | `mise run dev-smoke` (G-6): `scripts/dev/smoke.sh` polls `/manifest.json`, asserts `ckw` in `components`, scans `podman logs` for `ERROR`/`Traceback`, calls `homeassistant.update_entity` on the CKW sensors with the token, exits non-zero on failure | exits 0 healthy / non-zero broken | #39, #40 | M | AI |
+| ✅ #43 | Statistics reset harness | `scripts/dev/reset-db.sh`: stop unit, delete `config/home-assistant_v2.db*`, start, wait ready | three consecutive reset→backfill runs end with identical sums (tests #85/#86) | #37, #85 | S | AI |
+| ✅ #44 | Podman runbook | `scripts/dev/README.md`: rootless prerequisites (subuid/subgid, `net.ipv4.ip_unprivileged_port_start`), SELinux `:Z`, `--userns=keep-id`, `mise run dev-logs`, `mise run dev-shell`, teardown, volume cleanup | a fresh machine follows it without improvising | #36 | S | AI |
+| ✅ #45 | Runbook wired into docs | "Test locally" section in `AGENTS.md` and `CONTRIBUTING.md` using only mise tasks (`mise run setup`, `dev-up`, `dev-smoke`, `dev-reset`); gate G-6 references `mise run dev-smoke` | commands copy-pasteable, linked from both files | #42, #20 | S | AI |
 | ✅ #141 | Local mock CKW API for offline development | `scripts/dev/mock/` (aiohttp) + fake Keycloak: three endpoints from `tests/fixtures/`, auth/token/otp/password endpoints, `x-ratelimit-*` headers, `?fail=`/`?slow=` injection, deterministic fixture generator, `mise run dev-mock` | full setup + one poll against the mock, `?fail=401` produces the reauth path | #91, #39 | M | AI |
 | ✅ #144 | Mock and fixtures must match the measured API | Rework mock + fixtures against `docs/reference/ckw-openenergy-api-verification.md`: `customer.User[].locations[].meters[]`, enums `SMART/ANALOGUE`, `import/export/consumption/production`, `elec/gas`, `anzahl_linien_* = 1` normally, 400 missing-token gate, documented error bodies, `minute(s)` = 15-minute rows, `x-ratelimit-limit: 4`, unknown-key tolerance, `?fail=quota`, `?range=too-big` | fixtures and tests match the measured shapes; no test asserts contradicted behaviour | #141, #143 | M | AI |
 
@@ -621,16 +621,16 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | Phase | Tasks | Done |
 |---|---|---|
 | 0 External | 8 | 0 |
-| 1 Setup & governance | 31 | 8 |
-| 1b Podman dev instance | 12 | 2 |
+| 1 Setup & governance | 31 | 16 |
+| 1b Podman dev instance | 12 | 6 |
 | 2 Auth | 14 | 1 |
-| 3 API | 10 | 0 |
+| 3 API | 10 | 7 |
 | 4 Coordinator | 8 | 0 |
 | 5 Entities | 14 | 1 |
 | 6 Statistics | 7 | 0 |
 | 7 Docs | 24 | 13 |
 | 8 Quality/Release | 18 | 0 |
-| 9 Optional | 8 | 0 |
+| 9 Optional | 8 | 1 |
 | **Total** | **152** | **33** |
 
 ## Critical path
