@@ -10,6 +10,11 @@ user-visible behaviour in a minor release; every such change is listed.
 
 ### Added
 
+- [Reference: fresh-install verification](docs/reference/fresh-install-check.md), the recorded acceptance run on
+  a clean Home Assistant instance: the public repository cloned into an empty `config/`, onboarding over the API,
+  the mock login with application credentials, the meter picker, the created entry, its entities, the 79 imported
+  statistics rows, a diagnostics download without a token or a full delivery point, and the INFO lines of a 730-day
+  backfill. It also records what a first install does *not* show and the one deprecation warning a user will meet (#107).
 - `mise run setup` bootstraps a fresh clone in one step: the pinned toolchain, the `.venv` the gates use,
   the `pre-commit`, `commit-msg` and `pre-push` git hooks, and the gitignored `config/` and
   `scripts/dev/.env`. Every workflow is a documented mise task that runs from the repository root, and CI

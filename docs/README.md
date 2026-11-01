@@ -47,6 +47,7 @@ Lookup only: exact names, values and limits, with no steps.
 | --- | --- | --- |
 | [ckw-openenergy-api.md](reference/ckw-openenergy-api.md) | The endpoints, fields, rate limits and error codes of the CKW OpenEnergy API as CKW publishes them. | Contributors |
 | [ckw-openenergy-api-verification.md](reference/ckw-openenergy-api-verification.md) | What the live endpoints and the deployed API model actually return, and where that contradicts the transcription. | Contributors |
+| [fresh-install-check.md](reference/fresh-install-check.md) | The recorded acceptance run on a clean instance: install from the published repository, mock login, entities, statistics, diagnostics, log lines and findings. | Maintainers, contributors |
 | [glossary.md](reference/glossary.md) | One definition per CKW and Home Assistant term used anywhere in this repository. | Everyone |
 | [entities.md](reference/entities.md) | Every entity and statistic with its unit, device class, unique id, statistic id, cadence and Energy-dashboard eligibility. | Users, contributors |
 | [configuration.md](reference/configuration.md) | Every setup and options field with its type, allowed values, default and effect, plus the `ckw.backfill` action and the development-only endpoint overrides. | Users |
