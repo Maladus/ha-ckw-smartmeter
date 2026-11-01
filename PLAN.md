@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: <https://github.com/Maladus/ha-ckw-smartmeter> (`custom_components/ckw`) — private until #110
-Issues: #1–#153, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
+Issues: #1–#155, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -266,6 +266,7 @@ CI or AGENTS.md. Tracked as #117.
 | 2026-11-01 | Entities enabled by default | 4 core per meter; HT/NT, quarter-hour and delay diagnostics off (#83, #152) |
 | 2026-11-01 | Poll interval | default 2 h, selectable 1-12 h (#53) |
 | 2026-11-01 | Podman dev instance on this machine | yes — image pulled, `mise run dev-up` is the test path |
+| 2026-11-01 | Live data | **impossible with this API** — the meter may legally be read once per day, so every value is at best "until yesterday"; the integration is an archive (daily kWh + 15-min history as available), not a monitor. Live power requires a local source (P1/IR reader or a CT clamp) and is out of scope (#155) |
 | 2026-11-01 | 15-minute resolution | quarter-hour **sensor** (history from installation, `purge_keep_days`-bounded), no retroactive 15-min import, InfluxDB for longer retention (#152, #153) |
 
 ## MVP definition (no CKW answer required)
@@ -476,6 +477,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | #82 | Availability | `available` false when coordinator fails; entities restore on success | matches Silver `entity-unavailable` | #70 | S | AI |
 | #83 | Sensor tests | State + attributes from fixtures, multi-meter fan-out, missing interval (None) handling | `test_sensor.py` ≥ 5 cases | #76–#80 | M | AI |
 | #152 | Quarter-hour sensor (finest resolution) | `sensor.ckw_<meter>_quarter_hour`: kWh per 15-minute interval, `MEASUREMENT`, disabled by default, attributes `interval_start`/`interval_end`/`publication_delay_h`; fetched per poll for the current day only, no retroactive import (states are not writable in the past) | newest quarter-hour visible, history survives `purge_keep_days`, docs state the limits | #71, #124, #147 | M | AI |
+| #155 | Document the live-data gap and the companion path | `README.md` + `docs/explanation/data-model.md` state plainly: no live values, newest data is yesterday's, entity names/descriptions say so; a `docs/how-to/live-and-archive.md` explains pairing the archive (CKW) with a local live sensor (P1/IR reader or CT clamp) for automations, and why the totals of the two will differ (billed vs instantaneous) | a user understands within one screen why nothing is live and what to add if they need it | #94, #125 | S | AI |
 | #153 | ADR-0009: resolution and storage | Hourly long-term statistics for the dashboard; quarter-hour sensor bounded by `purge_keep_days`; no 15-min statistics import (dashboard resamples hourly); InfluxDB as the supported long-retention path; index + data-model updated | ADR merged | #93, #148 | S | AI |
 
 ## Phase 6 — Long-term statistics
@@ -620,12 +622,12 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 2 Auth | 14 | 1 |
 | 3 API | 10 | 0 |
 | 4 Coordinator | 8 | 0 |
-| 5 Entities | 12 | 0 |
+| 5 Entities | 13 | 0 |
 | 6 Statistics | 7 | 0 |
 | 7 Docs | 24 | 13 |
 | 8 Quality/Release | 18 | 0 |
 | 9 Optional | 7 | 0 |
-| **Total** | **148** | **23** |
+| **Total** | **149** | **24** |
 
 ## Critical path
 
