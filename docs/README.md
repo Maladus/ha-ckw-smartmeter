@@ -59,7 +59,8 @@ Why it is like this, and which alternatives lost.
 | --- | --- | --- |
 | [architecture.md](explanation/architecture.md) | The system in five arc42 chapters: context, building blocks, one runtime sequence and the ADRs behind each block. | Contributors |
 | [data-model.md](explanation/data-model.md) | Why values stop at yesterday, what HT/NT, billed quantity and CHF amounts mean, and the known limitations. | Users, contributors |
-| [decisions/README.md](explanation/decisions/README.md) | The ADR index for ADR-0001 to ADR-0005, each recording one decision and the alternatives rejected. | Contributors |
+| [session-lifetime.md](explanation/session-lifetime.md) | How long a CKW login holds, what the 6 h refresh token can and cannot survive, and the keep-alive rule the coordinator follows. | Contributors |
+| [decisions/README.md](explanation/decisions/README.md) | The ADR index from ADR-0001 to ADR-0007, each recording one decision and the alternatives rejected. | Contributors |
 
 ## Conventions
 

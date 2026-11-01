@@ -129,7 +129,10 @@ once. The same limit bounds how aggressively the 7-day window may be refetched a
 
 Quality-scale rule `docs-data-update`.
 
-- Poll interval: 2 h by default, configurable 1–12 h in the options flow.
+- Poll interval: 2 h by default, configurable 1–12 h in the options flow. The interval is also the
+  session keep-alive, and the refresh token lives 6 h, so anything at or above 6 h breaks the login
+  between polls unless CKW grants `offline_access` — [session lifetime](session-lifetime.md), and
+  follow-up #53 for the range itself.
 - Each poll refetches the last **7 days** (`days` aggregation), so missed polls and CKW corrections
   repair themselves; anything older only changes through the backfill.
 - Data is available **until yesterday** — the sensors show the last closed day, never today.
@@ -150,12 +153,14 @@ Quality-scale rule `docs-known-limitations`.
 | CKW only | Other grid operators need their own integration; this one has one provider. |
 | No feed-in tariff calculation | Production or PV feed-in metering is not implemented (tracked separately). |
 | 7-day self-healing window | A gap older than 7 days does not repair itself; it needs the backfill. |
+| Occasional CKW login | A dead refresh token needs one browser login: an outage longer than the poll leaves room for, or CKW's own absolute session cap. The imported history is kept. |
 
 ## Related
 
 - [Architecture](architecture.md) — where the coordinator and the statistics import sit.
 - [ADR-0002](decisions/0002-statistics-strategy.md) — why history is imported as entity statistics.
 - [ADR-0004](decisions/0004-poll-interval-and-data-lag.md) — why 2 h, why 7 days, why one day late.
+- [Session lifetime](session-lifetime.md) — how long a login holds, and what forces a reauth.
 - [OpenEnergy API reference](../reference/ckw-openenergy-api.md) — every field named on this page.
 - [Glossary](../reference/glossary.md) — HT/NT, Zählpunkt, billed vs physical quantity.
 - [Entities](../reference/entities.md) — which sensor carries which number, with units and classes.
