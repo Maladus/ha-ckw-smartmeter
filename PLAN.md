@@ -633,7 +633,7 @@ registering `ckw.backfill` in `async_setup` — and `docs-actions` applies too, 
 | 5 Entities | 14 | 13 |
 | 6 Statistics | 7 | 5 |
 | 7 Docs | 24 | 21 |
-| 8 Quality/Release | 18 | 11 |
+| 8 Quality/Release | 18 | 12 |
 | 9 Optional | 8 | 1 |
 | **Total** | **152** | **80** |
 
