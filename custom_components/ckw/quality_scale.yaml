@@ -9,22 +9,25 @@
 # Platinum is deliberately not listed: it grades a separately published client
 # library and is out of scope until Gold is verified (PLAN.md, GOAL.md).
 #
-# Status: this is an audit, not a claim. Two Bronze rules are still `todo`
-# (action-setup, config-flow-test-coverage), so `quality_scale: bronze` in
-# manifest.json is ahead of the evidence until they are fixed.
+# Status: this is an audit, not a claim. All 20 Bronze and all 10 Silver rules
+# are `done` or `exempt` with a written reason, so manifest.json may claim
+# `quality_scale: silver`. Gold still has three open rules (diagnostics,
+# docs-examples, docs-troubleshooting), each with its closing issue below.
 
 rules:
   # --- Bronze (20 rules) ---
 
   action-setup:
-    status: todo
+    status: done
     comment: >-
       The integration has one action, ckw.backfill, and it is registered from
-      async_setup_entry (__init__.py:127 -> statistics.py:707), not from
-      async_setup. The rule wants the action to exist as soon as the domain
-      loads and the target entry validated inside it. The rule's "no actions of
-      its own" exception therefore does not apply. No issue exists yet for the
-      move; #102 (audit) and #137 (tier claim) stay blocked on it.
+      async_setup (__init__.py:96 -> statistics.py:707), so it exists as soon
+      as the domain loads, before any config entry is set up. The handler does
+      not capture an entry: it resolves its targets per call from
+      entry_id (statistics.py:_backfill_targets) or, without one, from every
+      loaded CKW entry, and raises a translated HomeAssistantError when there
+      is no target. Registration is idempotent (has_service guard), so a
+      reload does not register it twice. tests/test_services.py.
 
   appropriate-polling:
     status: done
@@ -44,7 +47,7 @@ rules:
     comment: >-
       Uses the Home Assistant helpers instead of private copies:
       DataUpdateCoordinator (coordinator.py:171), config_entry_oauth2_flow
-      (__init__.py:95-110), ConfigEntry runtime_data, Store (repairs.py:99,
+      (__init__.py:112-115), ConfigEntry runtime_data, Store (repairs.py:99,
       statistics.py), issue_registry and entity_registry (repairs.py),
       DeviceInfo (entity.py:78).
 
@@ -54,16 +57,22 @@ rules:
       config_flow.py: OAuth2 user flow via application_credentials
       (async_step_user:92), delivery-point picker (async_step_meter:140),
       reauth (:163), reconfigure (:178), options (CkwOptionsFlow:377). Every
-      string is in strings.json config/options.
+      string is in strings.json config/options, including the abort reasons of
+      Home Assistant's OAuth2 helper. tests/test_config_flow.py covers every
+      step, error, abort and schema default.
 
   config-flow-test-coverage:
-    status: todo
+    status: done
     comment: >-
-      tests/test_config_flow.py covers every step, error and abort, but not
-      100 % of config_flow.py: the two-implementation branch of
-      async_step_pick_implementation (config_flow.py:109) is the one uncovered
-      line (98 %). The rule asks for 100 %. Closes with one test under
-      #102/#137.
+      100 % of config_flow.py, statements and branches (191 statements,
+      58 branches, measured with --cov-report=term-missing).
+      tests/test_config_flow.py covers the two-implementation picker, every
+      probe failure, the OAuth2 abort paths (missing_configuration,
+      authorize_url_timeout, no_url_available, user_rejected_authorize,
+      oauth_unauthorized, oauth_failed, oauth_timeout, oauth_error), a gas-only
+      account, invalid and missing delivery points, both reauth fallbacks, the
+      reconfigure revisit and the options-form defaults. No line is excluded
+      to reach the number.
 
   dependency-transparency:
     status: exempt
@@ -135,8 +144,8 @@ rules:
   runtime-data:
     status: done
     comment: >-
-      CkwRuntimeData dataclass (__init__.py:59) hung on the typed entry
-      (type CkwConfigEntry = ConfigEntry[CkwRuntimeData], __init__.py:74);
+      CkwRuntimeData dataclass (__init__.py:60) hung on the typed entry
+      (type CkwConfigEntry = ConfigEntry[CkwRuntimeData], __init__.py:75);
       platforms and statistics read entry.runtime_data, never a global.
 
   test-before-configure:
@@ -149,7 +158,7 @@ rules:
   test-before-setup:
     status: done
     comment: >-
-      await coordinator.async_config_entry_first_refresh() (__init__.py:117)
+      await coordinator.async_config_entry_first_refresh() (__init__.py:131)
       raises ConfigEntryNotReady and ConfigEntryAuthFailed before any platform
       is forwarded; tests/test_coordinator.py::test_a_failed_first_refresh_is_not_ready.
 
@@ -172,7 +181,7 @@ rules:
   config-entry-unloading:
     status: done
     comment: >-
-      async_unload_entry (__init__.py:203) unloads the platforms and drops
+      async_unload_entry (__init__.py:216) unloads the platforms and drops
       entry.runtime_data; the coordinator registers its own shutdown as an
       entry unload callback. tests/test_coordinator.py::test_setup_registers_the_service_device_and_unload_clears_the_entry.
 
@@ -234,7 +243,7 @@ rules:
     comment: >-
       [tool.coverage.report] fail_under = 95 in pyproject.toml, CI runs pytest
       with --cov=custom_components/ckw --cov-report=term-missing. Measured
-      99 % (1836 statements, 486 branches, 241 tests) on 2026-02; #136.
+      99 % (1839 statements, 486 branches, 258 tests) on 2026-02; #136.
 
   # --- Gold (21 rules) ---
 
@@ -243,7 +252,7 @@ rules:
     comment: >-
       One device per delivery point under the entry's service device:
       CkwDeviceInfo (entity.py:78) with via_device=(DOMAIN, entry_id) and the
-      service device created in __init__.py:222. ADR-0003, #80.
+      service device created in __init__.py:233. ADR-0003, #80.
 
   diagnostics:
     status: todo
@@ -391,6 +400,6 @@ rules:
       A meter missing for more than STALE_AFTER_DAYS (const.py:160) is reported
       in CkwData.stale_since (coordinator.py:_track_presence), its entities stay
       and go unavailable, stale_since surfaces on Consumption total, and
-      async_remove_config_entry_device (__init__.py:172) lets the user delete the
+      async_remove_config_entry_device (__init__.py:185) lets the user delete the
       device without it being resurrected (entity.py:62).
       tests/test_dynamic_devices.py:414-664. #134.

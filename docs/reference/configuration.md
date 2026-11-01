@@ -62,7 +62,7 @@ Options are edited later from the entry's **Configure** button. They are stored 
 | Key | Label (en / de) | Type | Allowed values | Default | Effect | Code |
 | --- | --- | --- | --- | --- | --- | --- |
 | `poll_hours` | "Poll interval (hours)" / "Abfrageintervall (Stunden)" | integer | `1`, `2`, `4`, `6`, `12` (`POLL_INTERVAL_HOURS`) | `2` (`DEFAULT_POLL_HOURS`) | How often the coordinator asks CKW for the rolling 7-day window; the interval is also the session keep-alive (ADR-0004, ADR-0007) | `config_flow.py:380-403`, `coordinator.py:215`, `const.py:60-64` |
-| `backfill_enabled` | "Import the 730-day history on setup" / "730 Tage Historie beim Einrichten importieren" | boolean | `true`, `false` | `true` (also when the key is absent, so an older entry keeps backfilling) | Whether setup starts the 730-day statistics import in the background. Off means only the rolling window is imported | `config_flow.py:380-403`, `__init__.py:128-155`, `const.py:190-193` |
+| `backfill_enabled` | "Import the 730-day history on setup" / "730 Tage Historie beim Einrichten importieren" | boolean | `true`, `false` | `true` (also when the key is absent, so an older entry keeps backfilling) | Whether setup starts the 730-day statistics import in the background. Off means only the rolling window is imported | `config_flow.py:380-403`, `__init__.py:141-169`, `const.py:190-193` |
 
 A value outside the list is not accepted by the form; a stored `poll_hours` outside 1–12 h (a hand-edited
 `.storage` file) is ignored and the coordinator falls back to 2 h (`coordinator.py:636-653`).

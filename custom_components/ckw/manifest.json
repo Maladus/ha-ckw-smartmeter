@@ -18,7 +18,7 @@
   "loggers": [
     "custom_components.ckw"
   ],
-  "quality_scale": "bronze",
+  "quality_scale": "silver",
   "requirements": [],
   "version": "0.1.0"
 }

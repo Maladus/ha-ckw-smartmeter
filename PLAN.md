@@ -114,7 +114,7 @@ jump you use at work — block → decision → consequence — works in this re
 | `docs-use-cases` | Gold | `docs/tutorial/getting-started.md` (#119) |
 | `docs-examples` | Gold | `docs/reference/examples.md` (#128) |
 
-Note: hassfest only validates `quality_scale.yaml` **inside core**. In a HACS repo `quality_scale: bronze`
+Note: hassfest only validates `quality_scale.yaml` **inside core**. In a HACS repo `quality_scale: silver`
 in `manifest.json` is a claim, not a checked fact — keep it only while #116 (core submission) is a goal,
 and treat `quality_scale.yaml` as our own audit checklist until then.
 
@@ -539,10 +539,12 @@ that tier **and all lower tiers** is `done` or `exempt` with a reason. Tracking:
 Verified `exempt` (with reason, checked by #137): `discovery`, `discovery-update-info` (cloud service,
 nothing on the LAN to discover; identity comes from OAuth), `docs-triggers`, `docs-conditions` (no
 triggers or conditions), `dependency-transparency` (no third-party requirement — everything runs on HA
-and stdlib). Two rules the plan expected to be exempt are not, now that the rule texts are checked:
-`action-setup` (an action exists, so the rule applies — and the action is registered in
-`async_setup_entry`, which the rule forbids) and `docs-actions` (an action exists, so it is documented
-in `docs/reference/configuration.md` instead).
+and stdlib). The plan expected `action-setup`, `docs-actions` and `dependency-transparency` to be
+exempt, but the rule texts only exempt the third: an action exists, so `action-setup` applies — met by
+registering `ckw.backfill` in `async_setup` — and `docs-actions` applies too, documented in
+`docs/reference/configuration.md`. Bronze and Silver are therefore complete (`quality_scale: silver` in
+`manifest.json`); Gold still has `diagnostics` (#105), `docs-examples` (#128) and `docs-troubleshooting`
+(#99, #122) open.
 
 ## Phase 8 — Quality scale, verification, release
 

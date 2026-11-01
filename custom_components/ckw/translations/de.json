@@ -26,15 +26,22 @@
     },
     "abort": {
       "already_configured": "Dieses CKW-Konto ist bereits eingerichtet.",
+      "authorize_url_timeout": "CKW hat zu lange für den Start der Anmeldung gebraucht. Versuchen Sie es erneut.",
       "cannot_connect": "Die CKW-API ist nicht erreichbar. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
       "invalid_auth": "CKW hat die Anmeldung abgelehnt. Bitte melden Sie sich erneut an.",
       "missing_configuration": "Fügen Sie zuerst die CKW-OAuth-Anmeldedaten hinzu, bevor Sie die Integration einrichten.",
       "no_meters": "Für dieses CKW-Konto wurde kein Strom-Smart-Meter gefunden.",
+      "no_url_available": "Home Assistant ist unter keiner erreichbaren URL für die Anmelde-Rückleitung erreichbar, CKW kann Sie also nicht zurückschicken. Siehe {docs_url}.",
+      "oauth_error": "CKW hat ein unbrauchbares Token geliefert. Melden Sie sich erneut an.",
+      "oauth_failed": "Die Anmeldung bei CKW ist fehlgeschlagen. Versuchen Sie es erneut.",
+      "oauth_timeout": "Die Anmeldung bei CKW hat zu lange gedauert. Versuchen Sie es erneut.",
+      "oauth_unauthorized": "CKW hat den Anmeldecode abgelehnt. Melden Sie sich erneut an.",
       "reauth_account_mismatch": "Das angemeldete CKW-Konto stimmt nicht mit dem Konto dieses Eintrags überein.",
       "reauth_successful": "Die erneute Anmeldung war erfolgreich.",
       "reconfigure_account_mismatch": "Das angemeldete CKW-Konto stimmt nicht mit dem Konto dieses Eintrags überein.",
       "reconfigure_successful": "Die Konfiguration wurde aktualisiert.",
-      "unknown": "Beim Zugriff auf CKW ist ein unerwarteter Fehler aufgetreten."
+      "unknown": "Beim Zugriff auf CKW ist ein unerwarteter Fehler aufgetreten.",
+      "user_rejected_authorize": "Die Anmeldung wurde bei CKW abgebrochen ({error}). Versuchen Sie es erneut."
     }
   },
   "options": {

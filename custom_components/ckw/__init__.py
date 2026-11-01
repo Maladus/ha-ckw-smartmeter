@@ -25,6 +25,7 @@ from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceEntryType
+from homeassistant.helpers.typing import ConfigType
 
 from .api import CkwClient
 from .const import (
@@ -92,6 +93,19 @@ async def async_get_access_token(
     return str(session.token["access_token"])
 
 
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register the domain's actions once, as soon as the integration loads.
+
+    ``ckw.backfill`` belongs to the domain, not to one account: it is registered
+    here so it exists before any entry does, and the handler resolves the entry
+    it should repair from the call itself (``entry_id`` or every loaded entry).
+    ``async_register_backfill_service`` is idempotent, so a second call after an
+    unload and reload leaves the one handler in place.
+    """
+    async_register_backfill_service(hass)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: CkwConfigEntry) -> bool:
     """Set up one CKW account from a config entry."""
     _LOGGER.debug("Setting up %s entry %s", DOMAIN, entry.entry_id)
@@ -124,7 +138,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: CkwConfigEntry) -> bool:
     # Home Assistant waits for pending tasks before it finishes starting.
     state = await async_prepare_statistics(hass, entry)
     async_register_statistics(hass, entry)
-    async_register_backfill_service(hass)
     backfill_enabled = bool(entry.options.get(CONF_BACKFILL_ENABLED, True))
     if state.done or not backfill_enabled:
         if not backfill_enabled and not state.done:

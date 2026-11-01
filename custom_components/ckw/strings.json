@@ -26,15 +26,22 @@
     },
     "abort": {
       "already_configured": "This CKW account is already configured.",
+      "authorize_url_timeout": "CKW took too long to start the sign-in. Try again.",
       "cannot_connect": "Could not reach the CKW API. Check your connection and try again.",
       "invalid_auth": "CKW rejected the sign-in. Please sign in again.",
       "missing_configuration": "Add the CKW OAuth application credentials before setting up the integration.",
       "no_meters": "No electricity smart meter was found for this CKW account.",
+      "no_url_available": "Home Assistant has no reachable URL for the sign-in callback, so CKW cannot send you back. See {docs_url}.",
+      "oauth_error": "CKW returned an unusable token. Sign in again.",
+      "oauth_failed": "The sign-in with CKW failed. Try again.",
+      "oauth_timeout": "The sign-in with CKW timed out. Try again.",
+      "oauth_unauthorized": "CKW rejected the sign-in code. Sign in again.",
       "reauth_account_mismatch": "The CKW account signed in does not match the account of this entry.",
       "reauth_successful": "Reauthentication was successful.",
       "reconfigure_account_mismatch": "The CKW account signed in does not match the account of this entry.",
       "reconfigure_successful": "The configuration was updated.",
-      "unknown": "An unexpected error occurred while talking to CKW."
+      "unknown": "An unexpected error occurred while talking to CKW.",
+      "user_rejected_authorize": "The sign-in was cancelled at CKW ({error}). Try again."
     }
   },
   "options": {

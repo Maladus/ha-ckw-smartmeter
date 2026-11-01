@@ -18,6 +18,8 @@ import time
 from typing import Any, Final
 
 import pytest
+from aiohttp import ClientError, ClientResponseError
+from aiohttp.client_reqrep import RequestInfo
 from homeassistant.config_entries import (
     SOURCE_REAUTH,
     SOURCE_RECONFIGURE,
@@ -26,7 +28,10 @@ from homeassistant.config_entries import (
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_entry_oauth2_flow
+from homeassistant.helpers.network import NoURLAvailableError
+from multidict import CIMultiDict, CIMultiDictProxy
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from yarl import URL
 
 from custom_components.ckw.api import (
     CkwAuthError,
@@ -54,6 +59,7 @@ CITY: Final = "Luzern"
 DELIVERYPOINT_1: Final = "CH1003601234500000000000000000000"
 DELIVERYPOINT_2: Final = "CH1003601234500000000000000000001"
 DELIVERYPOINT_GAS: Final = "CH1003601234500000000000000000002"
+DELIVERYPOINT_3: Final = "CH1003601234500000000000000000003"
 TITLE: Final = f"{CUSTOMER_ID} — {CITY}"
 
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
@@ -97,6 +103,20 @@ class FakeOAuth2Implementation(config_entry_oauth2_flow.AbstractOAuth2Implementa
             "refresh_token": "refreshed-refresh-token",
             "expires_in": 3600,
         }
+
+
+class SecondOAuth2Implementation(FakeOAuth2Implementation):
+    """A second implementation, so the flow has to ask which one to use."""
+
+    @property
+    def name(self) -> str:
+        """Return the implementation name."""
+        return "CKW second test IdP"
+
+    @property
+    def domain(self) -> str:
+        """Return a domain distinct from the first implementation's."""
+        return f"{DOMAIN}_second"
 
 
 def make_meter(
@@ -775,3 +795,242 @@ def test_the_debug_helpers_mask_a_location_without_a_city() -> None:
 
     assert CkwConfigFlow._meter_label(meter, location) == DELIVERYPOINT_1
     assert CkwConfigFlow._entry_title(CUSTOMER_ID, "") == CUSTOMER_ID
+
+
+async def test_two_implementations_ask_which_one_to_use(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two OAuth2 implementations reach the inherited picker instead of the only one."""
+    register_implementation(hass)
+    config_entry_oauth2_flow.async_register_implementation(
+        hass, DOMAIN, SecondOAuth2Implementation(hass)
+    )
+    patch_customer(monkeypatch, customer=make_customer(make_meter(DELIVERYPOINT_1)))
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "pick_implementation"
+
+    result = await complete_oauth(hass, result)
+
+    assert result["type"] == "create_entry"
+    assert result["data"][CONF_METER] == DELIVERYPOINT_1
+
+
+async def test_reconfigure_reuses_the_customer_it_already_probed(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A second visit of the reconfigure step does not probe the account again."""
+    from custom_components.ckw.config_flow import CkwConfigFlow as Flow
+
+    register_implementation(hass)
+    entry = add_entry(hass)
+    customer = make_customer(make_meter(DELIVERYPOINT_1), make_meter(DELIVERYPOINT_2))
+    probe_calls: list[CkwCustomer] = []
+
+    async def probe(self: CkwClient) -> CkwCustomer:
+        probe_calls.append(customer)
+        return customer
+
+    monkeypatch.setattr(CkwClient, "async_get_customer", probe)
+    monkeypatch.setattr(hass.config_entries, "async_schedule_reload", lambda entry_id: None)
+
+    flow = Flow()
+    flow.hass = hass
+    flow.context = {"source": SOURCE_RECONFIGURE, "entry_id": entry.entry_id}
+
+    first = await flow.async_step_reconfigure()
+    second = await flow.async_step_reconfigure()
+
+    assert first["step_id"] == "meter"
+    assert second["type"] == "form"
+    assert second["step_id"] == "meter"
+    assert second["description_placeholders"] == {"count": "2"}
+    assert len(probe_calls) == 1
+
+
+async def test_reauth_keeps_the_stored_delivery_point_when_two_meters_are_offered(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A reauth does not silently move the entry to a meter the user never chose."""
+    register_implementation(hass)
+    entry = add_entry(hass)
+    patch_customer(
+        monkeypatch,
+        customer=make_customer(make_meter(DELIVERYPOINT_2), make_meter(DELIVERYPOINT_3)),
+    )
+    monkeypatch.setattr(hass.config_entries, "async_schedule_reload", lambda entry_id: None)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": SOURCE_REAUTH,
+            "entry_id": entry.entry_id,
+            "unique_id": entry.unique_id,
+        },
+    )
+    result = await complete_oauth(hass, result)
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    assert entry.data[CONF_METER] == DELIVERYPOINT_1
+    assert entry.data[CONF_CITY] == CITY
+
+
+async def test_reauth_without_a_stored_delivery_point_stores_none(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An entry that never had a delivery point is not given one behind the user's back."""
+    register_implementation(hass)
+    entry = add_entry(hass)
+    hass.config_entries.async_update_entry(
+        entry, data={key: value for key, value in entry.data.items() if key != CONF_METER}
+    )
+    patch_customer(
+        monkeypatch,
+        customer=make_customer(make_meter(DELIVERYPOINT_2), make_meter(DELIVERYPOINT_3)),
+    )
+    monkeypatch.setattr(hass.config_entries, "async_schedule_reload", lambda entry_id: None)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": SOURCE_REAUTH,
+            "entry_id": entry.entry_id,
+            "unique_id": entry.unique_id,
+        },
+    )
+    result = await complete_oauth(hass, result)
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    assert CONF_METER not in entry.data
+    assert entry.data[CONF_CUSTOMER_ID] == CUSTOMER_ID
+    assert entry.data["token"]["access_token"] == "test-access-token"
+
+
+@pytest.mark.parametrize("option", [CONF_POLL_HOURS, CONF_BACKFILL_ENABLED])
+async def test_the_options_form_defaults_come_from_the_entry(
+    hass: HomeAssistant, option: str
+) -> None:
+    """The form opens on the stored value, and on the fresh-install value without one."""
+    from custom_components.ckw.const import DEFAULT_POLL_HOURS
+
+    fresh = add_entry(hass)
+    configured = add_entry(hass, options={CONF_POLL_HOURS: 6, CONF_BACKFILL_ENABLED: False})
+
+    fresh_result = await hass.config_entries.options.async_init(fresh.entry_id)
+    configured_result = await hass.config_entries.options.async_init(configured.entry_id)
+
+    def default_of(result: FlowResult) -> Any:
+        return next(key.default() for key in result["data_schema"].schema if key == option)
+
+    if option == CONF_POLL_HOURS:
+        assert default_of(fresh_result) == DEFAULT_POLL_HOURS
+        assert default_of(configured_result) == 6
+    else:
+        assert default_of(fresh_result) is True
+        assert default_of(configured_result) is False
+
+
+# ---------------------------------------------------------------------------
+# The abort paths of Home Assistant's OAuth2 helper, reached through this flow
+# ---------------------------------------------------------------------------
+
+
+def token_exchange_error(kind: str) -> Exception | dict[str, Any]:
+    """Return what the token endpoint gives back for one failure mode."""
+    if kind == "unauthorized":
+        request_info = RequestInfo(
+            URL("https://id.example.invalid/token"),
+            "POST",
+            CIMultiDictProxy(CIMultiDict()),
+        )
+        return ClientResponseError(request_info, (), status=401)
+    if kind == "client_error":
+        return ClientError("the token endpoint is unreachable")
+    if kind == "timeout":
+        return TimeoutError()
+    return {"access_token": "test-access-token", "token_type": "Bearer"}
+
+
+@pytest.mark.parametrize(
+    ("kind", "reason"),
+    [
+        ("unauthorized", "oauth_unauthorized"),
+        ("client_error", "oauth_failed"),
+        ("timeout", "oauth_timeout"),
+        ("no_expiry", "oauth_error"),
+    ],
+)
+async def test_a_failed_token_exchange_aborts_with_its_reason(
+    hass: HomeAssistant,
+    monkeypatch: pytest.MonkeyPatch,
+    kind: str,
+    reason: str,
+) -> None:
+    """A rejected, unreachable, slow or malformed token answer never creates an entry."""
+    register_implementation(hass)
+
+    async def resolve(self: FakeOAuth2Implementation, external_data: Any) -> dict[str, Any]:
+        answer = token_exchange_error(kind)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    monkeypatch.setattr(FakeOAuth2Implementation, "async_resolve_external_data", resolve)
+
+    result = await start_user_flow(hass)
+
+    assert result["type"] == "abort"
+    assert result["reason"] == reason
+    assert hass.config_entries.async_entries(DOMAIN) == []
+
+
+@pytest.mark.parametrize(
+    ("error", "reason"),
+    [
+        (TimeoutError(), "authorize_url_timeout"),
+        (NoURLAvailableError(), "no_url_available"),
+    ],
+)
+async def test_an_authorize_url_that_cannot_be_built_aborts(
+    hass: HomeAssistant,
+    monkeypatch: pytest.MonkeyPatch,
+    error: Exception,
+    reason: str,
+) -> None:
+    """A slow IdP or an unreachable Home Assistant URL stops before the browser step."""
+    register_implementation(hass)
+
+    async def generate(self: FakeOAuth2Implementation, flow_id: str) -> str:
+        raise error
+
+    monkeypatch.setattr(FakeOAuth2Implementation, "async_generate_authorize_url", generate)
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+
+    assert result["type"] == "abort"
+    assert result["reason"] == reason
+    assert hass.config_entries.async_entries(DOMAIN) == []
+
+
+async def test_a_sign_in_cancelled_at_the_idp_aborts(hass: HomeAssistant) -> None:
+    """The user can decline at CKW; the flow says so instead of creating an entry."""
+    register_implementation(hass)
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    assert result["type"] == "external"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"error": "access_denied"}
+    )
+    assert result["type"] == "external_done"
+
+    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "user_rejected_authorize"
+    assert result["description_placeholders"] == {"error": "access_denied"}
+    assert hass.config_entries.async_entries(DOMAIN) == []
