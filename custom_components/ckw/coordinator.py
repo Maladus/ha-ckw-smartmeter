@@ -34,7 +34,7 @@ import asyncio
 import logging
 import time
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from typing import Final
 
@@ -50,8 +50,10 @@ from .api import (
     CkwAuthError,
     CkwClient,
     CkwConnectionError,
+    CkwCustomer,
     CkwError,
     CkwMeasurement,
+    CkwMeter,
     CkwMeterMeasurements,
     CkwRangeTooBigError,
     CkwRateLimitError,
@@ -66,9 +68,11 @@ from .const import (
     MAX_POLL_HOURS,
     MIN_POLL_HOURS,
     MIN_WINDOW_DAYS,
+    MINUTES_AGGREGATION,
     NAME,
     PUBLICATION_LAG_WARNING_HOURS,
     PUBLICATION_STALL_DAYS,
+    QUARTER_HOUR_MINUTES,
     RATE_LIMIT_MIN_REMAINING,
     ROLLING_WINDOW_DAYS,
     SECONDS_PER_HOUR,
@@ -76,7 +80,7 @@ from .const import (
     WINDOW_END_DAYS_BACK,
 )
 
-__all__ = ["CkwCoordinator", "CkwData", "MeterTotals"]
+__all__ = ["CkwCoordinator", "CkwData", "MeterTotals", "QuarterHourReading"]
 
 _LOGGER: Final[logging.Logger] = logging.getLogger(__name__)
 
@@ -105,6 +109,26 @@ class MeterTotals:
     publication_delay_h: float | None
     intervals_seen: int
     quality_intervals: int
+    #: The newest complete day, for ``consumption_yesterday``. It is the newest
+    #: interval even when CKW published it a day or two late, because that is
+    #: the last complete day the API knows about.
+    last_day_kwh: float | None = None
+    last_day_start: datetime | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class QuarterHourReading:
+    """The newest 15-minute interval of one delivery point (#152).
+
+    ``kwh`` is ``None`` when the interval is incomplete or quality-flagged; the
+    sensor then has no number rather than a wrong one. The timestamps stay UTC,
+    the sensor presents them as they are.
+    """
+
+    kwh: float | None
+    interval_start: datetime | None
+    interval_end: datetime | None
+    publication_delay_h: float | None
 
 
 @dataclass(slots=True)
@@ -114,6 +138,13 @@ class CkwData:
     meters: dict[str, MeterTotals]
     rate_limit: RateLimitInfo | None
     newest_interval: datetime | None
+    #: The customer's meters, keyed by delivery point. The model and type here
+    #: are what the per-meter device and entity names show.
+    meter_info: dict[str, CkwMeter] = field(default_factory=dict)
+    #: Newest quarter-hour interval per delivery point, when one was fetched.
+    quarter_hour: dict[str, QuarterHourReading] = field(default_factory=dict)
+    #: When this successful poll happened, for the diagnostic timestamp sensor.
+    polled_at: datetime | None = None
 
 
 class CkwCoordinator(DataUpdateCoordinator[CkwData]):
@@ -141,6 +172,9 @@ class CkwCoordinator(DataUpdateCoordinator[CkwData]):
         self._lag_warned = False
         self._stall_warned = False
         self._new_intervals: dict[str, int] = {}
+        # The customer's meters, refreshed on every poll so a new delivery point
+        # can be discovered without editing ids (#134).
+        self._meter_info: dict[str, CkwMeter] = {}
         # The rate-limit headers of the latest response and when they arrived,
         # so a reset that already elapsed does not turn into a stale sleep.
         self._rate_limit_info: RateLimitInfo | None = None
@@ -174,6 +208,10 @@ class CkwCoordinator(DataUpdateCoordinator[CkwData]):
         end = now_local.date() - timedelta(days=WINDOW_END_DAYS_BACK)
         days = ROLLING_WINDOW_DAYS
         start = _window_start(end, days)
+
+        customer = await self._async_fetch_customer()
+        if customer is not None:
+            self._meter_info = _meter_info(customer)
 
         try:
             series = await self._async_fetch(start, end)
@@ -215,6 +253,14 @@ class CkwCoordinator(DataUpdateCoordinator[CkwData]):
         if entry_totals is not None:
             self._log_publication(entry_totals, now)
 
+        meter_info = dict(self._meter_info)
+        for deliverypoint in totals:
+            meter_info.setdefault(deliverypoint, _placeholder_meter(deliverypoint))
+
+        quarter_hour: dict[str, QuarterHourReading] = {}
+        if customer is not None:
+            quarter_hour = await self._async_fetch_quarter_hour(now)
+
         _log_poll(
             start, end, series, newest, now, changed=bool(corrected) or any(new_counts.values())
         )
@@ -223,6 +269,9 @@ class CkwCoordinator(DataUpdateCoordinator[CkwData]):
             meters=totals,
             rate_limit=self.client.last_rate_limit,
             newest_interval=newest,
+            meter_info=meter_info,
+            quarter_hour=quarter_hour,
+            polled_at=now,
         )
 
     async def _async_fetch(self, start: date, end: date) -> list[CkwMeterMeasurements]:
@@ -261,6 +310,65 @@ class CkwCoordinator(DataUpdateCoordinator[CkwData]):
             # poll: stamp it so ``_async_pace`` can subtract the elapsed time.
             self._rate_limit_info = self.client.last_rate_limit
             self._rate_limit_at = time.monotonic()
+
+    async def _async_fetch_customer(self) -> CkwCustomer | None:
+        """Fetch the customer's meter list, or keep the previous one on failure.
+
+        The sensor platform needs the meter model for the device page, but the
+        daily measurements are the poll's real job. A failure here is therefore
+        logged at debug and does not fail the poll; an expired sign-in fails
+        the measurement request immediately afterwards anyway.
+        """
+        await self._async_pace()
+        try:
+            return await self.client.async_get_customer()
+        except Exception as err:  # noqa: BLE001 - metadata must not break the data poll
+            _LOGGER.debug(
+                "cannot read the CKW meter list for %s, keeping the last known meters: %s",
+                mask_deliverypoint(self.deliverypoint),
+                err,
+            )
+            return None
+
+    async def _async_fetch_quarter_hour(self, now: datetime) -> dict[str, QuarterHourReading]:
+        """Fetch today's quarter-hour series and keep its newest interval (#152).
+
+        CKW publishes quarter-hour rows for the current local day; only the
+        newest complete 15-minute interval becomes the sensor state, and the
+        full series is never imported as statistics (ADR-0009). A failed
+        quarter-hour request leaves the daily sensors untouched.
+        """
+        day = now.astimezone(TIME_ZONE).date()
+        await self._async_pace()
+        try:
+            series = await self.client.async_get_measurements(
+                day, day, aggregation=MINUTES_AGGREGATION
+            )
+        except Exception as err:  # noqa: BLE001 - the daily data still stands
+            _LOGGER.debug(
+                "the CKW quarter-hour request for %s failed, leaving the sensor empty: %s",
+                day.isoformat(),
+                err,
+            )
+            return {}
+
+        readings: dict[str, QuarterHourReading] = {}
+        for meter_series in series:
+            deliverypoint = meter_series.deliverypointnumber
+            if not deliverypoint:
+                continue
+            newest = _newest_quarter_hour(meter_series.measurements)
+            if newest is None:
+                continue
+            end = _measurement_end(newest)
+            delay = None if end is None else (now - end).total_seconds() / SECONDS_PER_HOUR
+            readings[deliverypoint] = QuarterHourReading(
+                kwh=None if newest.has_quality_issue else newest.kwh_total,
+                interval_start=newest.start_utc,
+                interval_end=newest.end_utc,
+                publication_delay_h=delay,
+            )
+        return readings
 
     async def _async_pace(self) -> None:
         """Wait for the next rate-limit window when the quota is exhausted."""
@@ -455,8 +563,10 @@ def _totals_for(intervals: Mapping[datetime, CkwMeasurement], now: datetime) -> 
     kwh_nt = 0.0
     quality = 0
     last_end: datetime | None = None
+    last_measurement: CkwMeasurement | None = None
     for end, measurement in sorted(intervals.items()):
         last_end = end
+        last_measurement = measurement
         if measurement.has_quality_issue:
             quality += 1
             continue
@@ -471,6 +581,14 @@ def _totals_for(intervals: Mapping[datetime, CkwMeasurement], now: datetime) -> 
     delay: float | None = None
     if last_end is not None:
         delay = (now - last_end).total_seconds() / SECONDS_PER_HOUR
+
+    last_day_kwh: float | None = None
+    last_day_start: datetime | None = None
+    if last_measurement is not None:
+        last_day_start = last_measurement.start_utc
+        if not last_measurement.has_quality_issue:
+            last_day_kwh = last_measurement.kwh_total
+
     return MeterTotals(
         kwh_total=kwh_total,
         kwh_ht=kwh_ht,
@@ -479,6 +597,60 @@ def _totals_for(intervals: Mapping[datetime, CkwMeasurement], now: datetime) -> 
         publication_delay_h=delay,
         intervals_seen=len(intervals),
         quality_intervals=quality,
+        last_day_kwh=last_day_kwh,
+        last_day_start=last_day_start,
+    )
+
+
+def _measurement_end(measurement: CkwMeasurement) -> datetime | None:
+    """Return the end of an interval, falling back to its start."""
+    return measurement.end_utc or measurement.start_utc
+
+
+def _newest_quarter_hour(
+    measurements: tuple[CkwMeasurement, ...],
+) -> CkwMeasurement | None:
+    """Return the newest 15-minute interval, ignoring wider rows."""
+    newest: CkwMeasurement | None = None
+    newest_end: datetime | None = None
+    for measurement in measurements:
+        end = _measurement_end(measurement)
+        if end is None:
+            continue
+        start = measurement.start_utc
+        if start is not None and end - start > timedelta(minutes=QUARTER_HOUR_MINUTES):
+            continue
+        if newest_end is None or end > newest_end:
+            newest = measurement
+            newest_end = end
+    return newest
+
+
+def _meter_info(customer: CkwCustomer) -> dict[str, CkwMeter]:
+    """Return the customer's meters, keyed by delivery point.
+
+    Gas meters are kept here so the sensor platform can recognise and skip
+    them; they share the measurement payload but are outside this product.
+    """
+    meters: dict[str, CkwMeter] = {}
+    for location in customer.locations:
+        for meter in location.meters:
+            if not meter.deliverypointnumber:
+                continue
+            meters.setdefault(meter.deliverypointnumber, meter)
+    return meters
+
+
+def _placeholder_meter(deliverypoint: str) -> CkwMeter:
+    """Build the metadata stand-in for a meter the customer payload omitted."""
+    return CkwMeter(
+        id=None,
+        model=None,
+        type=None,
+        fuel=None,
+        deliverypointnumber=deliverypoint,
+        supply_start=None,
+        supply_end=None,
     )
 
 

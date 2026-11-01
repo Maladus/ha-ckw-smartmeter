@@ -56,11 +56,20 @@
       "consumption_yesterday": {
         "name": "Verbrauch gestern"
       },
-      "cost_total": {
-        "name": "Kosten gesamt"
+      "consumption_high_tariff": {
+        "name": "Verbrauch Hochtarif"
+      },
+      "consumption_low_tariff": {
+        "name": "Verbrauch Niedertarif"
+      },
+      "quarter_hour": {
+        "name": "Viertelstundenverbrauch"
       },
       "last_update": {
         "name": "Letzte Aktualisierung"
+      },
+      "last_published_interval": {
+        "name": "Letztes veröffentlichtes Intervall"
       }
     }
   },

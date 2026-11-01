@@ -56,11 +56,20 @@
       "consumption_yesterday": {
         "name": "Consumption yesterday"
       },
-      "cost_total": {
-        "name": "Cost total"
+      "consumption_high_tariff": {
+        "name": "Consumption high tariff"
+      },
+      "consumption_low_tariff": {
+        "name": "Consumption low tariff"
+      },
+      "quarter_hour": {
+        "name": "Quarter-hour consumption"
       },
       "last_update": {
         "name": "Last update"
+      },
+      "last_published_interval": {
+        "name": "Last published interval"
       }
     }
   },

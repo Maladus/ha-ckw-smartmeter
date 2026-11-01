@@ -1,0 +1,27 @@
+{
+  "entity": {
+    "sensor": {
+      "consumption_total": {
+        "default": "mdi:transmission-tower-import"
+      },
+      "consumption_yesterday": {
+        "default": "mdi:cash-clock"
+      },
+      "consumption_high_tariff": {
+        "default": "mdi:transmission-tower-import"
+      },
+      "consumption_low_tariff": {
+        "default": "mdi:transmission-tower-import"
+      },
+      "quarter_hour": {
+        "default": "mdi:chart-timeline"
+      },
+      "last_update": {
+        "default": "mdi:clock-outline"
+      },
+      "last_published_interval": {
+        "default": "mdi:clock-outline"
+      }
+    }
+  }
+}

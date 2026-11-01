@@ -74,8 +74,12 @@ ROLLING_WINDOW_DAYS: Final[int] = 7
 WINDOW_END_DAYS_BACK: Final[int] = 1
 #: The window after a "response too big" 400 is halved once, never below this.
 MIN_WINDOW_DAYS: Final[int] = 1
-#: ``days`` is the only aggregation this integration requests (PLAN #65).
+#: Daily aggregates for the rolling window and every sensor total (PLAN #65).
 DAYS_AGGREGATION: Final = "days"
+#: The finest aggregation CKW serves: 15-minute rows for the quarter-hour sensor (#152).
+MINUTES_AGGREGATION: Final = "minutes"
+#: Width of one quarter-hour interval, used to reject wider rows from the minute endpoint.
+QUARTER_HOUR_MINUTES: Final[int] = 15
 
 #: Sleep before a request once fewer than this many requests are left.
 RATE_LIMIT_MIN_REMAINING: Final[int] = 1
