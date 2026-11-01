@@ -16,3 +16,7 @@ pytest>=8,<9
 pytest-homeassistant-custom-component>=0.13
 
 mypy>=1.11
+
+# aiodns 3.x (what this harness installs) imports `pycares.ares_query_a_result`,
+# which pycares 5 removed. Keep pycares on the 4.x line so the import succeeds.
+pycares>=4.9,<5
