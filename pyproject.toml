@@ -37,3 +37,15 @@ asyncio_mode = "auto"
 strict = true
 python_version = "3.13"
 files = ["custom_components/ckw"]
+
+[tool.coverage.run]
+source = ["custom_components/ckw"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+exclude_lines = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

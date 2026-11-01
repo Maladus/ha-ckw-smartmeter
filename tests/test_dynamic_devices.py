@@ -23,6 +23,7 @@ from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Final
+from unittest.mock import AsyncMock
 
 import pytest
 from freezegun import freeze_time
@@ -653,3 +654,45 @@ async def test_a_meter_the_portal_lists_without_data_goes_stale_too(
     stale_lines = [r for r in caplog.records if "has been missing" in r.getMessage()]
     assert len(stale_lines) == 1
     assert stale_lines[0].levelno == logging.INFO
+
+
+# ---------------------------------------------------------------------------
+# Defensive removal and unload paths (Silver test-coverage)
+# ---------------------------------------------------------------------------
+
+
+async def test_a_device_cannot_be_removed_before_the_first_poll(
+    hass: HomeAssistant,
+) -> None:
+    """Without data no meter can be proven absent, so removal is refused."""
+    from types import SimpleNamespace
+
+    entry = add_entry(hass)
+    entry.runtime_data = SimpleNamespace(coordinator=SimpleNamespace(data=None))
+    device = SimpleNamespace(
+        identifiers={(DOMAIN, f"{entry.entry_id}_{mask_deliverypoint(IMPORT_METER)}")}
+    )
+
+    assert not await async_remove_config_entry_device(hass, entry, device)
+
+
+async def test_a_failed_platform_unload_keeps_the_runtime_data(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The entry stays usable when a platform refuses to unload."""
+    from custom_components.ckw import async_unload_entry
+
+    entry = await setup_entry(
+        hass,
+        monkeypatch,
+        FakeApi(
+            days=[daily_series(IMPORT_METER, FROZEN_NOW)],
+            customer=customer_for(IMPORT_METER),
+        ),
+    )
+    monkeypatch.setattr(
+        hass.config_entries, "async_unload_platforms", AsyncMock(return_value=False)
+    )
+
+    assert await async_unload_entry(hass, entry) is False
+    assert hasattr(entry, "runtime_data")

@@ -94,7 +94,10 @@ jobs:
           fi
       - name: Run pytest
         if: steps.detect.outputs.enabled == 'true'
-        run: python -m pytest -q
+        run: >-
+          python -m pytest -q
+          --cov=custom_components/ckw
+          --cov-report=term-missing
       - name: Type-check the integration
         if: steps.integration.outputs.enabled == 'true'
         run: python -m mypy custom_components/ckw

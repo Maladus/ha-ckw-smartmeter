@@ -282,10 +282,8 @@ class CkwCoordinator(DataUpdateCoordinator[CkwData]):
 
         try:
             series = await self._async_fetch(start, end)
-        except CkwRangeTooBigError as err:
+        except CkwRangeTooBigError:
             days //= 2
-            if days < MIN_WINDOW_DAYS:
-                raise _range_too_big_failure() from err
             _LOGGER.warning(
                 "CKW rejected the %d-day window as too big, retrying once with the last %d days",
                 ROLLING_WINDOW_DAYS,

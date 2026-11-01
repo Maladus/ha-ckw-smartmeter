@@ -19,6 +19,7 @@ from types import SimpleNamespace
 from typing import Any, Final
 from unittest.mock import AsyncMock, Mock
 
+import aiohttp
 import pytest
 import voluptuous as vol
 from freezegun import freeze_time
@@ -40,6 +41,7 @@ from custom_components.ckw.api import (
     CkwAuthError,
     CkwClient,
     CkwCustomer,
+    CkwError,
     CkwMeasurement,
     CkwMeterMeasurements,
 )
@@ -60,12 +62,23 @@ from custom_components.ckw.const import (
     STATISTIC_ENTITY_KEY,
     TIME_ZONE,
     WINDOW_END_DAYS_BACK,
+    Fuel,
 )
 from custom_components.ckw.statistics import (
     BackfillProgress,
+    MeterState,
+    StatisticsBucket,
     StatisticsState,
+    _async_import_chunk,
+    _backfill_targets,
+    _cumulative_rows,
+    _daily_buckets,
+    _local_day,
+    _parse_backfill,
+    _parse_meter_state,
     async_backfill,
     async_import_meter_statistics,
+    async_import_polled_statistics,
     async_register_backfill_service,
 )
 
@@ -145,10 +158,20 @@ class FakeCoordinator:
         self.client = FakeClient()
         self.data = SimpleNamespace(meters={}, meter_info={})
         self.paced = 0
+        self.interval_data: Sequence[CkwMeasurement] = ()
 
     async def async_pace(self) -> None:
         """Count the pacing calls instead of waiting for a quota window."""
         self.paced += 1
+
+    def intervals(self, _deliverypoint: str) -> Sequence[CkwMeasurement]:
+        """Return the window a test configured, empty by default."""
+        return self.interval_data
+
+    def async_add_listener(self, listener: Any) -> Any:
+        """Remember the poll listener and return a no-op unsubscribe."""
+        self.listener = listener
+        return lambda: None
 
 
 @pytest.fixture
@@ -709,3 +732,417 @@ async def test_setup_runs_the_backfill_once(
     assert entry.runtime_data.statistics_state.done is True
     day_calls = [call for call in api.calls if call[2] == DAYS_AGGREGATION]
     assert len(day_calls) == calls_before + 1  # the poll only, no chunk again
+
+
+# ---------------------------------------------------------------------------
+# Resume, abort and malformed-state paths (Silver test-coverage)
+# ---------------------------------------------------------------------------
+
+
+async def test_a_second_backfill_is_refused_while_one_is_running(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """Two runs would race on one stored offset, so the second returns at once."""
+    coordinator = entry.runtime_data.coordinator
+    entry.runtime_data.statistics_state.running = True
+
+    await async_backfill(hass, entry, coordinator, days=1)
+
+    assert coordinator.client.calls == []
+
+
+async def test_a_forced_backfill_clears_the_stored_anchors_first(
+    hass: HomeAssistant,
+    entry: MockConfigEntry,
+    statistic_id: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A rebuild from the first day must not continue an untrusted sum."""
+    coordinator = entry.runtime_data.coordinator
+    store = statistics_module._statistics_store(hass, entry)
+    await store.async_load()
+    store.set_meter_state(
+        METER,
+        MeterState(
+            anchor_start=datetime(2025, 5, 1, tzinfo=UTC),
+            anchor_sum=42.0,
+            checksum="old",
+        ),
+    )
+    monkeypatch.setattr(
+        statistics_module,
+        "async_import_meter_statistics",
+        AsyncMock(return_value=SimpleNamespace(rows=0)),
+    )
+    monkeypatch.setattr(
+        statistics_module.asyncio, "sleep", AsyncMock(spec=statistics_module.asyncio.sleep)
+    )
+
+    with freeze_time(FROZEN_NOW):
+        await async_backfill(hass, entry, coordinator, days=1, force=True)
+
+    assert store.meter_state(METER) is None
+
+
+async def test_polled_import_without_data_or_with_only_gas_does_nothing(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """A failed poll has no data, and a gas meter has no energy statistic."""
+    coordinator = entry.runtime_data.coordinator
+
+    coordinator.data = None
+    await async_import_polled_statistics(hass, entry)
+
+    coordinator.data = SimpleNamespace(
+        meters={METER: object()},
+        meter_info={METER: SimpleNamespace(fuel=Fuel.GAS)},
+    )
+    await async_import_polled_statistics(hass, entry)
+
+    assert coordinator.client.calls == []
+
+
+async def test_polled_import_skips_a_meter_without_intervals(
+    hass: HomeAssistant, entry: MockConfigEntry, statistic_id: str
+) -> None:
+    """A known meter with no interval has nothing to write."""
+    coordinator = entry.runtime_data.coordinator
+    coordinator.data = SimpleNamespace(meters={METER: object()}, meter_info={})
+
+    await async_import_polled_statistics(hass, entry)
+
+    assert coordinator.client.calls == []
+
+
+async def test_a_raw_http_failure_in_a_chunk_keeps_the_offset(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """A non-auth response error is logged and the next run resumes."""
+    from unittest.mock import Mock
+
+    coordinator = entry.runtime_data.coordinator
+    coordinator.client.error = aiohttp.ClientResponseError(Mock(), (), status=503)
+
+    result = await _async_import_chunk(hass, entry, coordinator, date(2025, 5, 1), date(2025, 5, 1))
+
+    assert result is None
+
+
+async def test_a_timeout_in_a_chunk_is_a_connection_failure_for_the_service(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """The service gets a translated error instead of an aiohttp timeout."""
+    from custom_components.ckw.exceptions import CkwConnectionFailedError
+
+    coordinator = entry.runtime_data.coordinator
+    coordinator.client.error = TimeoutError("slow")
+
+    with pytest.raises(CkwConnectionFailedError):
+        await _async_import_chunk(
+            hass, entry, coordinator, date(2025, 5, 1), date(2025, 5, 1), raise_on_error=True
+        )
+
+
+async def test_a_generic_api_failure_in_a_chunk_uses_the_shared_mapping(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """A failure without a more specific key becomes ``unknown`` for the service."""
+    from custom_components.ckw.exceptions import CkwUnknownError
+
+    coordinator = entry.runtime_data.coordinator
+    coordinator.client.error = CkwError("something new")
+
+    with pytest.raises(CkwUnknownError):
+        await _async_import_chunk(
+            hass, entry, coordinator, date(2025, 5, 1), date(2025, 5, 1), raise_on_error=True
+        )
+
+
+async def test_a_chunk_without_a_sensor_is_retried_instead_of_skipped(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """Importing nothing would advance the offset past data never written."""
+    from custom_components.ckw.exceptions import CkwNoDataError
+
+    coordinator = entry.runtime_data.coordinator
+    coordinator.client.series = [
+        CkwMeterMeasurements(
+            deliverypointnumber=METER,
+            measurements=tuple(_daily(day) for day in _days(date(2025, 5, 1), 2)),
+        )
+    ]
+
+    assert (
+        await _async_import_chunk(hass, entry, coordinator, date(2025, 5, 1), date(2025, 5, 2))
+        is None
+    )
+
+    with pytest.raises(CkwNoDataError):
+        await _async_import_chunk(
+            hass,
+            entry,
+            coordinator,
+            date(2025, 5, 1),
+            date(2025, 5, 2),
+            raise_on_error=True,
+        )
+
+
+async def test_the_service_refuses_when_no_entry_is_loaded(hass: HomeAssistant) -> None:
+    """Before any setup there is no coordinator the service could use."""
+    with pytest.raises(Exception) as raised:
+        _backfill_targets(hass, None)
+
+    assert raised.value.translation_key == "no_loaded_entry"  # type: ignore[attr-defined]
+
+
+def test_a_bucket_without_a_timestamp_or_on_an_unaligned_hour_is_skipped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A timeless row and a row the recorder would reject never become a bucket."""
+    timeless = CkwMeasurement(
+        start_utc=None,
+        end_utc=None,
+        kwh_ht=1.0,
+        kwh_nt=1.0,
+        chf_ht=None,
+        chf_nt=None,
+        lines_p=1,
+        lines_fw=1,
+        lines_fb=1,
+    )
+    aligned = _daily(date(2025, 5, 1))
+    monkeypatch.setattr(
+        statistics_module,
+        "_local_midnight",
+        lambda day: datetime.combine(day, time(0, 30), tzinfo=TIME_ZONE),
+    )
+
+    buckets, skipped = _daily_buckets([timeless, aligned])
+
+    assert buckets == []
+    assert skipped == 2
+
+
+def test_an_older_window_restarts_the_cumulative_sum() -> None:
+    """History older than the anchor cannot continue a sum that starts later."""
+    previous = MeterState(
+        anchor_start=datetime(2025, 5, 10, tzinfo=TIME_ZONE),
+        anchor_sum=30.0,
+        checksum="old",
+    )
+    buckets = [
+        StatisticsBucket(start=datetime(2025, 5, 1, tzinfo=TIME_ZONE), kwh=2.0),
+        StatisticsBucket(start=datetime(2025, 5, 2, tzinfo=TIME_ZONE), kwh=3.0),
+    ]
+
+    rows, state = _cumulative_rows(buckets, previous)
+
+    assert [row["sum"] for row in rows] == [2.0, 5.0]
+    assert state.anchor_sum == 5.0
+
+
+def test_local_day_prefers_the_start_and_can_use_the_end() -> None:
+    """A row with only an end belongs to the day that end closes."""
+    end_only = CkwMeasurement(
+        start_utc=None,
+        end_utc=datetime(2025, 5, 2, tzinfo=TIME_ZONE).astimezone(UTC),
+        kwh_ht=1.0,
+        kwh_nt=1.0,
+        chf_ht=None,
+        chf_nt=None,
+        lines_p=1,
+        lines_fw=1,
+        lines_fb=1,
+    )
+    nothing = CkwMeasurement(
+        start_utc=None,
+        end_utc=None,
+        kwh_ht=1.0,
+        kwh_nt=1.0,
+        chf_ht=None,
+        chf_nt=None,
+        lines_p=1,
+        lines_fw=1,
+        lines_fb=1,
+    )
+
+    assert _local_day(end_only) == date(2025, 5, 1)
+    assert _local_day(nothing) is None
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        None,
+        "not-a-mapping",
+        {"anchor_start": 1, "anchor_sum": 1.0, "checksum": "x"},
+        {"anchor_start": "2025-05-01T00:00:00", "anchor_sum": True, "checksum": "x"},
+        {"anchor_start": "2025-05-01T00:00:00", "anchor_sum": 1.0, "checksum": 2},
+        {"anchor_start": "not-a-date", "anchor_sum": 1.0, "checksum": "x"},
+    ],
+)
+def test_a_malformed_meter_anchor_is_ignored(raw: object) -> None:
+    """An older or hand-edited store must not break the import."""
+    assert _parse_meter_state(raw) is None
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        None,
+        {"days": True},
+        {"days": 1, "chunks_done": "1"},
+        {"days": 1, "chunks_done": 0, "window_start": 1, "next_start": "2025-05-01"},
+        {
+            "days": 1,
+            "chunks_done": 0,
+            "window_start": "2025-05-01",
+            "next_start": "2025-05-02",
+            "done": "no",
+        },
+        {
+            "days": 1,
+            "chunks_done": 0,
+            "window_start": "not-a-date",
+            "next_start": "2025-05-02",
+            "done": False,
+        },
+    ],
+)
+def test_a_malformed_backfill_offset_is_ignored(raw: object) -> None:
+    """A corrupt offset means start over, never a crash during setup."""
+    assert _parse_backfill(raw) is None
+
+
+async def test_polled_import_logs_a_meter_without_a_total_sensor(
+    hass: HomeAssistant, entry: MockConfigEntry, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Before the entity exists there is no statistic id to write to."""
+    coordinator = entry.runtime_data.coordinator
+    coordinator.data = SimpleNamespace(meters={METER: object()}, meter_info={})
+    coordinator.interval_data = (_daily(date(2025, 5, 1)),)
+    caplog.set_level("DEBUG", logger="custom_components.ckw.statistics")
+
+    await async_import_polled_statistics(hass, entry)
+
+    assert any("no total sensor" in record.getMessage() for record in caplog.records)
+
+
+async def test_a_raw_http_failure_is_raised_when_the_service_asked(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """The service sees its own connection error, not the aiohttp one."""
+    from unittest.mock import Mock
+
+    from custom_components.ckw.exceptions import CkwConnectionFailedError
+
+    coordinator = entry.runtime_data.coordinator
+    coordinator.client.error = aiohttp.ClientResponseError(Mock(), (), status=503)
+
+    with pytest.raises(CkwConnectionFailedError):
+        await _async_import_chunk(
+            hass, entry, coordinator, date(2025, 5, 1), date(2025, 5, 1), raise_on_error=True
+        )
+
+
+async def test_a_timeout_keeps_the_offset_for_the_background_run(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """Nobody asked for an error, so a timeout resumes at the same chunk."""
+    coordinator = entry.runtime_data.coordinator
+    coordinator.client.error = TimeoutError("slow")
+
+    assert (
+        await _async_import_chunk(hass, entry, coordinator, date(2025, 5, 1), date(2025, 5, 1))
+        is None
+    )
+
+
+async def test_a_generic_api_failure_keeps_the_offset_for_the_background_run(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """A background chunk failure is a log line and a stored offset, not a crash."""
+    coordinator = entry.runtime_data.coordinator
+    coordinator.client.error = CkwError("something new")
+
+    assert (
+        await _async_import_chunk(hass, entry, coordinator, date(2025, 5, 1), date(2025, 5, 1))
+        is None
+    )
+
+
+async def test_a_raw_auth_failure_also_stops_the_background_run(
+    hass: HomeAssistant, entry: MockConfigEntry, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A dead token refresh starts reauth and returns without raising."""
+    from unittest.mock import Mock
+
+    coordinator = entry.runtime_data.coordinator
+    coordinator.client.error = aiohttp.ClientResponseError(Mock(), (), status=401)
+    monkeypatch.setattr(entry, "async_start_reauth", Mock())
+
+    assert (
+        await _async_import_chunk(hass, entry, coordinator, date(2025, 5, 1), date(2025, 5, 1))
+        is None
+    )
+    entry.async_start_reauth.assert_called_once()  # type: ignore[attr-defined]
+
+
+async def test_the_poll_listener_is_silent_while_a_backfill_runs(
+    hass: HomeAssistant, entry: MockConfigEntry, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A backfill imports the same days; the listener must not double-write them."""
+    coordinator = entry.runtime_data.coordinator
+    tasks: list[str] = []
+
+    def create_task(_hass: HomeAssistant, coroutine: Any, *, name: str) -> None:
+        coroutine.close()
+        tasks.append(name)
+
+    monkeypatch.setattr(entry, "async_create_background_task", create_task)
+    statistics_module.async_register_statistics(hass, entry)
+
+    entry.runtime_data.statistics_state.running = True
+    coordinator.listener()
+    assert tasks == []
+
+    entry.runtime_data.statistics_state.running = False
+    coordinator.listener()
+    assert tasks == ["ckw statistics import"]
+
+
+def test_a_window_that_starts_later_than_the_anchor_continues_the_sum() -> None:
+    """A gap between the anchor and this window carries the sum forward."""
+    previous = MeterState(
+        anchor_start=datetime(2025, 5, 1, tzinfo=TIME_ZONE),
+        anchor_sum=3.0,
+        checksum="old",
+    )
+    buckets = [StatisticsBucket(start=datetime(2025, 5, 5, tzinfo=TIME_ZONE), kwh=2.0)]
+
+    rows, state = _cumulative_rows(buckets, previous)
+
+    assert [row["sum"] for row in rows] == [5.0]
+    assert state.anchor_sum == 5.0
+
+
+def test_has_electricity_series_requires_a_named_electricity_meter() -> None:
+    """An empty or gas-only answer is not an electricity history."""
+    from custom_components.ckw.statistics import _has_electricity_series
+
+    coordinator = SimpleNamespace(data=SimpleNamespace(meter_info={}))
+    empty = [CkwMeterMeasurements(deliverypointnumber="", measurements=())]
+
+    assert _has_electricity_series(coordinator, empty) is False
+    assert _has_electricity_series(
+        coordinator, [CkwMeterMeasurements(deliverypointnumber=METER, measurements=())]
+    )
+
+
+@pytest.mark.parametrize("raw_date", ["not-a-date", "2025-13-01T00:00:00"])
+def test_an_unparseable_anchor_date_is_ignored(raw_date: str) -> None:
+    """Both a missing and an impossible date mean no stored anchor."""
+    assert (
+        _parse_meter_state({"anchor_start": raw_date, "anchor_sum": 1.0, "checksum": "x"}) is None
+    )

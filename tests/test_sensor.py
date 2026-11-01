@@ -156,6 +156,7 @@ class FakeApi:
         self.minutes = minutes
         self.customer = customer
         self.calls: list[tuple[date, date, str]] = []
+        self.error: Exception | None = None
 
 
 def patch_api(monkeypatch: pytest.MonkeyPatch, fake: FakeApi) -> None:
@@ -171,6 +172,8 @@ def patch_api(monkeypatch: pytest.MonkeyPatch, fake: FakeApi) -> None:
         aggregation: str = DAYS_AGGREGATION,
     ) -> list[CkwMeterMeasurements]:
         fake.calls.append((start, end, aggregation))
+        if fake.error is not None:
+            raise fake.error
         if aggregation == MINUTES_AGGREGATION:
             return fake.minutes
         return fake.days
@@ -464,3 +467,208 @@ async def test_every_entity_has_entity_name_and_the_platform_does_not_parallelis
     entries = sensor_entries(hass, entry)
     assert entries
     assert all(item.has_entity_name for item in entries)
+
+
+# ---------------------------------------------------------------------------
+# Helper and availability paths (Silver test-coverage)
+# ---------------------------------------------------------------------------
+
+
+def _totals_fixture(**overrides: Any) -> Any:
+    """Build the coordinator data one sensor reads, with overridable totals."""
+    from custom_components.ckw.coordinator import CkwData, MeterTotals
+
+    totals = MeterTotals(
+        kwh_total=overrides.pop("kwh_total", 3.0),
+        kwh_ht=overrides.pop("kwh_ht", 2.0),
+        kwh_nt=overrides.pop("kwh_nt", 1.0),
+        last_interval_end=overrides.pop("last_interval_end", FROZEN_NOW_UTC),
+        publication_delay_h=overrides.pop("publication_delay_h", 1.0),
+        intervals_seen=overrides.pop("intervals_seen", 1),
+        quality_intervals=overrides.pop("quality_intervals", 0),
+        last_day_kwh=overrides.pop("last_day_kwh", 3.0),
+        last_day_start=overrides.pop("last_day_start", FROZEN_NOW_UTC),
+    )
+    return CkwData(
+        meters={IMPORT_METER: totals},
+        rate_limit=None,
+        newest_interval=FROZEN_NOW_UTC,
+        polled_at=FROZEN_NOW_UTC,
+    )
+
+
+def test_the_value_helpers_return_none_when_there_is_no_total() -> None:
+    """Data, meter and intervals can each be missing; none of them is a zero."""
+    from custom_components.ckw import sensor as sensor_module
+
+    data = _totals_fixture()
+    empty = _totals_fixture(intervals_seen=0)
+
+    assert sensor_module._totals(None, IMPORT_METER) is None
+    assert sensor_module._totals(empty, IMPORT_METER) is None
+    assert sensor_module._totals(data, "unknown") is None
+    assert sensor_module._consumption_total(data, IMPORT_METER) == 3.0
+    assert sensor_module._consumption_yesterday(data, IMPORT_METER) == 3.0
+    assert sensor_module._consumption_high_tariff(data, IMPORT_METER) == 2.0
+    assert sensor_module._consumption_low_tariff(data, IMPORT_METER) == 1.0
+    assert sensor_module._last_published_interval(data, IMPORT_METER) == FROZEN_NOW_UTC
+
+
+async def test_sensor_setup_without_data_adds_nothing(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A platform forward before the first poll must not create entities."""
+    from types import SimpleNamespace
+
+    from custom_components.ckw import sensor as sensor_module
+
+    added: list[Any] = []
+    entry = SimpleNamespace(
+        runtime_data=SimpleNamespace(coordinator=SimpleNamespace(data=None)),
+        async_on_unload=lambda callback: None,
+    )
+
+    await sensor_module.async_setup_entry(hass, entry, added.extend)
+
+    assert added == []
+
+
+async def test_the_follow_up_listener_without_data_adds_nothing(hass: HomeAssistant) -> None:
+    """The coordinator can clear its data between a callback and its execution."""
+    from types import SimpleNamespace
+
+    from custom_components.ckw import sensor as sensor_module
+    from custom_components.ckw.coordinator import CkwData
+
+    listeners: list[Any] = []
+    coordinator = SimpleNamespace(
+        data=CkwData(meters={}, rate_limit=None, newest_interval=None),
+        async_add_listener=lambda callback: listeners.append(callback) or (lambda: None),
+    )
+    entry = SimpleNamespace(
+        entry_id="entry-1",
+        runtime_data=SimpleNamespace(coordinator=coordinator),
+        async_on_unload=lambda callback: None,
+    )
+    added: list[Any] = []
+
+    await sensor_module.async_setup_entry(hass, entry, added.extend)
+    coordinator.data = None
+    listeners[0]()
+
+    assert added == []
+
+
+def test_a_sensor_without_data_has_no_value_attributes_or_stale_mark(
+    hass: HomeAssistant,
+) -> None:
+    """Every read-only property tolerates a coordinator that has no data yet."""
+    from types import SimpleNamespace
+
+    from custom_components.ckw import sensor as sensor_module
+    from custom_components.ckw.entity import CkwEntity
+
+    entry = add_entry(hass)
+    coordinator = SimpleNamespace(config_entry=entry, last_update_success=True, data=None)
+    entity = CkwEntity(coordinator, deliverypoint=IMPORT_METER, key="consumption_total")
+
+    assert entity.available is False
+    assert entity.stale_since is None
+
+    total = next(
+        item for item in sensor_module.SENSOR_DESCRIPTIONS if item.key == "consumption_total"
+    )
+    yesterday = next(
+        item for item in sensor_module.SENSOR_DESCRIPTIONS if item.key == "consumption_yesterday"
+    )
+    quarter = next(item for item in sensor_module.SENSOR_DESCRIPTIONS if item.key == "quarter_hour")
+    sensor = sensor_module.CkwSensor(coordinator, IMPORT_METER, None, total)
+    yesterday_sensor = sensor_module.CkwSensor(coordinator, IMPORT_METER, None, yesterday)
+    quarter_sensor = sensor_module.CkwSensor(coordinator, IMPORT_METER, None, quarter)
+
+    assert sensor.native_value is None
+    assert sensor.extra_state_attributes is None
+    assert yesterday_sensor.last_reset is None
+    assert quarter_sensor.extra_state_attributes is None
+
+    quarter_sensor.coordinator.data = _totals_fixture()
+    assert quarter_sensor.extra_state_attributes is None
+
+
+def test_a_total_sensor_without_totals_has_no_attributes(hass: HomeAssistant) -> None:
+    """A meter that has no complete interval yet exposes no publication details."""
+    from types import SimpleNamespace
+
+    from custom_components.ckw import sensor as sensor_module
+
+    entry = add_entry(hass)
+    coordinator = SimpleNamespace(
+        config_entry=entry,
+        last_update_success=True,
+        data=_totals_fixture(intervals_seen=0),
+    )
+    total = next(
+        item for item in sensor_module.SENSOR_DESCRIPTIONS if item.key == "consumption_total"
+    )
+    sensor = sensor_module.CkwSensor(coordinator, IMPORT_METER, None, total)
+
+    assert sensor.extra_state_attributes is None
+
+
+def test_an_unknown_meter_model_is_kept_as_the_raw_string() -> None:
+    """A model CKW invents later must still be shown, not crash the device page."""
+    from custom_components.ckw.api import CkwMeter
+    from custom_components.ckw.entity import _meter_model
+
+    unknown = CkwMeter(
+        id="1",
+        model="A brand new model",
+        type=None,
+        fuel=None,
+        deliverypointnumber=IMPORT_METER,
+        supply_start=None,
+        supply_end=None,
+    )
+
+    assert _meter_model(None) is None
+    assert _meter_model(unknown) == "A brand new model"
+
+
+def test_an_entity_needs_a_config_entry() -> None:
+    """A coordinator created without an entry cannot build an append-only id."""
+    from types import SimpleNamespace
+
+    from custom_components.ckw.entity import CkwEntity
+
+    coordinator = SimpleNamespace(config_entry=None, last_update_success=True, data=None)
+
+    with pytest.raises(ValueError):
+        CkwEntity(coordinator, deliverypoint=IMPORT_METER, key="consumption_total")
+
+
+async def test_a_failed_poll_makes_every_sensor_unavailable_and_recovery_restores_it(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Availability follows the coordinator, not only the meter's presence."""
+    from custom_components.ckw import statistics as statistics_module
+    from custom_components.ckw.api import CkwConnectionError
+
+    fake = fixture_fake()
+    fake.error = None
+    monkeypatch.setattr(statistics_module, "async_import_statistics", lambda *args: None)
+
+    with freeze_time(FROZEN_NOW):
+        entry = await setup_entry(hass, monkeypatch, fake)
+        assert state_of(hass, entry, IMPORT_METER, "consumption_total").state != STATE_UNAVAILABLE
+
+        fake.error = CkwConnectionError("offline")
+        await entry.runtime_data.coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+        assert state_of(hass, entry, IMPORT_METER, "consumption_total").state == STATE_UNAVAILABLE
+
+        fake.error = None
+        await entry.runtime_data.coordinator.async_refresh()
+        await hass.async_block_till_done()
+
+        assert state_of(hass, entry, IMPORT_METER, "consumption_total").state != STATE_UNAVAILABLE

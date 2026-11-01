@@ -131,10 +131,6 @@ class CkwConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
             self._abort_if_unique_id_mismatch(reason="reauth_account_mismatch")
             return self._async_finish_reauth(customer)
 
-        if self.source == SOURCE_RECONFIGURE:
-            self._abort_if_unique_id_mismatch(reason="reconfigure_account_mismatch")
-            return await self.async_step_meter()
-
         self._abort_if_unique_id_configured()
         if len(self._meters) == 1:
             deliverypoint = next(iter(self._meters))
@@ -210,9 +206,6 @@ class CkwConfigFlow(AbstractOAuth2FlowHandler, domain=DOMAIN):
             self._meters = self._electric_meters(customer)
             if not self._meters:
                 return self.async_abort(reason="no_meters")
-
-        if user_input is not None:
-            return self._async_update_reconfigure(str(user_input[CONF_METER]))
 
         if len(self._meters) == 1:
             return self._async_update_reconfigure(

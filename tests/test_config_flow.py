@@ -33,6 +33,7 @@ from custom_components.ckw.api import (
     CkwClient,
     CkwConnectionError,
     CkwCustomer,
+    CkwError,
     CkwLocation,
     CkwMeter,
 )
@@ -457,3 +458,320 @@ async def test_application_credentials_dev_override(
     assert implementation.client_id == "test-client"
     assert implementation.client_secret == ""
     assert implementation.extra_authorize_data["scope"] == "openid offline_access"
+
+
+# ---------------------------------------------------------------------------
+# Error paths and edge cases (#63, #70, Silver test-coverage)
+# ---------------------------------------------------------------------------
+
+
+async def test_an_unavailable_oauth_implementation_aborts_the_user_step(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Home Assistant can report the implementation itself as unavailable."""
+    from homeassistant.helpers.config_entry_oauth2_flow import ImplementationUnavailableError
+
+    from custom_components.ckw import config_flow as config_flow_module
+
+    async def unavailable(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+        raise ImplementationUnavailableError("no implementation")
+
+    monkeypatch.setattr(
+        config_flow_module.config_entry_oauth2_flow,
+        "async_get_implementations",
+        unavailable,
+    )
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "missing_configuration"
+
+
+async def test_a_customer_without_an_id_cannot_be_configured(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The customer id is the unique id; without it the flow stops at once."""
+    from dataclasses import replace
+
+    register_implementation(hass)
+    patch_customer(
+        monkeypatch,
+        customer=replace(make_customer(make_meter(DELIVERYPOINT_1)), id=""),
+    )
+
+    result = await start_user_flow(hass)
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "unknown"
+
+
+async def test_an_electricity_meter_without_a_delivery_point_is_ignored(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A placeholder meter must not become the entry's delivery point."""
+    register_implementation(hass)
+    patch_customer(
+        monkeypatch,
+        customer=make_customer(
+            make_meter(""),
+            make_meter(DELIVERYPOINT_1),
+        ),
+    )
+
+    result = await start_user_flow(hass)
+
+    assert result["type"] == "create_entry"
+    assert result["data"][CONF_METER] == DELIVERYPOINT_1
+
+
+async def test_the_meter_step_rejects_a_delivery_point_it_never_offered(
+    hass: HomeAssistant,
+) -> None:
+    """A stale form cannot store a delivery point that is no longer in the payload."""
+    from custom_components.ckw.config_flow import CkwConfigFlow
+
+    customer = make_customer(make_meter(DELIVERYPOINT_1), make_meter(DELIVERYPOINT_2))
+    flow = CkwConfigFlow()
+    flow.hass = hass
+    flow._customer = customer
+    flow._meters = flow._electric_meters(customer)
+
+    result = await flow.async_step_meter({CONF_METER: "CH-not-offered"})
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "meter"
+    assert result["errors"] == {CONF_METER: "invalid_meter"}
+
+
+async def test_the_meter_step_without_a_customer_aborts_no_meters(hass: HomeAssistant) -> None:
+    """The step guards itself while the OAuth2 callback has not produced a customer."""
+    from custom_components.ckw.config_flow import CkwConfigFlow
+
+    flow = CkwConfigFlow()
+    flow.hass = hass
+
+    result = await flow.async_step_meter()
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "no_meters"
+
+
+async def test_the_picker_and_title_can_do_without_a_city(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A location without a city yields the bare delivery point and customer id."""
+    register_implementation(hass)
+    patch_customer(
+        monkeypatch,
+        customer=make_customer(make_meter(DELIVERYPOINT_1), make_meter(DELIVERYPOINT_2), city=""),
+    )
+    result = await start_user_flow(hass)
+    assert result["step_id"] == "meter"
+
+    # The picker renders both labels, neither of which has a city suffix.
+    options = result["data_schema"]({CONF_METER: DELIVERYPOINT_1})
+    assert options[CONF_METER] == DELIVERYPOINT_1
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_METER: DELIVERYPOINT_2}
+    )
+
+    assert result["type"] == "create_entry"
+    assert result["title"] == CUSTOMER_ID
+    assert result["data"][CONF_CITY] == ""
+
+
+async def test_a_reconfigure_without_a_known_customer_uses_one_meter_directly(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A one-meter account reconfigures without showing the picker."""
+    register_implementation(hass)
+    entry = add_entry(hass)
+    patch_customer(
+        monkeypatch,
+        customer=make_customer(make_meter(DELIVERYPOINT_1), city="Bern"),
+    )
+    monkeypatch.setattr(hass.config_entries, "async_schedule_reload", lambda entry_id: None)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_RECONFIGURE, "entry_id": entry.entry_id},
+    )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data[CONF_METER] == DELIVERYPOINT_1
+    assert entry.data[CONF_CITY] == "Bern"
+
+
+@pytest.mark.parametrize(
+    ("error", "reason"),
+    [
+        (CkwAuthError("rejected"), "invalid_auth"),
+        (CkwConnectionError("offline"), "cannot_connect"),
+        (CkwError("unexpected answer"), "unknown"),
+        (RuntimeError("unexpected"), "unknown"),
+    ],
+)
+async def test_reconfigure_failures_abort_with_the_probe_reason(
+    hass: HomeAssistant,
+    monkeypatch: pytest.MonkeyPatch,
+    error: Exception,
+    reason: str,
+) -> None:
+    """A broken probe during reconfigure keeps the entry and names the reason."""
+    register_implementation(hass)
+    entry = add_entry(hass)
+    patch_customer(monkeypatch, error=error)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_RECONFIGURE, "entry_id": entry.entry_id},
+    )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == reason
+    assert hass.config_entries.async_entries(DOMAIN) == [entry]
+
+
+async def test_reconfigure_without_electricity_meters_aborts_no_meters(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A gas-only answer cannot reconfigure an electricity entry."""
+    register_implementation(hass)
+    entry = add_entry(hass)
+    patch_customer(
+        monkeypatch,
+        customer=make_customer(make_meter(DELIVERYPOINT_GAS, fuel=Fuel.GAS)),
+    )
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_RECONFIGURE, "entry_id": entry.entry_id},
+    )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "no_meters"
+
+
+async def test_reconfigure_rejects_an_unknown_delivery_point(hass: HomeAssistant) -> None:
+    """The reconfigure helper validates its choice like the setup picker."""
+    from custom_components.ckw.config_flow import CkwConfigFlow
+
+    customer = make_customer(make_meter(DELIVERYPOINT_1), make_meter(DELIVERYPOINT_2))
+    flow = CkwConfigFlow()
+    flow.hass = hass
+    flow._customer = customer
+    flow._meters = flow._electric_meters(customer)
+
+    result = flow._async_update_reconfigure("CH-not-offered")
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "meter"
+    assert result["errors"] == {CONF_METER: "invalid_meter"}
+
+
+def test_reconfigure_without_a_customer_aborts_no_meters(hass: HomeAssistant) -> None:
+    """The update helper refuses to touch an entry before the probe succeeded."""
+    from custom_components.ckw.config_flow import CkwConfigFlow
+
+    flow = CkwConfigFlow()
+    flow.hass = hass
+
+    result = flow._async_update_reconfigure(DELIVERYPOINT_1)
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "no_meters"
+
+
+async def test_reconfigure_aborts_when_the_oauth_implementation_is_gone(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A deleted application credential leaves reconfigure nothing to authenticate with."""
+    from homeassistant.helpers.config_entry_oauth2_flow import ImplementationUnavailableError
+
+    from custom_components.ckw import config_flow as config_flow_module
+
+    entry = add_entry(hass)
+
+    async def unavailable(*_args: Any, **_kwargs: Any) -> Any:
+        raise ImplementationUnavailableError("gone")
+
+    monkeypatch.setattr(
+        config_flow_module.config_entry_oauth2_flow,
+        "async_get_config_entry_implementation",
+        unavailable,
+    )
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={"source": SOURCE_RECONFIGURE, "entry_id": entry.entry_id},
+    )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "unknown"
+
+
+async def test_reauth_moves_to_the_only_meter_when_the_old_one_is_gone(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A one-meter account keeps working after CKW renumbers its delivery point."""
+    register_implementation(hass)
+    entry = add_entry(hass)
+    patch_customer(
+        monkeypatch,
+        customer=make_customer(make_meter(DELIVERYPOINT_2), city="Bern"),
+    )
+    monkeypatch.setattr(hass.config_entries, "async_schedule_reload", lambda entry_id: None)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": SOURCE_REAUTH,
+            "entry_id": entry.entry_id,
+            "unique_id": entry.unique_id,
+        },
+    )
+    result = await complete_oauth(hass, result)
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "reauth_successful"
+    assert entry.data[CONF_METER] == DELIVERYPOINT_2
+    assert entry.data[CONF_CITY] == "Bern"
+
+
+async def test_the_options_flow_falls_back_for_a_stored_interval_outside_the_bounds(
+    hass: HomeAssistant,
+) -> None:
+    """An old or hand-edited option value cannot break the form."""
+    from custom_components.ckw.const import DEFAULT_POLL_HOURS
+
+    entry = add_entry(hass, options={CONF_POLL_HOURS: 99})
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    assert result["type"] == "form"
+    assert result["step_id"] == "init"
+    schema_default = next(
+        key.default() for key in result["data_schema"].schema if key == CONF_POLL_HOURS
+    )
+    assert schema_default == DEFAULT_POLL_HOURS
+
+
+def test_the_debug_helpers_mask_a_location_without_a_city() -> None:
+    """The label and title helpers stay usable when CKW sends no city."""
+    from custom_components.ckw.config_flow import CkwConfigFlow
+
+    meter = make_meter(DELIVERYPOINT_1)
+    location = CkwLocation(
+        id="1",
+        gpnr="1",
+        street="Musterweg 1",
+        postal_code="6000",
+        city=None,
+        meters=(meter,),
+    )
+
+    assert CkwConfigFlow._meter_label(meter, location) == DELIVERYPOINT_1
+    assert CkwConfigFlow._entry_title(CUSTOMER_ID, "") == CUSTOMER_ID

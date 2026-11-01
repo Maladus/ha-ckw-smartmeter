@@ -37,9 +37,11 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.ckw import coordinator as coordinator_module
 from custom_components.ckw.api import (
+    CkwApiError,
     CkwAuthError,
     CkwClient,
     CkwConnectionError,
+    CkwError,
     CkwMeasurement,
     CkwMeterMeasurements,
     CkwRangeTooBigError,
@@ -713,3 +715,331 @@ async def test_a_window_that_is_still_too_big_fails_the_poll(
     assert isinstance(coordinator.last_exception, UpdateFailed)
     assert coordinator.last_exception.translation_key == "range_too_big"
     assert len(fake.calls) == 2
+
+
+# ---------------------------------------------------------------------------
+# Failure mapping and defensive paths (#70, Silver test-coverage)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("error", "translation_key"),
+    [
+        (CkwApiError(503, "busy"), "api_error"),
+        (CkwError("a new answer"), "unknown"),
+        (CkwRateLimitError("quota"), "rate_limited_no_reset"),
+    ],
+)
+async def test_api_and_unknown_failures_become_translated_update_failures(
+    hass: HomeAssistant,
+    monkeypatch: pytest.MonkeyPatch,
+    error: Exception,
+    translation_key: str,
+) -> None:
+    """Every ``api.py`` failure has a key, including one without a reset time."""
+    coordinator = CkwCoordinator(hass, add_entry(hass), make_client())
+    fake = FakeMeasurements()
+    fake.error = error
+    monkeypatch.setattr(coordinator.client, "async_get_measurements", fake)
+
+    with pytest.raises(UpdateFailed) as raised:
+        await coordinator._async_fetch(date(2026, 10, 26), date(2026, 11, 1))
+
+    assert raised.value.translation_key == translation_key
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        (401, ConfigEntryAuthFailed),
+        (403, ConfigEntryAuthFailed),
+        (503, UpdateFailed),
+    ],
+)
+async def test_a_raw_aiohttp_response_error_is_mapped_by_status(
+    hass: HomeAssistant,
+    monkeypatch: pytest.MonkeyPatch,
+    status: int,
+    expected: type[Exception],
+) -> None:
+    """The token refresh can answer before ``api.py`` sees the response."""
+    from unittest.mock import Mock
+
+    import aiohttp
+
+    coordinator = CkwCoordinator(hass, add_entry(hass), make_client())
+    fake = FakeMeasurements()
+    fake.error = aiohttp.ClientResponseError(Mock(), (), status=status)
+    monkeypatch.setattr(coordinator.client, "async_get_measurements", fake)
+
+    with pytest.raises(expected):
+        await coordinator._async_fetch(date(2026, 10, 26), date(2026, 11, 1))
+
+
+@pytest.mark.parametrize(
+    "error",
+    [TimeoutError("slow"), __import__("aiohttp").ClientConnectionError("offline")],
+)
+async def test_timeouts_and_transport_errors_become_cannot_connect(
+    hass: HomeAssistant,
+    monkeypatch: pytest.MonkeyPatch,
+    error: Exception,
+) -> None:
+    """A request without a response is a connection failure, never a traceback."""
+    coordinator = CkwCoordinator(hass, add_entry(hass), make_client())
+    fake = FakeMeasurements()
+    fake.error = error
+    monkeypatch.setattr(coordinator.client, "async_get_measurements", fake)
+
+    with pytest.raises(UpdateFailed) as raised:
+        await coordinator._async_fetch(date(2026, 10, 26), date(2026, 11, 1))
+
+    assert raised.value.translation_key == "cannot_connect"
+
+
+async def test_pacing_skips_the_wait_when_there_is_nothing_to_wait_for(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No quota, a healthy quota and an expired reset all send immediately."""
+    coordinator = CkwCoordinator(hass, add_entry(hass), make_client())
+    sleeps: list[float] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    monkeypatch.setattr(coordinator_module, "asyncio", SimpleNamespace(sleep=fake_sleep))
+
+    coordinator.client.last_rate_limit = RateLimitInfo(limit=4, remaining=None, reset_ms=None)
+    await coordinator.async_pace()
+
+    coordinator.client.last_rate_limit = RateLimitInfo(limit=4, remaining=2, reset_ms=1000)
+    await coordinator.async_pace()
+
+    coordinator.client.last_rate_limit = RateLimitInfo(limit=4, remaining=0, reset_ms=None)
+    await coordinator.async_pace()
+
+    coordinator.client.last_rate_limit = RateLimitInfo(limit=4, remaining=0, reset_ms=1000)
+    coordinator._rate_limit_info = coordinator.client.last_rate_limit
+    coordinator._rate_limit_at = time.monotonic() - 5
+    await coordinator.async_pace()
+
+    assert sleeps == []
+
+
+async def test_merge_ignores_series_and_intervals_without_identity_or_time(
+    hass: HomeAssistant,
+) -> None:
+    """A nameless series and a timeless interval never enter the totals."""
+    coordinator = CkwCoordinator(hass, add_entry(hass), make_client())
+    timeless = CkwMeasurement(
+        start_utc=None,
+        end_utc=None,
+        kwh_ht=1.0,
+        kwh_nt=1.0,
+        chf_ht=None,
+        chf_nt=None,
+        lines_p=1,
+        lines_fw=1,
+        lines_fb=1,
+    )
+
+    counts, corrected, newest = coordinator._merge(
+        [
+            CkwMeterMeasurements(deliverypointnumber="", measurements=(timeless,)),
+            CkwMeterMeasurements(deliverypointnumber=ENTRY_METER, measurements=(timeless,)),
+        ]
+    )
+
+    assert counts == {ENTRY_METER: 0}
+    assert corrected == 0
+    assert newest is None
+
+
+async def test_a_corrected_interval_replaces_the_stored_one(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+) -> None:
+    """CKW's later answer for the same end wins and is logged at debug."""
+    coordinator = CkwCoordinator(hass, add_entry(hass), make_client())
+    original = load_series()[0].measurements[-1]
+    corrected = CkwMeasurement(
+        start_utc=original.start_utc,
+        end_utc=original.end_utc,
+        kwh_ht=9.0,
+        kwh_nt=9.0,
+        chf_ht=None,
+        chf_nt=None,
+        lines_p=1,
+        lines_fw=1,
+        lines_fb=1,
+    )
+    deliverypoint = load_series()[0].deliverypointnumber
+    coordinator._merge(
+        [CkwMeterMeasurements(deliverypointnumber=deliverypoint, measurements=(original,))]
+    )
+    caplog.set_level(logging.DEBUG, logger=COORDINATOR_LOGGER)
+
+    counts, corrected_count, _ = coordinator._merge(
+        [CkwMeterMeasurements(deliverypointnumber=deliverypoint, measurements=(corrected,))]
+    )
+
+    assert counts[deliverypoint] == 0
+    assert corrected_count == 1
+    assert any("corrected the interval" in record.getMessage() for record in caplog.records)
+
+
+async def test_a_poll_without_a_publication_timestamp_logs_nothing(
+    hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A meter with no published interval has no baseline to log about."""
+    coordinator = CkwCoordinator(hass, add_entry(hass), make_client())
+    caplog.set_level(logging.INFO, logger=COORDINATOR_LOGGER)
+
+    coordinator._log_publication(
+        coordinator_module.MeterTotals(
+            kwh_total=0.0,
+            kwh_ht=0.0,
+            kwh_nt=0.0,
+            last_interval_end=None,
+            publication_delay_h=None,
+            intervals_seen=0,
+            quality_intervals=0,
+        ),
+        FROZEN_NOW,
+    )
+
+    assert caplog.records == []
+
+
+async def test_repair_checks_are_skipped_without_a_config_entry(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A coordinator detached from its entry never fails a poll on repairs."""
+    called = AsyncMock()
+    monkeypatch.setattr(coordinator_module, "async_check_repairs", called)
+    coordinator = SimpleNamespace(hass=hass, config_entry=None)
+
+    await CkwCoordinator._async_check_repairs(coordinator, SimpleNamespace())  # type: ignore[arg-type]
+
+    called.assert_not_awaited()
+
+
+async def test_a_failed_quarter_hour_request_leaves_the_daily_data_alone(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The opt-in quarter-hour request is never allowed to fail the poll."""
+    coordinator = CkwCoordinator(hass, add_entry(hass), make_client())
+    fake = FakeMeasurements()
+    fake.error = CkwConnectionError("offline")
+    monkeypatch.setattr(coordinator.client, "async_get_measurements", fake)
+
+    assert await coordinator._async_fetch_quarter_hour(FROZEN_NOW) == {}
+
+
+async def test_quarter_hour_rows_without_a_meter_or_a_timestamp_are_ignored(
+    hass: HomeAssistant, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Only a complete, named interval can become the quarter-hour sensor."""
+    coordinator = CkwCoordinator(hass, add_entry(hass), make_client())
+    timeless = CkwMeasurement(
+        start_utc=None,
+        end_utc=None,
+        kwh_ht=1.0,
+        kwh_nt=1.0,
+        chf_ht=None,
+        chf_nt=None,
+        lines_p=1,
+        lines_fw=1,
+        lines_fb=1,
+    )
+    fake = FakeMeasurements(
+        [
+            CkwMeterMeasurements(deliverypointnumber="", measurements=(timeless,)),
+            CkwMeterMeasurements(deliverypointnumber=ENTRY_METER, measurements=(timeless,)),
+        ]
+    )
+    monkeypatch.setattr(coordinator.client, "async_get_measurements", fake)
+
+    assert await coordinator._async_fetch_quarter_hour(FROZEN_NOW) == {}
+
+
+def test_totals_skip_an_incomplete_interval_instead_of_counting_it_as_zero() -> None:
+    """Unknown is not free electricity, so the sum ignores that interval."""
+    from custom_components.ckw.coordinator import _totals_for
+
+    end = datetime(2026, 10, 31, 23, 0, tzinfo=UTC)
+    incomplete = CkwMeasurement(
+        start_utc=end - timedelta(days=1),
+        end_utc=end,
+        kwh_ht=2.0,
+        kwh_nt=None,
+        chf_ht=None,
+        chf_nt=None,
+        lines_p=1,
+        lines_fw=1,
+        lines_fb=1,
+    )
+
+    totals = _totals_for({end: incomplete}, FROZEN_NOW)
+
+    assert totals.kwh_total == 0.0
+    assert totals.intervals_seen == 1
+    assert totals.last_day_kwh is None
+
+
+def test_the_newest_quarter_hour_skips_a_row_without_an_end() -> None:
+    """A timeless row cannot be the newest complete quarter hour."""
+    from custom_components.ckw.coordinator import _newest_quarter_hour
+
+    timeless = CkwMeasurement(
+        start_utc=None,
+        end_utc=None,
+        kwh_ht=1.0,
+        kwh_nt=1.0,
+        chf_ht=None,
+        chf_nt=None,
+        lines_p=1,
+        lines_fw=1,
+        lines_fb=1,
+    )
+
+    assert _newest_quarter_hour((timeless,)) is None
+
+
+def test_meter_info_keeps_only_meters_with_a_delivery_point() -> None:
+    """A meter without a Zählpunkt cannot be keyed or shown."""
+    from custom_components.ckw.api import CkwCustomer, CkwLocation, CkwMeter
+    from custom_components.ckw.coordinator import _meter_info
+
+    named = CkwMeter(
+        id="1",
+        model=None,
+        type=None,
+        fuel=None,
+        deliverypointnumber=ENTRY_METER,
+        supply_start=None,
+        supply_end=None,
+    )
+    unnamed = CkwMeter(
+        id="2",
+        model=None,
+        type=None,
+        fuel=None,
+        deliverypointnumber="",
+        supply_start=None,
+        supply_end=None,
+    )
+    customer = CkwCustomer(
+        id=CUSTOMER_ID,
+        locations=(
+            CkwLocation(
+                id="1",
+                gpnr="1",
+                street="Musterweg 1",
+                postal_code="6000",
+                city=CITY,
+                meters=(named, unnamed),
+            ),
+        ),
+    )
+
+    assert set(_meter_info(customer)) == {ENTRY_METER}

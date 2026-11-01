@@ -561,7 +561,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | ✅ #133 | Repair issues (Gold) | `repairs.py` raises and clears four `issue_registry` issues per entry, id `ckw_<entry_id>_<condition>`: a meter exchange (`supply_start_date` changed against the stored baseline, #124), persistent quality flags (`anzahl_linien_* > 1` on more than three intervals of the rolling window), a publication stalled beyond `PUBLICATION_STALL_DAYS` (#149), and quarter-hour retention below 30 days (#157) | each issue has a translation key, severity and fix path; create/delete symmetric and tested | #87, #130 | M | AI |
 | ✅ #134 | Dynamic and stale devices (Gold) | The sensor platform listens to the coordinator (`CkwData.meters_present` vs the accumulated `meters`): a delivery point CKW starts to return gets its seven entities and its device on the next poll, no reload. A meter missing for more than `STALE_AFTER_DAYS` is stale. Entities and history stay, the sensors are unavailable, `stale_since` sits on Consumption total, one `INFO` line marks it going stale and one its return, and no repair issue is raised because a meter can come back. `async_remove_config_entry_device` lets the user delete a vanished meter's device, and it is only registered again while the meter is present | second meter in the CKW portal shows up within one poll; vanished meter marked stale; a deleted device is not resurrected until its meter returns | #76, #70 | M | AI |
 | ✅ #135 | Parallel updates (Silver) | `PARALLEL_UPDATES = 0` per platform with a one-line reason | constant set, noted in `reference/conventions.md` (#129) | #76 | S | AI |
-| #136 | Test coverage >= 95% (Silver) | `--cov-fail-under=95`; fixtures for multi-meter, DST day, quality flags, missing intervals; config flow + coordinator error paths included | CI enforces the threshold, report attached to the release checklist | #19, #32 | L | AI |
+| ✅ #136 | Test coverage >= 95% (Silver) | `[tool.coverage]` in `pyproject.toml` (`branch`, `fail_under = 95`, `show_missing`); CI runs pytest with `--cov=custom_components/ckw --cov-report=term-missing`; fixtures for multi-meter, DST day, quality flags, missing intervals; config flow, coordinator, statistics, repairs and availability error paths included | CI enforces the threshold and the local gate prints per-module coverage (measured 99%) | #19, #32 | L | AI |
 | #137 | Silver + Gold audit and tier claim | All 54 rules accounted for with evidence in `reference/quality-scale.md` and `quality_scale.yaml`; expected `exempt`: `discovery`, `discovery-update-info`, `action-setup`, `docs-actions/triggers/conditions`, `dependency-transparency` | every `done` links code/docs, every `exempt` states why | #102, #130, #131, #132, #133, #134, #136 | M | AI |
 
 ## Phase 9 — Later / optional
@@ -629,9 +629,9 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 5 Entities | 14 | 13 |
 | 6 Statistics | 7 | 5 |
 | 7 Docs | 24 | 19 |
-| 8 Quality/Release | 18 | 6 |
+| 8 Quality/Release | 18 | 7 |
 | 9 Optional | 8 | 1 |
-| **Total** | **152** | **79** |
+| **Total** | **152** | **80** |
 
 ## Critical path
 

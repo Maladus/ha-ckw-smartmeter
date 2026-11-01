@@ -587,3 +587,70 @@ def test_both_translations_carry_every_issue(language: str) -> None:
             actual = placeholders(translated[key][field])
             assert actual == expected, f"{language}.json {key}.{field} placeholders"
             assert translated[key][field].strip()
+
+
+# ---------------------------------------------------------------------------
+# Store and helper edges (Silver test-coverage)
+# ---------------------------------------------------------------------------
+
+
+async def test_the_baseline_store_keeps_its_key_and_first_supply_start(
+    hass: HomeAssistant,
+) -> None:
+    """The first supply start is persisted once, and re-reading it is a no-op."""
+    from custom_components.ckw.const import STORAGE_KEY_REPAIRS
+    from custom_components.ckw.repairs import RepairBaselineStore
+
+    store = RepairBaselineStore(hass, "entry-1")
+    await store.async_load()
+
+    assert store.key == f"{STORAGE_KEY_REPAIRS}.entry-1"
+    assert store.supply_start(METER) is None
+
+    await store.async_remember_supply_start(METER, "2019-04-01")
+    await store.async_remember_supply_start(METER, "2019-04-01")
+
+    assert store.supply_start(METER) == "2019-04-01"
+
+
+def test_local_day_prefers_the_start_and_can_use_the_end() -> None:
+    """A row with only an end belongs to the day that end closes."""
+    from custom_components.ckw.repairs import _local_day
+
+    end_only = CkwMeasurement(
+        start_utc=None,
+        end_utc=datetime(2026, 11, 3, tzinfo=TIME_ZONE).astimezone(UTC),
+        kwh_ht=1.0,
+        kwh_nt=1.0,
+        chf_ht=None,
+        chf_nt=None,
+        lines_p=1,
+        lines_fw=1,
+        lines_fb=1,
+    )
+    nothing = CkwMeasurement(
+        start_utc=None,
+        end_utc=None,
+        kwh_ht=1.0,
+        kwh_nt=1.0,
+        chf_ht=None,
+        chf_nt=None,
+        lines_p=1,
+        lines_fw=1,
+        lines_fb=1,
+    )
+
+    assert _local_day(end_only) == date(2026, 11, 2)
+    assert _local_day(nothing) is None
+
+
+def test_an_unknown_retention_is_skipped_not_guessed(hass: HomeAssistant) -> None:
+    """A recorder without an integer ``keep_days`` says nothing about retention."""
+    from homeassistant.helpers.recorder import DATA_INSTANCE
+
+    from custom_components.ckw.repairs import _purge_keep_days
+
+    hass.config.components.add("recorder")
+    hass.data[DATA_INSTANCE] = SimpleNamespace(keep_days="30")
+
+    assert _purge_keep_days(hass) is None

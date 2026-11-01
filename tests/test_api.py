@@ -710,3 +710,56 @@ async def test_numeric_drift_is_tolerated_but_never_invented() -> None:
     assert interval.lines_fw is None
     assert interval.lines_fb == 3
     assert interval.has_quality_issue
+
+
+# ---------------------------------------------------------------------------
+# Module-level parsing helpers, directly (#136, Silver test-coverage)
+# ---------------------------------------------------------------------------
+
+
+def test_a_missing_or_non_string_enum_value_is_ignored() -> None:
+    """CKW may omit a field or send a number where its enum belongs."""
+    assert api_module._coerce_enum(None, Fuel, field="fuel") is None
+    assert api_module._coerce_enum(12, Fuel, field="fuel") is None
+
+
+def test_an_integer_counter_refuses_bools_and_fractions() -> None:
+    """A counter is a whole number; ``True`` and ``2.5`` are not counters."""
+    assert api_module._as_int(True) is None
+    assert api_module._as_int("2.5") is None
+    assert api_module._as_int(" 7 ") == 7
+
+
+def test_timestamps_tolerate_a_z_suffix_a_missing_zone_and_garbage() -> None:
+    """The parser accepts what CKW sends and returns ``None`` for the rest."""
+    assert api_module._as_utc_datetime("   ") is None
+    assert api_module._as_utc_datetime("not-a-date") is None
+    assert api_module._as_utc_datetime("2026-01-01T00:00:00Z") == datetime(2026, 1, 1, tzinfo=UTC)
+    naive = api_module._as_utc_datetime("2026-01-01T00:00:00")
+    assert naive == datetime(2026, 1, 1, tzinfo=UTC)
+
+
+def test_a_non_numeric_header_is_ignored() -> None:
+    """A broken ``x-ratelimit-*`` header never becomes a number."""
+    assert api_module._header_int({"x-ratelimit-limit": "many"}, "x-ratelimit-limit") is None
+
+
+def test_an_error_body_without_a_message_falls_back_to_the_text() -> None:
+    """An empty body has no message, and a JSON object without ``error`` is text."""
+    assert api_module._message_from_body("   ") is None
+    payload = '{"foo": "bar"}'
+    assert api_module._message_from_body(payload) == payload
+
+
+def test_an_empty_success_body_is_not_json() -> None:
+    """A 200 with no body means no data, not a parse failure."""
+    assert api_module._decode_json(200, "   ") is None
+
+
+def test_a_400_without_a_known_marker_is_a_plain_api_error() -> None:
+    """Only the documented markers get a special exception."""
+    error = api_module._error_for(400, "something else", None)
+
+    assert isinstance(error, CkwApiError)
+    assert not isinstance(error, CkwRangeTooBigError)
+    assert error.status == 400
