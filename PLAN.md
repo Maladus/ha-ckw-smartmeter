@@ -421,16 +421,16 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 
 | ID | Task | Details | Done when | Deps | Size | Owner |
 |---|---|---|---|---|---|---|
-| #46 | `application_credentials.py` | `async_get_authorization_server` → `AuthorizationServer(authorize_url, token_url)`; `async_get_auth_implementation` → `LocalOAuth2ImplementationWithPkce` (public client, no secret) | unit test returns both objects | #10 | M | AI |
-| #47 | Config flow: OAuth2 step | `async_step_user` → `async_oauth_create_entry`, `VERSION/MINOR_VERSION`, entry title from customer name | flow reaches HA login, entry created | #46, #1 | M | AI+H |
-| #48 | `test-before-configure` | After OAuth, probe `GET /smartmeter/customer`; map 401/403 to `invalid_auth`, network to `cannot_connect` | flow aborts with correct error, test covers both | #47 | S | AI |
-| #49 | `unique-config-entry` | Abort if an entry with the same customer id exists (`async_set_unique_id`) | second setup aborts `already_configured` | #48 | S | AI |
-| #151 | ADR-0008: multi-account support | One integration, N config entries (one per CKW customer): `async_set_unique_id(customer_number)`, entry title `<customer> — <city>`, entity ids stay `entry_id + deliverypoint + key`, one coordinator per entry (rate-limit aware), deletion isolated per entry; index + architecture note updated | ADR merged, #49 consistent with it | #93 | S | AI |
-| #50 | Meter selection step | If >1 `deliverypointnumber`, `async_step_meter` picker; store in entry data | multi-meter fixture → picker shown; single meter → skipped | #48, #6 | M | AI |
-| #51 | Reauth flow | `async_step_reauth` → same OAuth2 flow, update tokens, `async_update_reload_and_abort` | simulated 401 on refresh → reauth offered, flow reloads entry | #47 | M | AI |
+| ✅ #46 | `application_credentials.py` | `async_get_authorization_server` → `AuthorizationServer(authorize_url, token_url)`; `async_get_auth_implementation` → `LocalOAuth2ImplementationWithPkce` (public client, no secret) | unit test returns both objects | #10 | M | AI |
+| ✅ #47 | Config flow: OAuth2 step | `async_step_user` → `async_oauth_create_entry`, `VERSION/MINOR_VERSION`, entry title from customer name | flow reaches HA login, entry created | #46, #1 | M | AI+H |
+| ✅ #48 | `test-before-configure` | After OAuth, probe `GET /smartmeter/customer`; map 401/403 to `invalid_auth`, network to `cannot_connect` | flow aborts with correct error, test covers both | #47 | S | AI |
+| ✅ #49 | `unique-config-entry` | Abort if an entry with the same customer id exists (`async_set_unique_id`) | second setup aborts `already_configured` | #48 | S | AI |
+| ✅ #151 | ADR-0008: multi-account support | One integration, N config entries (one per CKW customer): `async_set_unique_id(customer_number)`, entry title `<customer> — <city>`, entity ids stay `entry_id + deliverypoint + key`, one coordinator per entry (rate-limit aware), deletion isolated per entry; index + architecture note updated | ADR merged, #49 consistent with it | #93 | S | AI |
+| ✅ #50 | Meter selection step | If >1 `deliverypointnumber`, `async_step_meter` picker; store in entry data | multi-meter fixture → picker shown; single meter → skipped | #48, #6 | M | AI |
+| ✅ #51 | Reauth flow | `async_step_reauth` → same OAuth2 flow, update tokens, `async_update_reload_and_abort` | simulated 401 on refresh → reauth offered, flow reloads entry | #47 | M | AI |
 | ✅ #148 | Session lifetime analysis + keep-alive rule | `docs/explanation/session-lifetime.md` (lifetime model in Keycloak terms, tolerance table, probe procedure, open questions incl. the unverified Android-app observation) and `docs/explanation/decisions/0007-token-lifetime-and-keepalive.md` (2 h poll, refresh before every request, single-flight lock, persist rotated token before next use, reauth on dead refresh token, ask CKW for `offline_access`) | lifetime model with numbers, keep-alive rule implementable without further analysis | #71, #51 | M | AI |
-| #52 | Reconfigure flow | Change client id / meter without deleting the entry | reconfigure reloads entry, statistics ids unchanged | #50 | S | AI |
-| #53 | Options flow | Poll interval (1–12 h, default 2 h) | options persist, coordinator picks up on reload | #50 | S | AI |
+| ✅ #52 | Reconfigure flow | Change client id / meter without deleting the entry | reconfigure reloads entry, statistics ids unchanged | #50 | S | AI |
+| ✅ #53 | Options flow | Poll interval (1–12 h, default 2 h) | options persist, coordinator picks up on reload | #50 | S | AI |
 | #54 | Config-flow tests | `pytest-homeassistant-custom-component`: happy path, invalid auth, cannot connect, already configured, multi-meter, reauth | `test_config_flow.py` ≥ 6 cases green | #48–#53 | M | AI |
 | #55 | End-to-end login | Real browser login in `scripts/ha-dev` HA against `oe-wigger`; HA restart → no prompt | entry `loaded`, entities present, restart silent | #47, #5 | — | H |
 | #56 | Fallback: pasted-code flow | Only if CKW refuses callback registration: PKCE generate → show authorize URL → user pastes redirect URL → exchange | hidden menu entry `user_paste` works | #56 trigger | M | AI |
@@ -623,7 +623,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 0 External | 8 | 0 |
 | 1 Setup & governance | 31 | 16 |
 | 1b Podman dev instance | 12 | 6 |
-| 2 Auth | 14 | 1 |
+| 2 Auth | 14 | 10 |
 | 3 API | 10 | 7 |
 | 4 Coordinator | 8 | 0 |
 | 5 Entities | 14 | 1 |
@@ -631,7 +631,7 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 7 Docs | 24 | 13 |
 | 8 Quality/Release | 18 | 0 |
 | 9 Optional | 8 | 1 |
-| **Total** | **152** | **33** |
+| **Total** | **152** | **42** |
 
 ## Critical path
 
