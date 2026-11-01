@@ -627,11 +627,11 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 3 API | 10 | 9 |
 | 4 Coordinator | 8 | 8 |
 | 5 Entities | 14 | 13 |
-| 6 Statistics | 7 | 0 |
+| 6 Statistics | 7 | 5 |
 | 7 Docs | 24 | 19 |
 | 8 Quality/Release | 18 | 3 |
 | 9 Optional | 8 | 1 |
-| **Total** | **152** | **71** |
+| **Total** | **152** | **76** |
 
 ## Critical path
 
