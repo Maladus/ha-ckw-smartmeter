@@ -1,6 +1,6 @@
 # 0001 — Authenticate with OAuth2 authorization code and PKCE
 
-- Status: proposed
+- Status: accepted (partially superseded by 0006 — the password/SMS-OTP fallback is not available)
 - Date: 2026-11-01
 - Deciders: Martin Wigger
 

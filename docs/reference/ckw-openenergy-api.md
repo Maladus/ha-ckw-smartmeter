@@ -3,10 +3,21 @@
 This page answers: what the CKW OpenEnergy API exposes — endpoints, fields, limits and error codes.
 
 A transcription of the published **CKW OpenEnergy Client API** contract (MuleSoft Anypoint, Axpo group;
-RAML 1.0, version group v1). Lookup only — procedures live in `../how-to/`, the reasoning in
-`../explanation/`. Field names are reproduced exactly as the API sends them, including the German ones.
-Where the contract does not state a value, a type or a format, the cell says
-`Unknown — verify with CKW` rather than a plausible guess.
+RAML 1.0, version group v1), corrected against the deployed API model measured on 2026-11-01. Lookup
+only — procedures live in `../how-to/`, the reasoning in `../explanation/`. Field names are reproduced
+exactly as the API sends them, including the German ones.
+
+The measurements and the discrepancies they exposed are recorded in
+[the verification page](ckw-openenergy-api-verification.md). This page states the corrected contract;
+questions the measurements leave open are collected under [Open questions](#open-questions) instead of
+being guessed in a table cell.
+
+## Response shapes are open
+
+The customer and measurement shapes are declared open (`shacl:closed: false`), and the portal warns
+that new fields can appear without a major-version bump. Unknown keys and missing keys are both legal.
+A parser must ignore what it does not know and must not require a field it does not need, or a CKW
+addition becomes an outage.
 
 ## Authentication
 
@@ -25,25 +36,14 @@ client secret.
 - Token endpoint: `https://id.ckw.ch/realms/CKW-prod/protocol/openid-connect/token`
 - Refresh: `grant_type=refresh_token`
 - Documented lifetimes (CKW login guide): access token **600 s**, refresh token **21600 s**
-- Client id, scopes and the exact PKCE parameters: `Unknown — verify with CKW`
+- The redirect URI must be registered at CKW, and the authorize request must return
+  `response_mode=query` for Home Assistant's `/auth/external/callback`. The URL CKW documents asks for
+  `fragment`, which would leave the authorization code where Home Assistant's callback does not read
+  it. See [ADR-0006](../explanation/decisions/0006-auth-measured-constraints.md).
 
-**Headless flow** — for clients without a browser:
-
-1. `POST https://id.ckw.ch/realms/CKW-prod/otp/login` with the body below returns `204` and sends an
-   SMS one-time code.
-2. The token endpoint then accepts `grant_type=password` with `code=<OTP>`.
-
-Request body of `POST /otp/login`:
-
-| `username` | `password` | `clientId` | `localeCode` |
-| --- | --- | --- | --- |
-| CKW user name | CKW password | OAuth client id | Locale of the SMS text |
-
-OTPs are single use. Whether the two flows share the same client id and whether the headless flow is
-enabled for every customer: `Unknown — verify with CKW`.
-
-Token, password and OTP handling rules are in `../explanation/decisions/0001-auth-oauth2-vs-pasted-code.md`
-and `conventions.md`.
+The portal states `grant_type:authorization_code` and that the grant type `password` is not supported.
+The realm metadata still advertises `password`, but there is no implementation path for it; the headless
+password + SMS-OTP flow from earlier revisions of this page is not available.
 
 ## Base URL and versioning
 
@@ -51,66 +51,82 @@ and `conventions.md`.
 https://e-customer-smartmeter.de-c1.eu1.cloudhub.io/api/v1
 ```
 
-The version group `v1` is the `/api/v1` path segment; it is not a header or a query parameter. A test or
-sandbox base URL is not part of the transcribed contract (`Unknown — verify with CKW`; only the test
-realm `CKW-dev` is documented).
+The version group `v1` is the `/api/v1` path segment; it is not a header or a query parameter. Only the
+test realm `CKW-dev` is documented; whether a separate test or sandbox base URL exists is open.
 
 ## Endpoint reference
 
 Three endpoints are documented. All of them are `GET`, take no request body, and return the same error
-response set — `400`, `401`, `403`, `408`, `429`, `500`, `503`. A response body schema for those codes is
-not part of the contract, so the body cannot be used to tell the causes apart
-(`Unknown — verify with CKW`).
-
-Where a table cell says `Unknown — verify with CKW`, the contract states neither a type nor a format for
-that field; the field itself is part of the response.
+response set — `400`, `401`, `403`, `408`, `429`, `500`, `503`. The documented bodies are in
+[Error responses](#error-responses).
 
 ### `GET /smartmeter/customer`
 
-Core data: the customer, the locations of the delivery points, and the meters at each location.
-Parameters: none documented.
+Core data: the customer, the users of the account, the locations of the delivery points, and the meters
+at each location. Parameters: none documented.
 
-The response is an object `customer` containing the array `locations`:
+The response is an object `customer` whose `User` array sits **above** `locations`:
 
-| `locations[]` | `address` | `meters[]` |
-| --- | --- | --- |
-| Array of location objects, the top level of the response | Object nested in each location | Array of meter objects nested in each location |
+```text
+customer
+└─ User[]
+   ├─ id, name, email, phone
+   └─ locations[]
+      ├─ id, gpnr, address {street_address, postal_code, city}
+      └─ meters[] {id, model, type, fuel, deliverypointnumber,
+                   supply_start_date, supply_end_date, custom {meter_type_indicator}}
+```
+
+A client written against `customer.locations` raises `KeyError` on the first live call. Several users
+can map to locations, so consumers iterate every user and key meters by `deliverypointnumber`, the key
+the measurement response uses.
+
+User fields:
+
+| `id` | `name` | `email` | `phone` |
+| --- | --- | --- | --- |
+| User identifier | User name | Email address of the user | Phone number of the user |
+
+`email` and `phone` are personal data and **must be redacted in diagnostics**. They are the two fields
+nobody listed before the measurement.
 
 Location fields:
 
 | `id` | `gpnr` | `address` |
 | --- | --- | --- |
-| `Unknown — verify with CKW` | `Unknown — verify with CKW` | Object, see the address fields below |
-| Location identifier | Business partner number (GPNR); exact expansion `Unknown — verify with CKW` | Postal address of the location |
+| Location identifier; exact type and format were not measured | Business partner number (GPNR); exact expansion was not measured | Object, see the address fields below |
 
 Address fields:
 
 | `street_address` | `postal_code` | `city` |
 | --- | --- | --- |
-| `Unknown — verify with CKW` | `Unknown — verify with CKW` | `Unknown — verify with CKW` |
-| Street and house number | Postal code | City |
+| Street and house number; exact type and format were not measured | Postal code; exact type and format were not measured | City; exact type and format were not measured |
 
 Meter identity fields:
 
 | `id` | `model` | `type` | `fuel` |
 | --- | --- | --- | --- |
-| `Unknown — verify with CKW` | `Unknown — verify with CKW` | `Unknown — verify with CKW` | `Unknown — verify with CKW` |
-| Meter identifier | Meter model | Meter type | Energy carrier; which values occur is `Unknown — verify with CKW` |
+| Meter identifier | Enum: `SMART`, `ANALOGUE` | Enum: `import`, `export`, `consumption`, `production` | Enum: `elec`, `gas` |
+| Identifies the meter | Meter model | Meter type; `export` and `production` identify feed-in | Energy carrier; `elec` filters out gas meters |
+
+`model` and `type` are the only values the deployed model declares; a strict validator that expects a
+free-text model or a type such as `electricity` will reject a real meter.
 
 Meter supply fields:
 
 | `deliverypointnumber` | `supply_start_date` | `supply_end_date` |
 | --- | --- | --- |
-| 33-character string, the Swiss Zählpunkt | `Unknown — verify with CKW` | `Unknown — verify with CKW` |
-| Delivery point the measurements are reported under | Start of the supply period; format `Unknown — verify with CKW` | End of the supply period; format and behaviour for a running supply `Unknown — verify with CKW` |
+| 33-character string, the Swiss Zählpunkt, e.g. `CH1003601234500000000000000000000` | Start of the supply period; format was not measured | End of the supply period; format and behaviour for a running supply were not measured |
+| Delivery point the measurements are reported under | Start of the supply period | End of the supply period |
 
-Documented error responses: `400`, `401`, `403`, `408`, `429`, `500`, `503`. Which condition produces
-which code (missing role, wrong audience, unknown customer): `Unknown — verify with CKW`.
+Each meter also carries a `custom` object with the free-text `meter_type_indicator`. It is harmless
+metadata, but a client that validates strictly will reject it; other keys are legal because the shape
+is open.
 
 ### `GET /smartmeter/measurement/{datum_von_YYYYMMDD}/{datum_bis_YYYYMMDD}/{aggregation}`
 
-Consumption and production of **all** meters of the customer in one request — the meters are not filtered
-by delivery point. Parameters, all in the path:
+Consumption and production of **all** meters of the customer in one request — the meters are not
+filtered by delivery point. Parameters, all in the path:
 
 | `datum_von_YYYYMMDD` | `datum_bis_YYYYMMDD` | `aggregation` |
 | --- | --- | --- |
@@ -118,11 +134,18 @@ by delivery point. Parameters, all in the path:
 | Start of the requested range | End of the requested range | Resolution of one measurement element |
 
 Aggregation values (exactly these ten): `year`, `years`, `month`, `months`, `week`, `weeks`, `day`,
-`days`, `minute`, `minutes`. Both the singular and the plural spelling are part of the enum; how they
-differ from each other is not stated in the transcribed contract (`Unknown — verify with CKW`).
+`days`, `minute`, `minutes`. Both the singular and the plural spelling are part of the enum and are
+accepted.
 
-Range limits — maximum span per request, whether the boundaries are inclusive, and the response for an
-empty range: `Unknown — verify with CKW`.
+`minute` and `minutes` are the **finest available** resolution, not a promise of one row per minute.
+CKW's own sample data is quarter-hourly: every measurement example in the deployed model is 15 minutes
+wide, no 1-minute example exists, and the public price feed also returns 96 quarter-hour slots per day.
+Whether a `minute(s)` request returns 60 rows per hour with 15 of them populated, or only four rows,
+needs one authenticated call and is [open](#open-questions).
+
+Range limits: a range that is too large answers `400` with
+`"response too big, please adjust aggregation or duration accordingly"`. The maximum span per request
+is open. Whether the boundaries are inclusive and what an empty range returns were not measured.
 
 The response is an array; one element per delivery point:
 
@@ -135,7 +158,7 @@ Interval boundaries of a measurement:
 
 | `zeitstempel_von_utc` | `zeitstempel_bis_utc` |
 | --- | --- |
-| `dateTimeOnly`, UTC | `dateTimeOnly`, UTC |
+| `dateTimeOnly`, UTC, no offset and no `Z` | `dateTimeOnly`, UTC, no offset and no `Z` |
 | Start of the interval | End of the interval |
 
 Amounts of a measurement:
@@ -159,19 +182,21 @@ Timeseries counters of a measurement:
 | `integer` | `integer` | `integer` |
 | Number of physical timeseries behind this interval | Number of billable timeseries behind this interval | Number of blind-current timeseries behind this interval |
 
-For all three counters, `1` is the normal value; a value greater than `1` usually indicates a data
-quality issue, so such an interval should not be summed blindly. None of the documented fields says
-whether an interval is consumption or production — that distinction is `Unknown — verify with CKW`.
+For all three counters, `1` is normal operation — including `anzahl_linien_fw` and `anzahl_linien_fb`.
+`0` is not the normal value and does not mean "no line". A value greater than `1` signals a data quality
+problem, so such an interval should not be summed blindly.
 
-Documented error responses: `400`, `401`, `403`, `408`, `429`, `500`, `503`. Which condition produces
-which code: `Unknown — verify with CKW`.
+A measurement element carries no field that says whether it is consumption or production; that
+distinction comes from the meter's `type` for the same `deliverypointnumber`.
 
 ### `GET /energie/dynamische-preise`
 
-Hourly dynamic prices, with German field names. Parameters: none documented.
+Dynamic prices, with German field names. Parameters:
 
-The field names, their types and the shape of the response are not part of the transcribed facts:
-`Unknown — verify with CKW`.
+| `tariff_type` | `metering_code` | `start_timestamp` | `end_timestamp` |
+| --- | --- | --- | --- |
+| Tariff product selector | Metering code | Start of the requested range | End of the requested range |
+| Chooses the tariff | Metering code the prices belong to | Default: start of the current day in CET | Default: end of the current day in CET |
 
 The same data is also published **without authentication** at
 
@@ -179,21 +204,44 @@ The same data is also published **without authentication** at
 https://e-ckw-public-data.de-c1.eu1.cloudhub.io/api/v1/netzinformationen/energie/dynamische-preise
 ```
 
-That public endpoint is what the companion integration `swiss-dynamic-tariffs` uses; this integration
-does not consume it.
+A measured day on the public feed returned 96 quarter-hour slots, each carrying `grid`, `electricity`,
+`integrated` and `grid_usage` as arrays of one `{unit, value}` object with `unit: CHF_kWh`. That public
+endpoint is what the companion integration `swiss-dynamic-tariffs` uses; this integration does not
+consume the endpoint.
 
-Documented error responses: `400`, `401`, `403`, `408`, `429`, `500`, `503`.
+## Error responses
+
+The deployed model attaches a documented body to every error response, so the cause can be told apart.
+
+| Status | Documented body | Cause |
+| --- | --- | --- |
+| `400` | `{"error": "JWT Token is required."}` (live gate); `"Token was not provided."` (model) | Missing token. Every meter-host path answers this before routing runs, so an unknown path and a missing token look alike. |
+| `401` | `"Bad or expired token. To fix, you should re-authenticate the user."` | Token is invalid or expired |
+| `403` | `"The client id validation failed."` | Client id or its registration is wrong |
+| `408` | `"Timeout to get customer data was exceeded."` | CKW's upstream customer lookup timed out |
+| `429` | `{"error": "Quota has been exceeded"}` | Rate limit or quota exhausted |
+| `500` | Generic service error | Unspecified server failure |
+| `503` | `"Error communicating with JWKS server."` | Token verification cannot reach the key set |
+
+The measurement endpoint adds a `400` whose body is
+`"response too big, please adjust aggregation or duration accordingly"` when the requested range
+exceeds the server cap. Since the unauthenticated gate runs before routing, a `404` cannot be observed
+without a token.
 
 ## Rate limiting
 
-The limit is enforced **per user**. Every response carries three headers:
+The limit is enforced **per user**. Every response on the public host carries three headers:
 
 | `x-ratelimit-limit` | `x-ratelimit-remaining` | `x-ratelimit-reset` |
 | --- | --- | --- |
 | Requests allowed per window | Requests still available in the current window | Milliseconds until a new window starts |
 
-The numeric limit and the window length are not stated in the transcribed contract
-(`Unknown — verify with CKW`); `429` is among the documented error responses.
+On the public host the measurement was `x-ratelimit-limit: 4`, `x-ratelimit-remaining: 3`,
+`x-ratelimit-reset: 998` — four requests per roughly one-second window.
+
+The meter host sends no `x-ratelimit-*` headers without a token, so its policy cannot be observed from
+outside. Whether it shares the public host's 4-per-second limit is [open](#open-questions). `429` is
+among the documented error responses, and a backfill large enough to hit the limit must be paced.
 
 ## Data availability and constraints
 
@@ -204,10 +252,34 @@ The numeric limit and the window length are not stated in the transcribed contra
 - Amounts (`betrag_ht`, `betrag_nt`) are base prices: **without VAT and without surcharges**. A sum of
   them is not the invoice total.
 - `deliverypointnumber` is exactly 33 characters — the Swiss Zählpunkt.
-- `anzahl_linien_p`, `anzahl_linien_fw` and `anzahl_linien_fb` above `1` usually indicate a data quality
-  issue.
-- Whether older history is retained, how far back it reaches, and whether intervals are ever revised after
-  delivery: `Unknown — verify with CKW`.
+- `anzahl_linien_p`, `anzahl_linien_fw` and `anzahl_linien_fb` are normally `1`; above `1` signals a
+  data quality problem.
+
+## Open questions
+
+These remained open after the 2026-11-01 measurements. None of them is answered by this page.
+
+- **Auth registration:** the client id, scopes and exact PKCE parameters were not measured; the meter
+  host is unreachable without a client id and a login. Whether a separate test or sandbox base URL
+  exists is likewise unmeasured.
+- **Response mode:** whether CKW can return `response_mode=query` to Home Assistant's callback, or
+  insists on `fragment`, decides whether the pasted-code fallback (#50) is required.
+- **`minute(s)` width:** does a `minute` or `minutes` request return 60 rows an hour, four rows, or the
+  same payload as the other spelling?
+- **Day boundaries:** where a daily bucket starts. The examples sit on quarter hours, not midnight, so
+  the contract says nothing about it.
+- **Range cap:** what is the maximum range per request before the `400` "response too big"?
+- **Meter-host rate limit:** do the `x-ratelimit-*` headers appear on a `200` from the meter host, and
+  with which limit?
+- **Drifting price fields:** does a real account return `feed_in` or `grid_usage` in any object this
+  integration consumes? Neither appears in the two endpoints we use.
+- **Unmeasured field formats:** the exact types of location `id`, `gpnr`, the address fields, meter
+  `id`, and `supply_start_date` / `supply_end_date`.
+- **Aggregation spelling:** whether the singular and plural values differ for anything other than
+  `minute`/`minutes`, and whether range boundaries are inclusive or what an empty range returns.
+- **History:** whether older history is retained, how far back it reaches, and whether intervals are
+  ever revised after delivery.
+- **Support:** support hours, response times and a status page.
 
 ## Support
 
@@ -216,14 +288,17 @@ The numeric limit and the window length are not stated in the transcribed contra
   required by Art. 8a–8d StromVV.
 - A `403` because the client is missing an API audience or a role is a registration problem, not a code
   problem: escalate it to the address above, quoting the client id.
-- Support hours, response times and a status page: `Unknown — verify with CKW`.
 
 ## Related
 
+- [Measured API behaviour](ckw-openenergy-api-verification.md) — the evidence for every correction on
+  this page.
 - [Data model](../explanation/data-model.md) — why readings stop at yesterday, HT/NT, the quality flags,
   and why there is no live power sensor.
 - [ADR-0001 — OAuth2 with PKCE vs. pasted code](../explanation/decisions/0001-auth-oauth2-vs-pasted-code.md)
   — why the browser flow is the default and what the fallbacks cost.
+- [ADR-0006 — measured auth constraints](../explanation/decisions/0006-auth-measured-constraints.md) —
+  why only the browser flow is pursued.
 - [Entities](entities.md) — the sensors and statistics built from these fields.
 - [Configuration parameters](configuration.md) — what the user enters, and what is derived.
 - [Glossary](glossary.md) — every German and API term above in one sentence.

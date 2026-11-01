@@ -10,11 +10,12 @@ not edit it.
 
 | No. | Title | Status | Date |
 |---|---|---|---|
-| [0001](0001-auth-oauth2-vs-pasted-code.md) | Authenticate with OAuth2 authorization code and PKCE | proposed | 2026-11-01 |
+| [0001](0001-auth-oauth2-vs-pasted-code.md) | Authenticate with OAuth2 authorization code and PKCE | accepted (partially superseded by 0006) | 2026-11-01 |
 | [0002](0002-statistics-strategy.md) | Import entity statistics instead of storing history as states | proposed | 2026-11-01 |
 | [0003](0003-meter-device-mapping.md) | One device per delivery point, unique ids from the config entry | proposed | 2026-11-01 |
 | [0004](0004-poll-interval-and-data-lag.md) | Poll every two hours over a rolling seven-day window | proposed | 2026-11-01 |
 | [0005](0005-doc-structure-diataxis-arc42-lite.md) | Documentation in Diataxis, architecture in five arc42 chapters | proposed | 2026-11-01 |
+| [0006](0006-auth-measured-constraints.md) | Restrict authentication to the browser authorization-code flow | accepted | 2026-11-01 |
 
 ## Lifecycle
 

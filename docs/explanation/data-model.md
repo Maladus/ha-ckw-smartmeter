@@ -9,12 +9,13 @@ that contract is silent, this page says so instead of guessing.
 
 ## Data stops at yesterday
 
-The OpenEnergy API serves daily aggregates up to yesterday, never today: one value per delivery point
-per closed day. Swiss smart meters record quarter-hour load profiles, and the aggregation enum includes
-`minute(s)`, so finer *historical* resolution may well exist. What the transcribed contract guarantees
-is daily values up to yesterday; whether `minute(s)` returns populated data, and how far back, is
-`Unknown — verify with CKW`. This integration requests `days` only — a product decision (PLAN #65),
-not an API limitation.
+The OpenEnergy API serves data up to yesterday, never today: one value per delivery point per closed
+day at the `days` aggregation. CKW's own sample data is quarter-hourly — every measurement example in
+the deployed model is 15 minutes wide, no 1-minute example exists, and the public price feed returns
+96 quarter-hour slots per day. `minute` and `minutes` are therefore the finest *available* resolution,
+not one row per minute; whether a `minute(s)` request returns 60 rows an hour with 15 populated, or
+only four, is open. This integration requests `days` only — a product decision (PLAN #65), not an API
+limitation.
 
 Consequence: **no live power sensor**. Today's values do not exist yet, so there is nothing to show
 for "now"; a `W` sensor built from quarter-hour history would be an average over a past interval, not
@@ -26,6 +27,31 @@ Why not import the finer history that may exist? Because the product is daily co
 the Energy dashboard. 96 intervals per day multiply every statistic row, every entity update and every
 API request for detail no Energy-dashboard graph uses; the decision and its alternatives belong in the
 backlog, not in this document.
+
+## Users sit above locations
+
+The customer response is `customer.User[].locations[].meters[]`, not `customer.locations`. `User`
+carries `id`, `name`, `email` and `phone`; each user then carries locations, and each location carries
+meters.
+
+Two consequences:
+
+- **Several users can map to locations.** An account can return more than one user, so the integration
+  walks every user before it counts delivery points. A single-user assumption silently loses meters.
+- **The payload is personal data.** `email` and `phone` must be redacted in diagnostics, together with
+  the delivery points that are already masked.
+
+The meter is identified by enums, not free text:
+
+| Field | Values | What it means here |
+| --- | --- | --- |
+| `model` | `SMART`, `ANALOGUE` | Meter model; the API declares only these two |
+| `type` | `import`, `export`, `consumption`, `production` | `export` and `production` identify feed-in, so production can be told from consumption without guessing |
+| `fuel` | `elec`, `gas` | `fuel: elec` selects electricity and filters out gas meters |
+
+Meters also carry `deliverypointnumber` (the 33-character Swiss Zählpunkt), `supply_start_date`,
+`supply_end_date` and a `custom` object with the free-text `meter_type_indicator`. The customer and
+measurement shapes are open: unknown keys and missing keys are legal, so a parser must tolerate both.
 
 ## Two tariff buckets: HT and NT
 
@@ -46,9 +72,10 @@ snapshot of a physical instantaneous measurement, and the difference matters whe
 meter rollover, estimated intervals and corrections all end up in the billed number.
 
 `anzahl_linien_p`, `anzahl_linien_fw` and `anzahl_linien_fb` report how many timeseries stand behind
-an interval (physical, billed, blind current). A value of 1 is the normal case. A value greater than
-1 means more than one series was folded into that interval — usually a data quality issue at CKW,
-and the API does not say which kind. The integration does not silently sum such an
+an interval (physical, billed, blind current). All three are `1` in normal operation, including `_fw`
+and `_fb`; `0` is not the normal value and does not mean "no line". A value greater than `1` means
+more than one series was folded into that interval — a data quality problem at CKW, and the API does
+not say which kind. The integration does not silently sum such an
 interval: it logs the flag, exposes it as a diagnostic attribute, skips the interval when importing
 statistics, and raises a repair issue so the user knows the total has a hole rather than a wrong
 number.
@@ -67,9 +94,12 @@ not free electricity.
 The API accepts `year(s)`, `month(s)`, `week(s)`, `day(s)` and `minute(s)`. The integration always
 requests `days` and aggregates locally. Two reasons:
 
-- A daily bucket must correspond to **one local day in `Europe/Zurich`**, including the 23 h and 25 h
-  days around a DST change. Server-side `month(s)` would hand us buckets whose boundaries we cannot
-  verify, and a DST day would either split or double-count.
+- A daily bucket should correspond to **one local day in `Europe/Zurich`**, including the 23 h and
+  25 h days around a DST change. That boundary is an **inference, not a documented fact**: the API
+  returns bare UTC timestamps, CKW's examples sit on quarter hours rather than midnight, and the only
+  hint is the legal "read once per day" rule. Server-side `month(s)` would hand us buckets whose
+  boundaries are equally undocumented, and a DST day could split or double-count. We therefore keep
+  the assumption and import one statistic per local day.
 - The rolling 7-day window ([ADR-0004](decisions/0004-poll-interval-and-data-lag.md)) and the 730-day
   backfill need one shape of response, independent of how the user later looks at the data.
   Statistics are imported per local day ([ADR-0002](decisions/0002-statistics-strategy.md)).
@@ -81,11 +111,19 @@ Quality-scale rule `docs-supported-devices`.
 | Supported | Not supported |
 |---|---|
 | CKW smart meters whose delivery point (`deliverypointnumber`) is returned by `GET /smartmeter/customer` — i.e. inside the CKW supply area with a smart meter installed. | Legacy electromechanical meters (no daily aggregate exists to fetch). |
-| Electricity meters reporting `fuel` values for electricity. | Meters of other Swiss grid operators (needs a provider registry, out of scope). |
-| Accounts with several delivery points — each becomes its own device. | Non-electricity `fuel` values (gas, water, district heat). |
+| Electricity meters with `fuel: elec`. | Gas meters (`fuel: gas`); water and district heat are not part of the API's fuel enum. |
+| Accounts with several delivery points, including accounts with several users — each delivery point becomes its own device. | Meters of other Swiss grid operators (needs a provider registry, out of scope). |
 
 A meter that CKW knows but the API does not list cannot be supported by guessing a delivery point
 number: the 33-character Zählpunkt is the only key, and it comes from `/smartmeter/customer`.
+
+## Rate limiting paces the backfill
+
+The public host advertises four requests per roughly one-second window (`x-ratelimit-limit: 4`). The
+meter host sends no rate-limit headers without a token, so whether it shares that limit is open. If it
+does, a **730-day backfill must be paced**: 730 daily requests cannot be fired as a tight loop. They
+arrive over several minutes, and a first setup therefore shows history filling in rather than all at
+once. The same limit bounds how aggressively the 7-day window may be refetched after an error.
 
 ## Update cadence
 
@@ -95,8 +133,9 @@ Quality-scale rule `docs-data-update`.
 - Each poll refetches the last **7 days** (`days` aggregation), so missed polls and CKW corrections
   repair themselves; anything older only changes through the backfill.
 - Data is available **until yesterday** — the sensors show the last closed day, never today.
-- Backfill at first setup: **730 days**, imported idempotently and re-importable after a recorder
-  wipe or a meter exchange ([backfill history](../how-to/backfill-history.md)).
+- Backfill at first setup: **730 days**, paced by the rate limit (see above), imported idempotently and
+  re-importable after a recorder wipe or a meter exchange
+  ([backfill history](../how-to/backfill-history.md)).
 
 ## Known limitations
 
@@ -106,6 +145,7 @@ Quality-scale rule `docs-known-limitations`.
 |---|---|
 | One-day lag | Today's consumption is invisible; there is no workaround, only patience. |
 | No live values | No power (`W`) for *now*, no current; the freshest value is yesterday's. Minute-level history is not imported (PLAN #65). |
+| Paced backfill | First setup imports 730 days over several minutes rather than instantly; the history fills in. |
 | Base price only | CHF values exclude VAT and surcharges and will not match the invoice. |
 | CKW only | Other grid operators need their own integration; this one has one provider. |
 | No feed-in tariff calculation | Production or PV feed-in metering is not implemented (tracked separately). |
