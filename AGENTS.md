@@ -61,15 +61,26 @@ The `pre-push` hook runs exactly `mise run check` and refuses the push when it i
 
 ## Branch, commit, pull request
 
-1. `gh issue develop <N> --checkout` — one branch per issue, no exceptions, no branch serving two
-   issues.
+`main` is branch-protected (#110): a slice lands as a pull request, never as a push to `main` and
+never as a local merge. Required checks are *Gates (mise run)*, *Hassfest* and *HACS validation*,
+strict (the branch must be up to date with `main` before it merges).
+
+1. `gh issue develop <N> --checkout` (or `git switch -c ckw-<topic>`) — one branch per issue, no
+   exceptions, no branch serving two issues. Work on it, and get `mise run check` green.
 2. Commit `<type>: <summary>` in the imperative, no trailing period; types in
-   [docs/how-to/commits.md](docs/how-to/commits.md).
-3. The `Co-Authored-By: pi (<model>)` trailer is added by the `commit-msg` hook. Never write it by
-   hand, never amend it away, never `git commit --no-verify`.
-4. The pull request body contains `Closes #N`; merging closes the issue.
-5. The same pull request marks the `PLAN.md` row ✅. A shipped task with an unmarked row fails the
-   plan-drift gate.
+   [docs/how-to/commits.md](docs/how-to/commits.md). The `Co-Authored-By: pi (<model>)` trailer is
+   added by the `commit-msg` hook: never write it by hand, never amend it away, never
+   `git commit --no-verify`.
+3. `git push -u origin <branch>`.
+4. `gh pr create --base main --head <branch> --title "<commit subject>" --body "<what / why / how it
+   was verified> — Closes #N"`.
+5. Wait for the three required checks; when they are green, merge with
+   `gh pr merge --squash --delete-branch`. The body's `Closes #N` closes the issue; the same pull
+   request marks the `PLAN.md` row ✅ and failing to mark it fails the plan-drift gate.
+6. Never `git push` to `main`, never merge locally, never bypass a check with `--admin`.
+
+The local pre-push gate (`mise run check`) stays the fast inner loop — it catches a red branch in
+about 20 s, before the push; the PR checks are the authoritative gate.
 
 ## Notify the coordinator
 
@@ -80,10 +91,11 @@ workmux send ckw-homeassistant "done <handle>: <one-line summary + commit sha>"
 workmux send ckw-homeassistant "blocked <handle>: <what blocks it, and what would unblock it>"
 ```
 
-Send `done` when the work is merged and the gates are green, `blocked` as soon as you know you cannot
-finish under the current contract (missing credentials, a contradictory plan, a failing external
-service) — not after you have improvised around it. Never send progress pings, never send a message
-per file. `mise run next --notify` uses the same channel for the scheduled task check.
+Send `done` when the pull request is open with its checks green (or merged, when you are the
+coordinator), `blocked` as soon as you know you cannot finish under the current contract (missing
+credentials, a contradictory plan, a failing external service) — not after you have improvised
+around it. Never send progress pings, never send a message per file. `mise run next --notify` uses the
+same channel for the scheduled task check.
 
 ## Hard rules
 
@@ -99,11 +111,12 @@ per file. `mise run next --notify` uses the same channel for the scheduled task 
    same pull request — the CI job, not your reading of the schema.
 7. A behaviour change ships with a test, the affected Diátaxis page, a `CHANGELOG.md` entry and, for a
    decision, a new ADR. ADRs are append-only; supersede with a new number.
-8. Never merge outside the gates, never force-push a shared branch, never edit `PLAN.md` scope to make
-   a change fit.
+8. Never push to `main`, never merge a branch locally, never merge a pull request whose required
+   checks are red or pending, never `--admin`, never force-push a shared branch, never edit `PLAN.md`
+   scope to make a change fit.
 9. A red gate is a stop. The `pre-push` hook runs `mise run check` and rejects the push when it is red
-   (#142); never merge with a red gate, never `MISE_SKIP_GATE=1`, never `git push --no-verify` — the
-   last one also skips the secret scan.
+   (#142), and the three PR checks decide the merge (#159); never `MISE_SKIP_GATE=1`, never
+   `git push --no-verify` — the last one also skips the secret scan.
 
 ## Definition of done
 
@@ -111,7 +124,7 @@ per file. `mise run next --notify` uses the same channel for the scheduled task 
   changed.
 - A test for every behaviour change; coverage stays at or above the threshold in `pyproject.toml`.
 - The affected page updated, `CHANGELOG.md` updated, the ADR written and its index row added.
-- The `PLAN.md` row marked ✅, the issue closed with `Closes #N`.
+- The `PLAN.md` row marked ✅, the issue closed by the merged pull request through `Closes #N`.
 
 ## Manual-only zones
 

@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: <https://github.com/Maladus/ha-ckw-smartmeter> (`custom_components/ckw`) — private until #110
-Issues: #1–#158, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
+Issues: #1–#159, one per task row below (✅ = closed / done; #139/#140 closed as not planned)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -217,6 +217,9 @@ holds status, assignment and discussion.
 - **Status** is label + issue state, never a bare comment; `status: blocked` needs a comment naming the blocker.
 - **Branches:** `gh issue develop <N> --checkout`; PR body contains `Closes #N`; merging closes the issue
   and the plan row is marked ✅ in the same PR.
+- **Merging:** through a pull request with the three required checks green — *Gates (mise run)*,
+  *Hassfest*, *HACS validation* — never a push to `main` and never a local fast-forward; the coordinator
+  merges with `gh pr merge --squash --delete-branch` (#159).
 - **Drift gate:** `scripts/sync-issues.sh --check` compares plan rows with open/closed issues (count, title,
   milestone) and fails CI when they disagree. The plan stays authoritative for scope.
 
@@ -268,7 +271,7 @@ CI or AGENTS.md. Tracked as #117.
 | 2026-11-01 | Multi-account support | **yes** — one integration, N entries, one per CKW customer (#151, #49) |
 | 2026-11-01 | Cost sensors from `betrag_ht/_nt` | **no** — kWh only; cost fields stay parsed and appear in diagnostics raw payload, no cost entities or statistics (#78 dropped) |
 | 2026-11-01 | UI languages | `de` + `en` (#15, #96) |
-| 2026-11-01 | Repo visibility / merge gate | private + local pre-push gate (#142); flip public before release (#110) |
+| 2026-11-01 | Repo visibility / merge gate | public and branch-protected since #110; the local pre-push gate (#142) is the fast inner loop, the PR checks decide the merge (#159) |
 | 2026-11-01 | Entities enabled by default | 4 core per meter; HT/NT, quarter-hour and delay diagnostics off (#83, #152) |
 | 2026-11-01 | Poll interval | default 2 h, selectable 1-12 h (#53) |
 | 2026-11-01 | Podman dev instance on this machine | yes — image pulled, `mise run dev-up` is the test path |
@@ -340,11 +343,12 @@ them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritte
 | ✅ #17 | pre-commit (locked) | Hooks: `check-added-large-files`, `check-yaml`, `check-json`, `check-merge-conflict`, `check-case-conflict`, `detect-private-key`, `end-of-file-fixer`, `trailing-whitespace`, `mixed-line-ending`, `gitleaks --staged`, `ruff-check`, `ruff-format`, artifact block (`.dev/`, `*.token`, `config/.storage/`, `*.db`); tools pinned in `mise.toml`; installed for `pre-commit` + `pre-push` | `pre-commit run --all-files` green, a staged fake token is rejected | #9 | S | AI |
 | #118 | Secret scanning in CI + push protection | `.github/workflows/secrets.yml` (`gitleaks detect --redact` on push/PR, works on a private repo with free minutes), enable GitHub secret scanning + push protection at publish (#110, free only when public), document policy in `SECURITY.md` (#25) | workflow fails on a seeded leak, policy documented | #18, #25 | S | AI |
 | ✅ #117 | mise toolchain & task runner | Pin `python`, `uv`, `ruff`, `gitleaks`, `pipx:pre-commit`, `npm:markdownlint-cli2` and its `node` in `mise.toml`; expose every workflow as a mise task (`setup`, `dev-up/-down/-logs/-shell/-reset/-smoke/-onboard/-mock`, `lint`, `fmt`, `test`, `types`, `hooks`, `docs`, `check`, `next`, `issues`), each with a one-line description and running from the repo root; CI calls the tasks only, never raw interpreters. Podman stays host-level (rootless prerequisites in #44) | fresh clone: `mise install && mise run setup && mise run check` succeeds; no doc, CI job or AGENTS.md line invokes `python`, `pip` or `podman` directly | #9 | M | AI |
-| ✅ #142 | Pre-push gate: full check before any merge | `pre-push` stage hook `scripts/hooks/pre_push_gate.sh` (`language: system`, `always_run`) runs `mise run check` and aborts on failure; the full-history gitleaks hook stays in the same stage; `MISE_SKIP_GATE=1` is the documented escape hatch with a loud warning; worktree agents may only `/merge` when it is green. Needed because GitHub branch protection is unavailable on a private repo without Pro, and merges happen locally | a failing test or lint error rejects the push, measured 20 s wall time (budget 90 s) | #117, #127 | S | AI |
+| ✅ #142 | Pre-push gate: full check before any merge | `pre-push` stage hook `scripts/hooks/pre_push_gate.sh` (`language: system`, `always_run`) runs `mise run check` and aborts on failure; the full-history gitleaks hook stays in the same stage; `MISE_SKIP_GATE=1` is the documented escape hatch with a loud warning; worktree agents merge only through a pull request whose checks are green (#159). The hook is the fast inner loop, not the merge decision | a failing test or lint error rejects the push, measured 20 s wall time (budget 90 s) | #117, #127 | S | AI |
 | ✅ #18 | CI workflows | `.github/workflows/tests.yaml`: jobs `pre-commit`, `pytest`, `hassfest` (`home-assistant/actions/hassfest`), `hacs` (`hacs/action` category integration) | all jobs green on GitHub | #13–#17 | S | AI |
 | ✅ #19 | Dev instance plan | Dev HA is specified in **Phase 1b** (Podman); this task only reserves the directory `scripts/dev/` | `scripts/dev/` exists or is created by #36 | #14 | S | AI |
 | ✅ #20 | `AGENTS.md` + `CONTRIBUTING.md` | agent contract (commands, gates, hard rules) and human PR checklist | both written, gates referenced by exact command | #17 | S | AI |
 | ✅ #158 | Agents and timer notify the coordinator | `workmux send <handle> "done <handle>: <summary + commit>"` on completion, `blocked <handle>: <reason>` when stuck (silence = still working); `mise run next --notify` prefers `workmux send`, falls back to `notify-send`, then stdout; timer and crontab use the same command | a timer tick with a startable task reaches the coordinator, convention documented in AGENTS.md (#20) | #20 | S | AI |
+| #159 | Merge via GitHub PRs, not local fast-forward | Branch → `git push -u origin <branch>` → `gh pr create --base main --head <branch>` with what/why/verification and `Closes #N` → three required checks (*Gates (mise run)*, *Hassfest*, *HACS validation*) → `gh pr merge --squash --delete-branch`; never push to `main`, never merge locally, never `--admin`; the local `mise run check` pre-push gate stays the fast inner loop. Written into `AGENTS.md`, `CONTRIBUTING.md` and the PR template | the next slice lands as a PR with three green checks and no "Bypassed rule violations" entry, and the documented flow matches it | #110, #158 | S | AI |
 | ✅ #21 | Issue/PR templates | `.github/ISSUE_TEMPLATE/{bug,feature}.yml`, `PULL_REQUEST_TEMPLATE.md` with quality-scale checklist | templates visible on GitHub | #9 | S | AI |
 | ✅ #22 | `LICENSE` | Full MIT text, copyright "Martin Wigger" + year, LICENSE section in README. Rationale: HACS-typical, and permissive enough to be relicensed into Apache-2.0 for a later core submission | GitHub detects MIT, badge shown | #9 | S | AI |
 | ✅ #23 | `GOAL.md` | Goal, in/out of scope, success criteria — the "Project goal" block of this plan, maintained separately so it survives plan rewrites | file matches this plan, linked from README | #9 | S | AI |
