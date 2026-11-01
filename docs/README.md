@@ -12,7 +12,8 @@ exactly one quadrant; entries marked `planned` are not written yet and name the 
 - **I want to use it** — [getting-started](tutorial/getting-started.md) → [install](how-to/install.md).
 - **I want to change code** — [architecture](explanation/architecture.md) → [conventions](reference/conventions.md)
   → work-with-ai-agents (planned, #98).
-- **Something is broken** — [debug a connection](how-to/debug-connection.md) → reauthenticate (planned, #122).
+- **Something is broken** — [debug a connection](how-to/debug-connection.md) →
+  [reauthenticate](how-to/reauthenticate.md).
 
 ## Tutorial
 
@@ -28,10 +29,10 @@ One goal per page, steps only, no theory.
 
 | Document | What it covers | Audience |
 | --- | --- | --- |
-| `how-to/request-ckw-client.md` (planned, #120) | Asking CKW for the OpenEnergy client id and registering the Home Assistant redirect URI. | New users |
+| [request-ckw-client.md](how-to/request-ckw-client.md) | Asking CKW for the OpenEnergy client id: the access form, the mail with the redirect URIs and the `offline_access` request, the reply, and what is *not* needed. | New users |
 | [install.md](how-to/install.md) | Installing through HACS or by copying the folder, updating, and removing the integration with or without its statistics. | Users |
-| `how-to/reauthenticate.md` (planned, #122) | Repairing a login CKW no longer accepts, without losing the imported history. | Users |
-| `how-to/backfill-history.md` (planned, #123) | Re-running the history import for a Zählpunkt that came back with gaps. | Users |
+| [reauthenticate.md](how-to/reauthenticate.md) | Repairing a login CKW no longer accepts: the symptoms, the six clicks, what survives, and the three things not to do. | Users |
+| [backfill-history.md](how-to/backfill-history.md) | Re-running the import with the `ckw.backfill` action after a meter exchange, a recorder wipe or a missed backfill, and what it cannot repair. | Users |
 | [live-and-archive.md](how-to/live-and-archive.md) | Pairing the CKW archive with a local live source on the meter, and why the two numbers differ. | Users |
 | [keep-quarter-hour-history.md](how-to/keep-quarter-hour-history.md) | Keeping the quarter-hour values longer than the recorder's default retention, or exporting them. | Users |
 | [debug-connection.md](how-to/debug-connection.md) | Symptom → cause → fix for a stale value, a rejected login, `403`, `429`, an unfinished backfill and missing statistics, plus the log levels and what to attach to a bug report. | Users, contributors |

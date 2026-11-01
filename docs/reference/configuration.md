@@ -27,7 +27,7 @@ Three more parameters exist but are not fields, because they never change per us
 
 | Parameter | Default | Where it comes from |
 | --- | --- | --- |
-| Redirect URI | `https://<your Home Assistant URL>/auth/external/callback` | Home Assistant's OAuth2 helper; it must be registered with CKW ([how-to: request the CKW client](../how-to/request-ckw-client.md), planned, #120) |
+| Redirect URI | `https://<your Home Assistant URL>/auth/external/callback` | Home Assistant's OAuth2 helper; it must be registered with CKW ([how-to: request the CKW client](../how-to/request-ckw-client.md)) |
 | Authorize and token URL | `https://id.ckw.ch/realms/CKW-prod/protocol/openid-connect/{auth,token}` | `AUTHORIZE_URL`/`TOKEN_URL` in `const.py:37-38`, readable through `application_credentials.py:44-54` |
 | Scopes | `openid offline_access` | `SCOPES` in `const.py:40`; `offline_access` is what keeps the login alive between polls (ADR-0007) |
 
@@ -85,7 +85,7 @@ are recomputed from a stored anchor, so re-importing a window overwrites instead
 
 The same three fields are declared in `services.yaml` with names, descriptions, examples and selectors;
 `strings.json` `services.backfill` repeats the user-facing text. The steps for using the action after a
-meter exchange belong in [how-to: backfill history](../how-to/backfill-history.md) (planned, #123).
+meter exchange are in [how-to: backfill history](../how-to/backfill-history.md).
 
 ## Development-only endpoint overrides
 

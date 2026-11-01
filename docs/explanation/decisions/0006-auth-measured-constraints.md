@@ -9,7 +9,7 @@
 The CKW OpenEnergy portal documents the login as `grant_type:authorization_code` and states that the
 password grant is not supported. The realm metadata still advertises `password`, which made the
 password + SMS-OTP fallback look viable when ADR-0001 was written. Measurement on 2026-11-01 shows it
-has no implementation path ([verification](../reference/ckw-openenergy-api-verification.md),
+has no implementation path ([verification](../../reference/ckw-openenergy-api-verification.md),
 discrepancy 5).
 
 The authorize URL CKW documents asks for `response_mode=fragment`. Home Assistant completes the flow
@@ -71,5 +71,5 @@ scrollback. Kept only as the fallback when CKW cannot register the callback or r
   (password + SMS-OTP, closed as not planned); `PLAN.md` rows #145 and #146
 - [ADR-0001](0001-auth-oauth2-vs-pasted-code.md) — the browser flow and the fallbacks this decision
   partially supersedes
-- [Measured API behaviour](../reference/ckw-openenergy-api-verification.md) — the refused password grant
+- [Measured API behaviour](../../reference/ckw-openenergy-api-verification.md) — the refused password grant
   and the `response_mode=fragment` problem

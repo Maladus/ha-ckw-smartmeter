@@ -90,7 +90,7 @@ lockout. A second entry is also refused because the CKW customer id is the uniqu
 
 A successful reauth replaces the token pair; nothing else needs to be reconfigured. If the same
 notification returns immediately after a successful browser sign-in, read the log for the next section
-instead of trying again.
+instead of trying again. The same repair, step by step and with what it keeps: [reauthenticate](reauthenticate.md).
 
 ## `403` and the client id validation
 
@@ -247,11 +247,12 @@ The [conventions](../reference/conventions.md#redaction) list the same set and t
 
 ### Download diagnostics
 
-The integration does **not** ship a diagnostics download yet: there is no `diagnostics.py` until the
-diagnostics issue (#105) lands. Once it exists, the path is **Settings → Devices & services → CKW Smart
-Meter → three-dot menu → Download diagnostics**, and the dump masks the delivery point, customer id,
-e-mail and phone and drops the tokens. Today the menu entry is absent, so attach the log excerpt and
-the entity attributes described below instead.
+The integration ships a diagnostics download: **Settings → Devices & services → CKW Smart Meter →
+three-dot menu → Download diagnostics**. The dump masks the delivery point to its last four characters,
+replaces the customer id with a short hash, and drops e-mail, phone and every token, keeping the
+two token booleans and the expiry time only. It also carries the coordinator's health and the
+backfill's progress under `statistics` (`done`, `running`, `days`, `next_start`, `chunks`). If the menu
+entry is absent, the entry is not loaded — check the entry's card first.
 
 ## What to attach to a bug report
 
@@ -274,8 +275,9 @@ Never attach an access token, a refresh token, a client secret or the full Zähl
 
 ## Related
 
-- [Quality scale](../reference/quality-scale.md) — the status of the separate reauth how-to (#122) and
-  the `docs-troubleshooting` rule this page closes.
+- [Reauthenticate](reauthenticate.md) — the symptom of a rejected login from the user's side: what
+  survives, and the three actions not to take.
+- [Quality scale](../reference/quality-scale.md) — the `docs-troubleshooting` rule this page closes.
 - [Data model](../explanation/data-model.md) — why 1–3 days is normal and what the quality flags mean.
 - [Session lifetime](../explanation/session-lifetime.md) — why a refresh token dies and why a browser
   sign-in is the only repair.
