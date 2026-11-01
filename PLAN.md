@@ -1,7 +1,7 @@
 # ckw — HACS integration for CKW smart meters · Implementation Roadmap
 
 Repository: https://github.com/Maladus/ha-ckw-smartmeter (`custom_components/ckw`) — private until #110
-Issues: #1–#137, one per task row below (✅ = closed / done)
+Issues: #1–#140, one per task row below (✅ = closed / done)
 
 Home Assistant custom integration (`custom_components/ckw`) that pulls daily electricity
 consumption and cost from the **CKW OpenEnergy API** into HA sensors and long-term
@@ -486,7 +486,7 @@ that tier **and all lower tiers** is `done` or `exempt` with a reason. Tracking:
 | **Bronze** | covered by #10–#35, #101, #102 | — |
 | **Silver** | #48 (reauth), #57 (unload), #63 (exceptions), #99 (logs), #106 (doc params) | #135 `parallel-updates`, #136 `test-coverage` |
 | **Gold** | #92/#124/#125/#126/#128 (docs), #105 (diagnostics), #52 (reconfigure), #80 (device class/category) | #130 `exception-translations`, #131 `icon-translations`, #132 `entity-disabled-by-default`, #133 `repair-issues`, #134 `dynamic-devices` + `stale-devices` |
-| **Platinum** | out of scope | `strict-typing`, `inject-websession`, `async-dependency` — would require our own library instead of an in-tree client |
+| **Platinum** | optional, Phase 9 | `strict-typing` + `inject-websession` + `async-dependency` — preconditions are free if built in from the start (#138), the library extraction (#139) and claim (#140) happen only after Gold and core submission (#116) |
 
 Expected `exempt` (with reason, checked by #137): `discovery`, `discovery-update-info` (cloud service,
 nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `docs-actions`,
@@ -517,6 +517,9 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | #113 | Production / PV feed-in meter support | #7 shows separate delivery point with production `type` | AI+H |
 | #114 | Dynamic tariff entities | User wants prices in the same integration (today: companion `swiss-dynamic-tariffs`, public CKW endpoint) | AI |
 | #115 | Device authorization grant login | CKW enables RFC 8628 for `oe-wigger` | AI |
+| #138 | Platinum prep: library-shaped client + strict typing | `api.py` imports nothing from `homeassistant` (coordinator maps the errors), session + token injected as constructor args, full annotations, `mypy --strict` in gates and CI; boundary recorded in `reference/conventions.md` (#129) and ADR-0006 | `api.py` free of HA imports, `mypy --strict` green | #61, #129 | M | AI |
+| #139 | Platinum: extract + publish `ckw-openenergy` | Move the client to its own repo (`src/`, `py.typed`, ruff, mypy strict, pytest), PyPI trusted publishing on tag, integration pins `requirements` and drops the in-tree copy; `dependency-transparency` becomes `done` | install from PyPI, hassfest dependency check done | #138, #116 | L | AI |
+| #140 | Platinum: audit and tier claim | All 57 rules accounted for (Gold plus `async-dependency`, `inject-websession`, `strict-typing`) with evidence in `reference/quality-scale.md` and `quality_scale.yaml` | hassfest would accept `quality_scale: platinum` | #137, #139 | S | AI |
 | #116 | HA core submission | After 3+ months of stable HACS usage: docs page in `home-assistant.io`, brands repo PR, full test harness, code review | H |
 
 ## Cross-cutting gates (every PR)
@@ -572,8 +575,8 @@ nothing on the LAN to discover; identity comes from OAuth), `action-setup`, `doc
 | 6 Statistics | 7 | 0 |
 | 7 Docs | 21 | 0 |
 | 8 Quality/Release | 18 | 0 |
-| 9 Optional | 6 | 0 |
-| **Total** | **137** | **4** |
+| 9 Optional | 9 | 0 |
+| **Total** | **140** | **4** |
 
 ## Critical path
 
