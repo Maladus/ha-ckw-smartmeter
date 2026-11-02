@@ -645,7 +645,7 @@ rejects a red push (#142). Locally that includes G-6 whenever the dev container 
 | 4 Coordinator | 8 | 8 |
 | 5 Entities | 13 | 13 |
 | 6 Statistics | 6 | 6 |
-| 7 Docs | 24 | 23 |
+| 7 Docs | 24 | 24 |
 | 8 Quality/Release | 18 | 17 |
 | 9 Optional | 8 | 1 |
 | **Total** | **152** | **132** |
