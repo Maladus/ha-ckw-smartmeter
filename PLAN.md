@@ -234,7 +234,7 @@ CI or AGENTS.md. Tracked as #117.
 
 | Tool | Pin | Why |
 |---|---|---|
-| `python` | 3.13 | runtime of the HA image the dev instance uses |
+| `python` | 3.13 | toolchain for the scripts, the tests and CI; the dev image brings its own interpreter (3.14 in 2026.10.4, the pinned `HA_VERSION`) |
 | `uv` | latest | venv + dependency resolution and locking (#19) |
 | `ruff` | 0.17.3 | lint + format (gate G-1) |
 | `gitleaks` | 8.30.1 | secret scan (gates G-3, #118) |
@@ -341,7 +341,7 @@ them. Code that lands before `GOAL.md` and the doc skeleton exists gets rewritte
 | ✅ #15 | `strings.json` + translations | `config`, `config.error`, `config.abort`, `entity.sensor.*`, `exceptions` keys; `translations/de.json`, `en.json` | hassfest translations check green | #10 | S | AI |
 | ✅ #16 | Test bootstrap | `pyproject.toml` (ruff, pytest config, `pytest-homeassistant-custom-component` optional extra), `tests/conftest.py` | `pytest -q` runs (0 tests ok) | #9 | S | AI |
 | ✅ #17 | pre-commit (locked) | Hooks: `check-added-large-files`, `check-yaml`, `check-json`, `check-merge-conflict`, `check-case-conflict`, `detect-private-key`, `end-of-file-fixer`, `trailing-whitespace`, `mixed-line-ending`, `gitleaks --staged`, `ruff-check`, `ruff-format`, artifact block (`.dev/`, `*.token`, `config/.storage/`, `*.db`); tools pinned in `mise.toml`; installed for `pre-commit` + `pre-push` | `pre-commit run --all-files` green, a staged fake token is rejected | #9 | S | AI |
-| #118 | Secret scanning in CI + push protection | `.github/workflows/secrets.yml` (`gitleaks detect --redact` on push/PR, works on a private repo with free minutes), enable GitHub secret scanning + push protection at publish (#110, free only when public), document policy in `SECURITY.md` (#25) | workflow fails on a seeded leak, policy documented | #18, #25 | S | AI |
+| ✅ #118 | Secret scanning in CI + push protection | `.github/workflows/secrets.yml` (`gitleaks detect --redact -v` on push to `main`, on every pull request and weekly, checkout with `fetch-depth: 0`), GitHub secret scanning + push protection enabled on the public repository (#110), policy written down in `SECURITY.md` and `docs/how-to/commits.md` (#25) | workflow fails on a seeded leak, policy documented | #18, #25 | S | AI |
 | ✅ #117 | mise toolchain & task runner | Pin `python`, `uv`, `ruff`, `gitleaks`, `pipx:pre-commit`, `npm:markdownlint-cli2` and its `node` in `mise.toml`; expose every workflow as a mise task (`setup`, `dev-up/-down/-logs/-shell/-reset/-smoke/-onboard/-mock`, `lint`, `fmt`, `test`, `types`, `hooks`, `docs`, `check`, `next`, `issues`), each with a one-line description and running from the repo root; CI calls the tasks only, never raw interpreters. Podman stays host-level (rootless prerequisites in #44) | fresh clone: `mise install && mise run setup && mise run check` succeeds; no doc, CI job or AGENTS.md line invokes `python`, `pip` or `podman` directly | #9 | M | AI |
 | ✅ #142 | Pre-push gate: full check before any merge | `pre-push` stage hook `scripts/hooks/pre_push_gate.sh` (`language: system`, `always_run`) runs `mise run check` and aborts on failure; the full-history gitleaks hook stays in the same stage; `MISE_SKIP_GATE=1` is the documented escape hatch with a loud warning; worktree agents merge only through a pull request whose checks are green (#159). The hook is the fast inner loop, not the merge decision | a failing test or lint error rejects the push, measured 20 s wall time (budget 90 s) | #117, #127 | S | AI |
 | ✅ #18 | CI workflows | `.github/workflows/tests.yaml`: jobs `pre-commit`, `pytest`, `hassfest` (`home-assistant/actions/hassfest`), `hacs` (`hacs/action` category integration) | all jobs green on GitHub | #13–#17 | S | AI |
@@ -413,7 +413,7 @@ Fallback for non-systemd machines: `scripts/dev/compose.yaml` (`podman-compose`)
 |---|---|---|---|---|---|---|
 | ✅ #36 | Dev directory & container runner | `scripts/dev/{up.sh,down.sh,reset.sh,smoke.sh,onboard.sh,configuration.yaml,.env.example,README.md}`, gitignored `config/`, `custom_components/ckw/` mount point; `mise run dev-up` starts HA rootless via plain `podman run` (no podman-compose on the target host) | `mise run dev-up` serves HA on :8123 with `config/` and the component mounted | #14, #118 | M | AI |
 | #37 | Quadlet unit + autostart (optional) | `scripts/dev/ha.container` installed to `~/.config/containers/systemd/ha-dev.container`, `%h` specifiers, pinned image, both volume mounts with `:Z` | `systemctl --user daemon-reload && systemctl --user start ha-dev` -> HA reachable, `ckw` listed | #36 | M | AI |
-| #38 | Image pinning & upgrade path | `HA_VERSION` in `.env.example`, bump procedure in README, smoke run after each bump | pinned tag documented, bump checklist exists | #36 | S | AI |
+| ✅ #38 | Image pinning & upgrade path | `HA_VERSION` in `.env.example` pinned to `2026.10.4` (the release the dev container runs) instead of the moving `stable`, bump procedure in `scripts/dev/README.md` with the harness pin in one sweep, smoke run after each bump | pinned tag documented, bump checklist exists | #36 | S | AI |
 | ✅ #39 | Fixture mode | `CKW_FIXTURE_MODE` read in `const.py`; `api.py` serves `tests/fixtures/*.json` instead of HTTP; log a loud warning when active; never active unless the env var is set | fixture instance shows configured values, `podman logs` shows zero outbound CKW calls | #61 | M | AI |
 | ✅ #40 | Onboarding script | `scripts/dev/onboard.sh`: wait for onboarding API, create owner user, optionally core config, then write a long-lived token to `.dev/token` (gitignored) | fresh volume → usable HA + token in under 3 minutes | #37 | M | AI |
 | ✅ #41 | HTTPS callback for real login | Caddy sidecar (or documented tunnel) exposing `https://ha-dev.local:8443`, mkcert CA steps, redirect URI `…/auth/external/callback` registered at CKW | real OAuth2 login succeeds on the dev instance | #1, #37 | L | AI+H |
@@ -516,7 +516,7 @@ real-mode login verified on the dev instance; backfill idempotency reproducible 
 | ✅ #95 | `info.md` | Short store blurb for HACS/Marketplace (Markdown), mirrors the README intro | renders in HACS pane | #94 | AI |
 | #96 | Translation review | Native German pass over `translations/de.json` + `strings.json` | no machine-German left | #15 | H |
 | ✅ #97 | `CHANGELOG.md` + releases | Keep-a-changelog format, `v0.1.0` release notes, optional release-drafter workflow | release published | milestones | AI |
-| #98 | `docs/how-to/work-with-ai-agents.md` | AI playbook: context files to read first (arc42 chapter index), gate tasks (`mise run check`), hard rules, task prompt templates, review checklist, secret hygiene; links to `reference/conventions.md` for the crosscutting rules | agent can complete a small issue using it alone | #20, #129 | AI |
+| ✅ #98 | `docs/how-to/work-with-ai-agents.md` | AI playbook: context files to read first (arc42 chapter index), the issue → branch → `mise run check` → commit → PR → squash-merge loop, the `workmux` done/blocked notification contract, what an agent must never do, the mock and fixture guardrails, a copyable prompt template; links to `reference/conventions.md` for the crosscutting rules | agent can complete a small issue using it alone | #20, #129 | AI |
 | ✅ #99 | `docs/how-to/debug-connection.md` | Symptoms → cause → fix for 401/403/429/network, raising the log level, dumping diagnostics, what is redacted, where the data ends up. No theory (link to explanation) | the three most likely failures each have a concrete fix path | #66 | AI |
 | ✅ #100 | Documentation-maintenance rule | PR-template checkbox + CONTRIBUTING line: behaviour change ⇒ affected quadrant doc + CHANGELOG updated; `docs/README.md` index kept current; quadrant placement + links checked by `mise run docs` (#127); stale doc = bug | checkbox present, `mise run docs` enforced in CI, checked during #102 audit | #27 | AI |
 | ✅ #119 | `docs/tutorial/getting-started.md` | One linear 15-minute path: request the CKW client → install → log in → populated Energy dashboard. Prerequisites as a checklist, every step with its expected visible result, no alternatives (they live in how-to) | a first-time HACS user reaches a populated dashboard without asking | #120, #121 | AI |
@@ -638,17 +638,17 @@ rejects a red push (#142). Locally that includes G-6 whenever the dev container 
 | Phase | Tasks | Done |
 |---|---|---|
 | 0 External | 8 | 0 |
-| 1 Setup & governance | 31 | 32 |
-| 1b Podman dev instance | 12 | 9 |
-| 2 Auth | 14 | 10 |
-| 3 API | 10 | 9 |
+| 1 Setup & governance | 32 | 32 |
+| 1b Podman dev instance | 12 | 11 |
+| 2 Auth | 13 | 11 |
+| 3 API | 10 | 10 |
 | 4 Coordinator | 8 | 8 |
-| 5 Entities | 14 | 14 |
-| 6 Statistics | 7 | 6 |
-| 7 Docs | 24 | 24 |
+| 5 Entities | 13 | 13 |
+| 6 Statistics | 6 | 6 |
+| 7 Docs | 24 | 23 |
 | 8 Quality/Release | 18 | 17 |
 | 9 Optional | 8 | 1 |
-| **Total** | **152** | **112** |
+| **Total** | **152** | **132** |
 
 ## Critical path
 

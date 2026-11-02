@@ -64,6 +64,21 @@ Out of scope, because nothing in the integration can fix it and no report change
   development aid that runs on localhost, are never part of the shipped integration, and are not exposed
   to the network by this repository.
 
+## Secret scanning
+
+Three layers watch this repository for a leaked credential (#118), and all three are on:
+
+| Layer | Where | What it catches |
+| --- | --- | --- |
+| Local hooks | `gitleaks` in the `pre-commit` stage (staged diff) and the `pre-push` stage (full history), gate G-3 | a token in the commit you are about to write, and one already in your local history |
+| CI job | [`Secrets`](.github/workflows/secrets.yml), `gitleaks detect --redact` on every push to `main`, every pull request and weekly | a leak that reached the repository from a machine whose hooks were bypassed, with the finding reported redacted |
+| GitHub | secret scanning with push protection, enabled on this public repository | a pushed CKW token, Home Assistant token or private key, rejected before it lands in a branch |
+
+`.gitleaks.toml` holds the CKW token rules and the allowlist for the obviously fake fixtures
+(`CH0{10,}`). A finding is handled in this order: **rotate first** (reauthenticate the integration, revoke
+the credential at CKW), then remove it from the branch, then report the path it took through a private
+advisory. Rewriting history does not make a published token safe.
+
 ## Never paste a credential into an issue
 
 **Never paste an access token, a refresh token, an SMS code, your CKW password or a full Zählpunkt
