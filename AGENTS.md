@@ -21,7 +21,8 @@ Read these before the first command, and the ADR before touching code it shaped.
 
 One task, one issue, one branch. The issue number **is** the task identifier; the plan row is
 authoritative for scope and dependencies, the issue for progress. When they disagree, fix the plan
-first.
+first. The loop end to end — what to read, the eight steps, the notification contract, a copyable
+prompt — is [docs/how-to/work-with-ai-agents.md](docs/how-to/work-with-ai-agents.md).
 
 ## Commands
 
@@ -141,4 +142,5 @@ before the merge. Unattended merges are forbidden here:
 - [CONTRIBUTING.md](CONTRIBUTING.md) — the same obligations as a human checklist, plus release duty.
 - [docs/reference/conventions.md](docs/reference/conventions.md) — the rules restated here in one place.
 - [docs/how-to/commits.md](docs/how-to/commits.md) — commit types and the trailer, in detail.
+- [docs/how-to/work-with-ai-agents.md](docs/how-to/work-with-ai-agents.md) — the same contract as a task loop, with the prompt template.
 - [PLAN.md](PLAN.md) — gates, hard rules, decisions and the task tables this contract enforces.

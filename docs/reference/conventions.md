@@ -100,7 +100,7 @@ tasks, and `mise.toml` gains the remaining tasks in #117.
 - [ADR-0003](../explanation/decisions/0003-meter-device-mapping.md) — one device per delivery point.
 - [ADR-0004](../explanation/decisions/0004-poll-interval-and-data-lag.md) — 2 h interval, 7-day window.
 - [ADR-0005](../explanation/decisions/0005-doc-structure-diataxis-arc42-lite.md) — why this page exists.
-- Not written yet: `docs/how-to/work-with-ai-agents.md` (#98).
+- [Work with an AI agent](../how-to/work-with-ai-agents.md) — the task loop these rules are enforced in.
 
 ## Related
 

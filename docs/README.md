@@ -11,7 +11,7 @@ exactly one quadrant; entries marked `planned` are not written yet and name the 
 
 - **I want to use it** — [getting-started](tutorial/getting-started.md) → [install](how-to/install.md).
 - **I want to change code** — [architecture](explanation/architecture.md) → [conventions](reference/conventions.md)
-  → work-with-ai-agents (planned, #98).
+  → [work-with-ai-agents](how-to/work-with-ai-agents.md).
 - **Something is broken** — [debug a connection](how-to/debug-connection.md) →
   [reauthenticate](how-to/reauthenticate.md).
 
@@ -36,7 +36,7 @@ One goal per page, steps only, no theory.
 | [live-and-archive.md](how-to/live-and-archive.md) | Pairing the CKW archive with a local live source on the meter, and why the two numbers differ. | Users |
 | [keep-quarter-hour-history.md](how-to/keep-quarter-hour-history.md) | Keeping the quarter-hour values longer than the recorder's default retention, or exporting them. | Users |
 | [debug-connection.md](how-to/debug-connection.md) | Symptom → cause → fix for a stale value, a rejected login, `403`, `429`, an unfinished backfill and missing statistics, plus the log levels and what to attach to a bug report. | Users, contributors |
-| `how-to/work-with-ai-agents.md` (planned, #98) | Driving this repository with an AI agent under the contract in `AGENTS.md`. | Contributors, agents |
+| [work-with-ai-agents.md](how-to/work-with-ai-agents.md) | Driving this repository with a coding agent: what it reads first, the issue → branch → gate → commit → PR → merge loop, the `workmux` notification contract, what it must never do, the mock and fixture guardrails, and a copyable prompt template. | Contributors, agents |
 | [commits.md](how-to/commits.md) | Commit types, the agent co-author trailer and how to find commits by model. | Contributors |
 | [next-task.md](how-to/next-task.md) | Finding the task that can start now, and having a timer or crontab remind you. | Maintainers, contributors |
 

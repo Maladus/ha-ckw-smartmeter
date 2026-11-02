@@ -10,11 +10,28 @@ user-visible behaviour in a minor release; every such change is listed.
 
 ### Added
 
+- [How-to: work with an AI agent](docs/how-to/work-with-ai-agents.md): the mechanics of handing one issue to
+  a coding agent — what it reads first, the branch → gate → commit → pull request → merge loop, the
+  `workmux` done/blocked notification contract, the things it must never do, the mock and fixture
+  guardrails, and a prompt template to copy (#98).
 - [Reference: redirect URIs](docs/reference/oauth-redirects.md): the three values CKW can have registered
   (My Home Assistant, own FQDN, localhost), what each one depends on, the exact-match rule with the German
   `Ungültiger Parameter: redirect_uri` error, what the My Home Assistant page asks on first use, and the
   troubleshooting for a mismatch. The My Home Assistant URL was previously described as a Cloud feature; it
   works for any installation and needs no Nabu Casa subscription (#41).
+
+### Changed
+
+- The development Home Assistant is pinned to `2026.10.4` in `scripts/dev/.env.example` instead of the
+  moving `stable` tag, so `mise run dev-up` cannot upgrade the instance without a commit; the bump
+  procedure is in `scripts/dev/README.md` → "Bumping the dev image" (#38). Development-only, no effect on
+  an installation.
+
+### Security
+
+- A `Secrets` workflow runs `gitleaks detect --redact` over the full history on every push to `main`, every
+  pull request and weekly, next to the local hooks and GitHub push protection. The three layers and the
+  rotate-first policy are in [SECURITY.md](SECURITY.md) (#118).
 
 ## [0.1.0] - 2026-11-01
 

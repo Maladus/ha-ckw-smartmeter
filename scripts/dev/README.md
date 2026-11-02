@@ -11,7 +11,7 @@ directory and in one container called `ha-dev`, nothing outside the repository i
 
 | Piece | Where | Reached from the host | Reached from the container |
 |---|---|---|---|
-| Home Assistant `stable` | container `ha-dev` | `http://localhost:8123` | `http://localhost:8123` |
+| Home Assistant, pinned by `HA_VERSION` (2026.10.4) | container `ha-dev` | `http://localhost:8123` | `http://localhost:8123` |
 | Integration under development | `custom_components/ckw`, bind-mounted | the working tree | `/config/custom_components/ckw` |
 | Instance state (onboarding, recorder DB) | `config/`, gitignored | `config/` | `/config` |
 | Mock CKW API + fake Keycloak (`mise run dev-mock`) | your shell, port 8787 | `http://localhost:8787` | `http://host.containers.internal:8787` |
@@ -31,8 +31,9 @@ directory and in one container called `ha-dev`, nothing outside the repository i
   ports without it).
 - `curl` on the host for the readiness wait, and the toolchain from `mise install` (Python 3.13 for
   the onboarding script).
-- The image, once: `podman pull ghcr.io/home-assistant/home-assistant:stable`. It is
-  `ghcr.io/home-assistant/home-assistant:<HA_VERSION>`, and `HA_VERSION` defaults to `stable`.
+- The image, once: `podman pull ghcr.io/home-assistant/home-assistant:2026.10.4`. It is
+  `ghcr.io/home-assistant/home-assistant:<HA_VERSION>`, and `HA_VERSION` is a concrete tag in
+  `scripts/dev/.env` (copied from `.env.example` by `mise run setup`), never `stable`.
 
 ## Commands
 
@@ -83,7 +84,7 @@ podman run -d --name ha-dev --replace \
   -v "$PWD/custom_components/ckw:/config/custom_components/ckw:Z" \
   -e TZ=Europe/Zurich \
   --add-host=host.containers.internal:host-gateway \
-  ghcr.io/home-assistant/home-assistant:stable
+  ghcr.io/home-assistant/home-assistant:2026.10.4
 ```
 
 - `:Z` relabels the mount for SELinux (Fedora, openSUSE). Without it the container is not allowed to
@@ -152,19 +153,39 @@ mise run dev-reset -- --full   # additionally config/.storage and .dev/token
 `--full` is the "as if freshly cloned" button: the next `mise run dev-onboard` runs the full
 onboarding again.
 
-## Upgrading the image
+## Bumping the dev image
 
-`HA_VERSION` in `scripts/dev/.env` (default `stable`) is the whole pin (#38). To bump: change the tag,
-`mise run dev-up`, then `mise run dev-smoke`. If the integration breaks, the previous tag is one edit
-away; Home Assistant downgrades do not migrate the recorder database back, so take a copy of
-`config/home-assistant_v2.db` first if the history matters.
+`HA_VERSION` in the gitignored `scripts/dev/.env` is the whole pin (#38): the container runs
+`ghcr.io/home-assistant/home-assistant:<HA_VERSION>`, and `.env.example` carries the concrete tag the
+instance was last verified on. `stable` is deliberately not the default — it is a moving tag, so a
+`dev-up` would upgrade Home Assistant without a commit, and a breakage would appear with nothing in the
+diff to blame. (`up.sh` still falls back to `stable` when `scripts/dev/.env` is missing; a fresh clone
+gets the file from `mise run setup`, so the pin is what runs.)
+
+1. Edit `HA_VERSION` in `scripts/dev/.env` to the new release tag, e.g. `2026.10.4`.
+2. `mise run dev-up` — recreates `ha-dev` from the new image and waits for the frontend.
+3. `mise run dev-smoke` — gate G-6: manifest, mounted component and no traceback from
+   `custom_components.ckw`. This is the step a `stable` tag would have skipped silently.
+4. If Home Assistant moved to a new release line, bump the harness pin in `requirements_test.txt`
+   (`pytest-homeassistant-custom-component`, which fixes the Home Assistant version the tests run
+   against) and run `mise run setup` once so `.venv` follows. The image and the harness should name the
+   same Home Assistant; today the harness still pins HA 2026.2.3, so the image is one sweep ahead.
+5. `mise run check` — lint, docs, tests, hooks in one run, then the dev-smoke from step 3 again when a
+   test or a hook changed.
+
+The running version is what Home Assistant writes to `/config/.HA_VERSION` inside the container (the
+`config/` directory of the checkout that owns `ha-dev`, so the file is on the host too); `mise run
+dev-shell` opens a shell in the container if you want to read it there. If the integration breaks on the
+new tag, the previous tag is one edit away — but Home Assistant does not migrate the recorder database
+backwards, so copy `config/home-assistant_v2.db` first when the history matters, or `mise run dev-reset`
+if it does not.
 
 ## Teardown
 
 ```bash
 mise run dev-down          # container gone, config/ kept
 rm -rf config .dev/token   # the instance state is gone too
-podman image rm ghcr.io/home-assistant/home-assistant:stable   # optional, ~2.5 GB
+podman image rm ghcr.io/home-assistant/home-assistant:2026.10.4   # optional, ~2.5 GB
 ```
 
 Nothing outside the repository is created: no systemd unit, no quadlet, no registry. The optional

@@ -84,9 +84,18 @@ provider finds nothing, by design: the trailer never contains one.
 
 `--grep` is case-sensitive by default; add `-i` if you are unsure how the trailer was spelled.
 
+## Secret scanning in three layers
+
+A commit is scanned three times: the local `gitleaks` pre-commit hook on the staged diff and the
+pre-push hook on the full history (gate G-3), the [`Secrets` workflow](../../.github/workflows/secrets.yml)
+on every push to `main` and every pull request, and GitHub secret scanning with push protection, which
+is enabled on this public repository and rejects a pushed token before it reaches a branch (#118). A
+finding is a rotation first, then the commit that removes it — [SECURITY.md](../../SECURITY.md).
+
 ## Related
 
 - [Architecture](../explanation/architecture.md) — the modules these commits change.
 - [ADR-0005 — documentation structure](../explanation/decisions/0005-doc-structure-diataxis-arc42-lite.md)
   — why this page is a how-to and where the reasoning lives.
 - [PLAN.md](../../PLAN.md) — cross-cutting gates G-1 to G-7 that every commit has to pass.
+- [SECURITY.md](../../SECURITY.md) — what counts as a leaked credential and what to do about one.
